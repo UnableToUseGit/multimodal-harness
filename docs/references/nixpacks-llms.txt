@@ -1,0 +1,2 @@
+Reference placeholder for deployment/buildpack notes.
+No Nixpacks configuration exists in the current repository.
