@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import logging
 import queue
 import threading
 import time
@@ -13,7 +14,7 @@ try:
     import cv2
 except ImportError:
     cv2 = None
-    print("OpenCV not found!")
+    logging.getLogger(__name__).warning("OpenCV not found")
 
 
 def get_frame_indices(video_path, start=0, end=None, n_frames=None, fps=None, max_frames=None):

@@ -11,6 +11,8 @@ The core goal is not just to summarize a video, but to reorganize it into struct
 - per-segment summaries, detailed descriptions, clips, and optional subtitles
 - probe outputs and intermediate planning artifacts for inspection
 
+The repository also supports task-aware derivation: starting from a canonical content-aware atlas, derive a second workspace that keeps, drops, reorders, and retitles segments for a specific business task.
+
 The repository exists to make long-video understanding operational: take raw video input, extract structured context, and write it into a workspace that humans and language models can both navigate easily.
 
 ## Project Structure & Module Organization
@@ -19,10 +21,11 @@ This repository is the home of the `VideoAtlas` pipeline. Keep the code surface 
 
 - `src/video_atlas/agents/`: agent entrypoints and public agent classes.
 - `src/video_atlas/agents/video_atlas/`: internal `VideoAtlasAgent` stages such as response parsing, strategy building, probing, segmentation, and workspace IO.
+- `src/video_atlas/agents/task_derivation/`: internal `TaskDerivationAgent` stages such as canonical atlas loading, task planning, and derived workspace writing.
 - `src/video_atlas/core/`: read-only tree and filesystem node models.
 - `src/video_atlas/generators/`: abstract generator interface and config models.
 - `src/video_atlas/prompts/`: prompt templates used by `VideoAtlasAgent`.
-- `src/video_atlas/schemas/`: video workspace models, strategy/config models, and result objects.
+- `src/video_atlas/schemas/`: video workspace models, strategy/config models, task-derivation models, and result objects.
 - `src/video_atlas/utils/`: video helpers split by concern, such as frame extraction, subtitle parsing, and video metadata.
 - `src/video_atlas/workspaces/`: local command execution abstraction.
 - `src/video_atlas/cli/`: minimal local development CLI.
@@ -79,6 +82,8 @@ Dependency policy:
 - `PYTHONPATH=src python3 -m video_atlas.cli check-import`: smoke test the package entrypoint.
 - `PYTHONPATH=src python3 -m video_atlas.cli config`: inspect whether API config is loaded from env or `.env`.
 - `PYTHONPATH=src python3 -m unittest discover -s tests`: run the minimal automated smoke tests.
+- `PYTHONPATH=src python3 scripts/run_video_atlas.py --input-path ... --output-workspace ... --planner-model ...`: run a real canonical VideoAtlas generation test against an OpenAI-compatible API.
+- `PYTHONPATH=src python3 scripts/run_task_derivation.py --source-workspace ... --output-workspace ... --task-description ... --model ...`: run a real task-derivation test against an OpenAI-compatible API.
 
 ### Runtime Configuration
 
@@ -86,7 +91,16 @@ Dependency policy:
 - For local development, fill in the project-root `.env` file or copy `.env.example` to `.env`, but never commit the real `.env`.
 - Application code should read runtime config through `src/video_atlas/settings.py` instead of scattered direct `os.environ` access.
 
-If you change the `VideoAtlasAgent` pipeline, workspace-writing behavior, or video utility logic, also validate with a small local `.mp4` and optional `.srt`.
+### Local Test Data Convention
+
+- Keep local videos, subtitles, and generated workspaces under the project-root `local/` directory.
+- Recommended layout:
+  - `local/inputs/<case_name>/` for raw inputs such as `.mp4` and optional `.srt`
+  - `local/workspaces/canonical_<case_name>/` for canonical content-aware atlas outputs
+  - `local/workspaces/task_<case_name>/` for task-aware derived atlas outputs
+- Treat `local/` as machine-local working data only. It should stay out of version control.
+
+If you change the `VideoAtlasAgent` pipeline, the `TaskDerivationAgent` pipeline, workspace-writing behavior, or video utility logic, also validate with a small local `.mp4` and optional `.srt`.
 
 ### Notes
 
@@ -101,6 +115,7 @@ If you change the `VideoAtlasAgent` pipeline, workspace-writing behavior, or vid
 - Keep new modules aligned with the core VideoAtlas workflow; avoid adding unrelated product surfaces before a clear need exists.
 - Prefer type hints on public methods and dataclass/Pydantic fields.
 - Keep comments sparse and functional; explain non-obvious behavior only.
+- For internal runtime messaging, use the workspace/agent logger instead of direct `print` calls. CLI commands and top-level scripts may print final user-facing summaries.
 
 ## Testing Guidelines
 

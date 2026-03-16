@@ -7,6 +7,7 @@ from importlib import import_module
 
 _EXPORT_MAP = {
     "BaseAtlasAgent": "video_atlas.agents.base_agent",
+    "TaskDerivationAgent": "video_atlas.agents.task_derivation_agent",
     "VideoAtlasAgent": "video_atlas.agents.video_atlas_agent",
 }
 

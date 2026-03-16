@@ -2,6 +2,13 @@
 """Schemas used by VideoAtlasAgent."""
 
 from .results import CreateVideoAtlasResult
+from .task_derivation import (
+    CanonicalAtlas,
+    CanonicalSegment,
+    CreateTaskDerivationResult,
+    SegmentDerivationDecision,
+    TaskDerivationPlan,
+)
 from .strategy import (
     ALLOWED_EVIDENCE,
     ALLOWED_GENRES,
@@ -30,4 +37,9 @@ __all__ = [
     "ALLOWED_EVIDENCE",
     "DESCRIPTION_SLOTS",
     "CreateVideoAtlasResult",
+    "CanonicalAtlas",
+    "CanonicalSegment",
+    "CreateTaskDerivationResult",
+    "SegmentDerivationDecision",
+    "TaskDerivationPlan",
 ]

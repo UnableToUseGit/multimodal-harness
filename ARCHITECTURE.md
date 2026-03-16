@@ -1,6 +1,6 @@
 # Architecture
 
-This repository centers on one pipeline: `VideoAtlasAgent`.
+This repository centers on two related pipelines: `VideoAtlasAgent` and `TaskDerivationAgent`.
 
 ## System Goal
 
@@ -18,21 +18,25 @@ The output workspace is not just a summary dump. It is a stable artifact surface
 
 This workspace layout is a primary product surface of the system. Downstream consumers should be able to navigate the generated files reliably without depending on internal Python objects or prompt-level implementation details.
 
+The system also supports a second-stage task-aware derivation flow. A canonical content-aware atlas can be used as source material for generating a new task-aware workspace tailored to a business need such as highlights, issue extraction, or role-specific review.
+
 ## Core Flow
 
-1. `LocalWorkspace` prepares and mutates the output workspace.
-2. `VideoAtlasTree` provides a read-only structural view.
-3. `VideoAtlasAgent` probes the source video, plans a processing strategy, segments the video, generates per-segment context, and writes a global summary.
-4. `video_utils.py` handles frame extraction, subtitle parsing, and video metadata.
-5. Prompts and schemas define the contract between orchestration code and the backing multimodal generator.
+1. `LocalWorkspace` prepares and mutates output workspaces.
+2. `VideoAtlasTree` provides a read-only structural view over generated workspaces.
+3. `VideoAtlasAgent` probes the source video, plans a processing strategy, segments the video, generates per-segment context, and writes a canonical content-aware atlas.
+4. `TaskDerivationAgent` loads a canonical atlas, evaluates segment relevance for a task, and writes a derived task-aware workspace with source provenance.
+5. `video_utils.py` and split utility modules handle frame extraction, subtitle parsing, and video metadata.
+6. Prompts and schemas define the contract between orchestration code and the backing multimodal generator.
 
 ## Module Boundaries
 
 - `agents/`: public agent entrypoints and top-level orchestration only
 - `agents/video_atlas/`: internal pipeline stages for parsing, strategy building, probing, segmentation, and workspace writes
+- `agents/task_derivation/`: internal pipeline stages for canonical atlas loading, task planning, and derived workspace writing
 - `utils/`: media and subtitle helpers only, split by concern instead of one catch-all module
 - `prompts/`: prompt text only
-- `schemas/`: data contracts only, including workspace-facing markdown models and strategy/result models
+- `schemas/`: data contracts only, including workspace-facing markdown models, strategy/result models, and task-derivation models
 - `core/`: read-only workspace and tree models only
 - `workspaces/`: filesystem mutation and command execution only
 - `generators/`: abstract LLM interface only

@@ -4,6 +4,7 @@
 from .video_atlas_prompts import (
     VIDEO_SEGMENT_PROMPT,
     CONTEXT_GENERATION_PROMPT,
+    TASK_DERIVATION_PROMPT,
     VIDEO_GLOBAL_PROMPT,
     VIDEO_PROBE_PROMPT,
 )
@@ -11,6 +12,7 @@ from .video_atlas_prompts import (
 __all__ = [
     "VIDEO_SEGMENT_PROMPT",
     "CONTEXT_GENERATION_PROMPT",
+    "TASK_DERIVATION_PROMPT",
     "VIDEO_GLOBAL_PROMPT",
     "VIDEO_PROBE_PROMPT",
 ]

@@ -77,7 +77,7 @@ class SegmentationMixin:
                 "token_usage": output["response"]["usage"]["total_tokens"],
             }
         except Exception as exc:
-            print(f"❌ Error processing segment {seg_id} ({seg_start_time}-{seg_end_time}): {exc}")
+            self._log_error("Error processing segment %s (%.2f-%.2f): %s", seg_id, seg_start_time, seg_end_time, exc)
             return {
                 "start_time": seg_start_time,
                 "end_time": seg_end_time,
@@ -125,13 +125,16 @@ class SegmentationMixin:
                         chunk_end_time=chunk_end_time,
                     )
                 except (AssertionError, Exception) as exc:
-                    print(f"❌ [Chunk {chunk_index:03d}] Failed to generate valid segmentation info: {exc}")
+                    self._log_error("[Chunk %03d] Failed to generate valid segmentation info: %s", chunk_index, exc)
                     break
 
                 if verbose:
-                    print(
-                        f"[Chunk {chunk_index:03d}] Segmentation generated in {time.time() - started_at:.2f}s "
-                        f"| Segments found: {len(segmentation_info)} | Token usage: {output['response']['usage']['total_tokens']}"
+                    self._log_info(
+                        "[Chunk %03d] Segmentation generated in %.2fs | Segments found: %d | Token usage: %s",
+                        chunk_index,
+                        time.time() - started_at,
+                        len(segmentation_info),
+                        output["response"]["usage"]["total_tokens"],
                     )
 
                 if chunk_end_time >= duration_int:
@@ -163,7 +166,7 @@ class SegmentationMixin:
                 try:
                     all_contexts.append(future.result())
                 except Exception as exc:
-                    print(f"❌ Segment processing failed: {exc}")
+                    self._log_error("Segment processing failed: %s", exc)
 
         all_contexts.sort(key=lambda item: item["start_time"])
         return all_contexts
@@ -184,7 +187,11 @@ class SegmentationMixin:
         global_context = self.parse_response(output["text"])
 
         if verbose:
-            print(f"[Global] Context generation completed in {time.time() - started_at:.2f}s | Token usage: {output['response']['usage']['total_tokens']}")
+            self._log_info(
+                "[Global] Context generation completed in %.2fs | Token usage: %s",
+                time.time() - started_at,
+                output["response"]["usage"]["total_tokens"],
+            )
 
         segments_quickview = "\n".join(
             [

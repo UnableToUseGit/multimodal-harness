@@ -41,7 +41,7 @@ class ProbeMixin:
                     if result:
                         prepared_inputs.append(result)
                 except Exception as exc:
-                    print(f"⚠️ Warning: Probe failed for segment {future_to_segment[future]}: {exc}")
+                    self._log_warning("Probe failed for segment %s: %s", future_to_segment[future], exc)
 
         prepared_inputs = sorted(prepared_inputs, key=lambda item: item[0])
         user_content = [

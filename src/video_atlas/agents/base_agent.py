@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from ..generators.base import BaseGenerator
-from ..core.tree import BaseTree
-from ..workspaces.base import BaseWorkspace
+from ..workspaces.base import get_logger
+
+if TYPE_CHECKING:
+    from ..core.tree import BaseTree
+    from ..generators.base import BaseGenerator
+    from ..workspaces.base import BaseWorkspace
 
 
 class BaseAtlasAgent(ABC):
@@ -36,13 +39,14 @@ class BaseAtlasAgent(ABC):
 
     def __init__(
         self,
-        generator: BaseGenerator,
-        tree: BaseTree,
-        workspace: Optional[BaseWorkspace] = None,
+        generator: Any,
+        tree: Any,
+        workspace: Optional[Any] = None,
     ):
         self.generator = generator
         self.tree = tree
         self.workspace = workspace
+        self.logger = workspace.logger if workspace is not None and hasattr(workspace, "logger") else get_logger(self.__class__.__name__)
 
     def run_command(self, command: str, workdir: str = None) -> tuple[str, str]:
         """
@@ -65,6 +69,15 @@ class BaseAtlasAgent(ABC):
             raise RuntimeError("No workspace configured. Cannot reload tree.")
         if hasattr(self.tree, 'reload'):
             self.tree = self.tree.reload(self.workspace)
+
+    def _log_info(self, message: str, *args: Any) -> None:
+        self.logger.info(message, *args)
+
+    def _log_warning(self, message: str, *args: Any) -> None:
+        self.logger.warning(message, *args)
+
+    def _log_error(self, message: str, *args: Any) -> None:
+        self.logger.error(message, *args)
 
     @abstractmethod
     def add(

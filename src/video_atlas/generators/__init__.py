@@ -7,6 +7,7 @@ from importlib import import_module
 _EXPORT_MAP = {
     "BaseGenerator": "video_atlas.generators.base",
     "GeneratorConfig": "video_atlas.generators.config",
+    "OpenAICompatibleGenerator": "video_atlas.generators.openai_compatible",
 }
 
 __all__ = list(_EXPORT_MAP.keys())

@@ -34,8 +34,8 @@ class PipelineMixin:
         video_process_spec.description_sampling.use_subtitles = caption_with_subtitles
 
         if verbose:
-            print(f"[Probe] Video analysis completed in {time.time() - started_at:.2f}s")
-            print(f"[Probe] Strategy determined:\n{json.dumps(probe_result, indent=2)}")
+            self._log_info("[Probe] Video analysis completed in %.2fs", time.time() - started_at)
+            self._log_info("[Probe] Strategy determined:\n%s", json.dumps(probe_result, indent=2))
 
         self._write_workspace_text("PROBE_RESULT.json", json.dumps(probe_result, indent=4))
         all_contexts = self._generate_segments_and_context(
@@ -60,7 +60,7 @@ class PipelineMixin:
             caption_spec=video_process_spec.caption_spec,
         )
         if verbose:
-            print("✅ VideoAtlas construction completed successfully!")
+            self._log_info("VideoAtlas construction completed successfully")
         return result
 
     def add(
@@ -78,27 +78,27 @@ class PipelineMixin:
             if not source_path.exists():
                 raise FileNotFoundError(f"Input path does not exist: {source_path}")
             if verbose:
-                print(f"📂 Processing input video from: {source_path}")
+                self._log_info("Processing input video from: %s", source_path)
 
             mp4_files = list(source_path.glob("*.mp4"))
             srt_files = list(source_path.glob("*.srt"))
             if len(mp4_files) != 1:
                 raise ValueError(f"Expected exactly one .mp4 file in {source_path}, found {len(mp4_files)}")
             if len(srt_files) > 1 and verbose:
-                print(f"⚠️ Warning: Multiple .srt files found in {source_path}. Using the first one.")
+                self._log_warning("Multiple .srt files found in %s. Using the first one.", source_path)
 
             workspace_root = self._workspace_root()
             self.workspace.copy_to_workspace(str(mp4_files[0]), str(workspace_root / mp4_files[0].name))
             if srt_files:
                 self.workspace.copy_to_workspace(str(srt_files[0]), str(workspace_root / srt_files[0].name))
             if verbose:
-                print(f"✅ Files copied to workspace: {workspace_root}")
+                self._log_info("Files copied to workspace: %s", workspace_root)
         elif video_path:
             source_video_path = Path(video_path)
             if not source_video_path.exists():
                 raise FileNotFoundError(f"Video path does not exist: {source_video_path}")
             if verbose:
-                print(f"📂 Processing video from: {source_video_path}")
+                self._log_info("Processing video from: %s", source_video_path)
 
             workspace_root = self._workspace_root()
             self.workspace.copy_to_workspace(str(source_video_path), str(workspace_root / source_video_path.name))
@@ -107,9 +107,9 @@ class PipelineMixin:
                 if not source_subtitle_path.exists():
                     raise FileNotFoundError(f"Subtitle path does not exist: {source_subtitle_path}")
                 if verbose:
-                    print(f"📂 Processing subtitle from: {source_subtitle_path}")
+                    self._log_info("Processing subtitle from: %s", source_subtitle_path)
                 self.workspace.copy_to_workspace(str(source_subtitle_path), str(workspace_root / source_subtitle_path.name))
             if verbose:
-                print(f"✅ Files copied to workspace: {workspace_root}")
+                self._log_info("Files copied to workspace: %s", workspace_root)
 
         return self._create(verbose=verbose, caption_with_subtitles=caption_with_subtitles)
