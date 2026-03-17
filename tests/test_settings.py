@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from video_atlas.settings import ENV_API_BASE, ENV_API_KEY, ENV_MODEL, Settings, load_dotenv
+from video_atlas.settings import ENV_API_BASE, ENV_API_KEY, Settings, load_dotenv
 
 
 class SettingsTest(unittest.TestCase):
@@ -11,7 +11,6 @@ class SettingsTest(unittest.TestCase):
         self.original = {
             ENV_API_BASE: os.environ.get(ENV_API_BASE),
             ENV_API_KEY: os.environ.get(ENV_API_KEY),
-            ENV_MODEL: os.environ.get(ENV_MODEL),
         }
         for key in self.original:
             os.environ.pop(key, None)
@@ -31,7 +30,6 @@ class SettingsTest(unittest.TestCase):
                     [
                         "VIDEO_ATLAS_API_BASE=https://example.test/v1",
                         "VIDEO_ATLAS_API_KEY=secret-token-1234",
-                        "VIDEO_ATLAS_MODEL=test-model",
                     ]
                 ),
                 encoding="utf-8",
@@ -41,10 +39,9 @@ class SettingsTest(unittest.TestCase):
 
         self.assertEqual(os.environ[ENV_API_BASE], "https://example.test/v1")
         self.assertEqual(os.environ[ENV_API_KEY], "secret-token-1234")
-        self.assertEqual(os.environ[ENV_MODEL], "test-model")
 
     def test_masked_api_key(self) -> None:
-        settings = Settings(api_base="https://example.test/v1", api_key="secret-token-1234", model="test-model")
+        settings = Settings(api_base="https://example.test/v1", api_key="secret-token-1234")
         self.assertEqual(settings.masked_api_key, "secr...1234")
 
 

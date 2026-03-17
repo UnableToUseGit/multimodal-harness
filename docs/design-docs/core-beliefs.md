@@ -10,7 +10,7 @@ Prompts, schemas, and workspace outputs are part of the system contract. When on
 
 ## Separate orchestration from integration
 
-`VideoAtlasAgent` should coordinate work, not absorb provider-specific logic or low-level video utilities.
+`CanonicalVideoAtlasAgent` should coordinate work, not absorb provider-specific logic or low-level video utilities.
 
 ## Optimize for inspectability
 

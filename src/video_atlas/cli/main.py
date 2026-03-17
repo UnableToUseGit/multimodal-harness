@@ -50,7 +50,6 @@ def _print_config() -> int:
     print(f"configured {'yes' if settings.is_configured else 'no'}")
     print(f"api_base {settings.api_base or '<missing>'}")
     print(f"api_key {settings.masked_api_key}")
-    print(f"model {settings.model or '<missing>'}")
     return 0
 
 

@@ -1,0 +1,12 @@
+{
+  "generator": {
+    "provider": "openai_compatible",
+    "model_name": "replace-with-task-derivation-model",
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "max_tokens": 6400
+  },
+  "runtime": {
+    "verbose": false
+  }
+}

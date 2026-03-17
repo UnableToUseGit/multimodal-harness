@@ -12,7 +12,7 @@ class _FakeGenerator:
     def __init__(self, payload: dict):
         self.payload = payload
 
-    def generate_single(self, prompt=None, messages=None, schema=None, extra_params=None):
+    def generate_single(self, prompt=None, messages=None, schema=None, extra_body=None):
         return {
             "text": json.dumps(self.payload),
             "json": self.payload,

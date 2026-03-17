@@ -12,7 +12,6 @@ class CliSmokeTest(unittest.TestCase):
         self.env_backup = {
             "VIDEO_ATLAS_API_BASE": os.environ.get("VIDEO_ATLAS_API_BASE"),
             "VIDEO_ATLAS_API_KEY": os.environ.get("VIDEO_ATLAS_API_KEY"),
-            "VIDEO_ATLAS_MODEL": os.environ.get("VIDEO_ATLAS_MODEL"),
         }
 
     def tearDown(self) -> None:
@@ -48,14 +47,12 @@ class CliSmokeTest(unittest.TestCase):
     def test_config_command(self) -> None:
         os.environ["VIDEO_ATLAS_API_BASE"] = "https://example.test/v1"
         os.environ["VIDEO_ATLAS_API_KEY"] = "secret-token-1234"
-        os.environ["VIDEO_ATLAS_MODEL"] = "test-model"
 
         result = self._run_cli("config")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("configured yes", result.stdout)
         self.assertIn("api_base https://example.test/v1", result.stdout)
         self.assertIn("api_key secr...1234", result.stdout)
-        self.assertIn("model test-model", result.stdout)
 
 
 if __name__ == "__main__":

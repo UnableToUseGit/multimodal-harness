@@ -49,13 +49,13 @@ class OpenAICompatibleGenerator(BaseGenerator):
         prompt: str | None = None,
         messages: list[dict[str, Any]] | None = None,
         schema: dict[str, Any] | None = None,
-        extra_params: dict[str, Any] | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
-            "model": self.config.model_name,
-            "temperature": self.config.temperature,
-            "top_p": self.config.top_p,
-            "max_tokens": self.config.max_tokens,
+            "model": self.config["model_name"],
+            "temperature": self.config.get("temperature", 0.0),
+            "top_p": self.config.get("top_p", 1.0),
+            "max_tokens": self.config.get("max_tokens", 512),
         }
 
         if messages is not None:
@@ -66,9 +66,9 @@ class OpenAICompatibleGenerator(BaseGenerator):
         if schema is not None:
             payload["response_format"] = schema
 
-        merged_extra = dict(self.config.extra_params)
-        if extra_params:
-            merged_extra.update(extra_params)
+        merged_extra = dict(self.config.get("extra_body", {}))
+        if extra_body:
+            merged_extra.update(extra_body)
         payload.update(merged_extra)
         return payload
 
@@ -77,9 +77,9 @@ class OpenAICompatibleGenerator(BaseGenerator):
         prompt: str | None = None,
         messages: list[dict[str, str]] | None = None,
         schema: dict[str, Any] | None = None,
-        extra_params: dict[str, Any] | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        payload = self._build_payload(prompt=prompt, messages=messages, schema=schema, extra_params=extra_params)
+        payload = self._build_payload(prompt=prompt, messages=messages, schema=schema, extra_body=extra_body)
         request = urllib.request.Request(
             self._chat_completions_url(),
             data=json.dumps(payload).encode("utf-8"),
@@ -113,14 +113,14 @@ class OpenAICompatibleGenerator(BaseGenerator):
         prompts: list[str] | None = None,
         messages_list: list[list[dict[str, str]]] | None = None,
         schema: dict[str, Any] | None = None,
-        extra_params: dict[str, Any] | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         if messages_list is not None:
             return [
-                self.generate_single(messages=messages, schema=schema, extra_params=extra_params)
+                self.generate_single(messages=messages, schema=schema, extra_body=extra_body)
                 for messages in messages_list
             ]
         return [
-            self.generate_single(prompt=prompt, schema=schema, extra_params=extra_params)
+            self.generate_single(prompt=prompt, schema=schema, extra_body=extra_body)
             for prompt in (prompts or [])
         ]

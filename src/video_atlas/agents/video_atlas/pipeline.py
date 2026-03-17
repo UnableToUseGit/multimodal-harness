@@ -5,15 +5,40 @@ import time
 from pathlib import Path
 
 from ...schemas import CreateVideoAtlasResult
+from ...transcription import generate_subtitles_for_video
 from ...utils import get_video_property, parse_srt
 
 
 class PipelineMixin:
+    def _resolve_subtitle_path(self, workspace_dir: Path, video_path: str, verbose: bool = False) -> str:
+        srt_files = list(workspace_dir.glob("*.srt"))
+        if srt_files:
+            return str(srt_files[0])
+
+        if not getattr(self, "generate_subtitles_if_missing", False):
+            if verbose:
+                self._log_warning("No subtitle file found and subtitle generation is disabled")
+            return ""
+
+        transcriber = getattr(self, "transcriber", None)
+        if transcriber is None:
+            self._log_warning("No subtitle file found and no transcriber configured; continuing without subtitles")
+            return ""
+
+        subtitle_path = workspace_dir / "subtitles.srt"
+        try:
+            generate_subtitles_for_video(video_path, subtitle_path, transcriber=transcriber, logger=self.logger)
+            if verbose:
+                self._log_info("Generated subtitles at %s", subtitle_path)
+            return str(subtitle_path)
+        except Exception as exc:
+            self._log_warning("Automatic subtitle generation failed: %s", exc)
+            return ""
+
     def _create(self, verbose: bool = False, caption_with_subtitles: bool = True) -> CreateVideoAtlasResult:
         workspace_dir = self._workspace_root()
         video_path = str(list(workspace_dir.glob("*.mp4"))[0])
-        srt_files = list(workspace_dir.glob("*.srt"))
-        srt_path = str(srt_files[0]) if srt_files else ""
+        srt_path = self._resolve_subtitle_path(workspace_dir, video_path, verbose=verbose)
 
         subtitle_items, subtitles_str = parse_srt(srt_path)
         if caption_with_subtitles:

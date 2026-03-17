@@ -40,7 +40,7 @@ class SegmentationMixin:
                 start_time=seg_start_time,
                 end_time=seg_end_time,
                 video_sampling=description_sampling,
-                generator=self.segmentor,
+                generator=self.captioner,
             )
 
             context = self.parse_response(output["text"])
@@ -181,7 +181,7 @@ class SegmentationMixin:
             ]
         )
         user_prompt = VIDEO_GLOBAL_PROMPT["USER"].format(segments_description=segments_description)
-        output = self.planner.generate_single(
+        output = self.captioner.generate_single(
             messages=self._prepare_messages(system_prompt=VIDEO_GLOBAL_PROMPT["SYSTEM"], user_prompt=user_prompt)
         )
         global_context = self.parse_response(output["text"])

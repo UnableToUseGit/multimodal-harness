@@ -7,7 +7,6 @@ import os
 
 ENV_API_BASE = "VIDEO_ATLAS_API_BASE"
 ENV_API_KEY = "VIDEO_ATLAS_API_KEY"
-ENV_MODEL = "VIDEO_ATLAS_MODEL"
 
 
 def _repo_root() -> Path:
@@ -51,11 +50,10 @@ def load_dotenv(dotenv_path: Path | None = None, override: bool = False) -> dict
 class Settings:
     api_base: str | None = None
     api_key: str | None = None
-    model: str | None = None
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.api_base and self.api_key and self.model)
+        return bool(self.api_base and self.api_key)
 
     @property
     def masked_api_key(self) -> str:
@@ -72,6 +70,5 @@ def get_settings(load_local_env: bool = True) -> Settings:
 
     return Settings(
         api_base=os.getenv(ENV_API_BASE),
-        api_key=os.getenv(ENV_API_KEY),
-        model=os.getenv(ENV_MODEL),
+        api_key=os.getenv(ENV_API_KEY)
     )
