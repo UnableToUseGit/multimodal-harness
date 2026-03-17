@@ -28,6 +28,7 @@ This repository is the home of the `VideoAtlas` pipeline. Keep the code surface 
 - `src/video_atlas/schemas/`: video workspace models, strategy/config models, task-derivation models, and result objects.
 - `src/video_atlas/config/`: runnable pipeline config schemas, loaders, and factories for scripts.
 - `src/video_atlas/transcription/`: audio extraction, ASR abstraction, and `.srt` generation for missing-subtitle workflows.
+- `src/video_atlas/review/`: local browser-based review tooling for inspecting workspace clips, subtitles, captions, and source mappings.
 - `src/video_atlas/utils/`: video helpers split by concern, such as frame extraction, subtitle parsing, and video metadata.
 - `src/video_atlas/workspaces/`: local command execution abstraction.
 - `src/video_atlas/cli/`: minimal local development CLI.
@@ -86,6 +87,7 @@ Dependency policy:
 - `PYTHONPATH=src python3 -m video_atlas.cli check-import`: smoke test the package entrypoint.
 - `PYTHONPATH=src python3 -m video_atlas.cli config`: inspect whether API config is loaded from env or `.env`.
 - `PYTHONPATH=src python3 -m unittest discover -s tests`: run the minimal automated smoke tests.
+- `PYTHONPATH=src python3 scripts/run_review_app.py --canonical-workspace ... [--task-workspace ...]`: launch the local browser-based review workbench for manual evaluation.
 - `PYTHONPATH=src python3 scripts/run_video_atlas.py --config configs/canonical/default.json --input-path ... --output-workspace ...`: run a real canonical VideoAtlas generation test against an OpenAI-compatible API.
 - `PYTHONPATH=src python3 scripts/run_task_derivation.py --config configs/task_derivation/default.json --source-workspace ... --output-workspace ... --task-description ...`: run a real task-derivation test against an OpenAI-compatible API.
 

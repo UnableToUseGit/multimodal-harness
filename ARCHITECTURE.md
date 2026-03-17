@@ -30,8 +30,9 @@ When subtitle files are not provided, the system may also generate `subtitles.sr
 4. `TaskDerivationAgent` loads a canonical atlas, evaluates segment relevance for a task, and writes a derived task-aware workspace with source provenance.
 5. The transcription flow can extract audio, run ASR, and write `subtitles.srt` when subtitle files are missing.
 6. `video_utils.py` and split utility modules handle frame extraction, subtitle parsing, and video metadata.
-7. Config objects and checked-in workflow config files define how planner, segmentor, captioner, and transcriber runtimes are assembled for scripts.
-8. Prompts and schemas define the contract between orchestration code and the backing multimodal generator.
+7. The review workbench can load canonical and task-derived workspaces and expose their clips, subtitles, captions, and source mappings in a browser for manual evaluation.
+8. Config objects and checked-in workflow config files define how planner, segmentor, captioner, and transcriber runtimes are assembled for scripts.
+9. Prompts and schemas define the contract between orchestration code and the backing multimodal generator.
 
 ## Module Boundaries
 
@@ -40,6 +41,7 @@ When subtitle files are not provided, the system may also generate `subtitles.sr
 - `agents/task_derivation/`: internal pipeline stages for canonical atlas loading, task planning, and derived workspace writing
 - `config/`: runtime config schemas and factories for assembling multi-stage agents from config files
 - `transcription/`: audio extraction, ASR abstraction, and subtitle writing for missing-subtitle workflows
+- `review/`: local review app loading workspace artifacts for browser-based manual evaluation
 - `utils/`: media and subtitle helpers only, split by concern instead of one catch-all module
 - `prompts/`: prompt text only
 - `schemas/`: data contracts only, including workspace-facing markdown models, strategy/result models, and task-derivation models
