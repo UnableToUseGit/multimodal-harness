@@ -10,6 +10,22 @@ from ...utils import get_video_property, parse_srt
 
 
 class PipelineMixin:
+    def _planner_result_from_execution_plan(self, execution_plan) -> dict:
+        sampling = execution_plan.segmentation_specification.frame_sampling_profile
+        profile = execution_plan.segmentation_specification.profile
+        if sampling.fps >= 1.0 or sampling.max_resolution >= 720:
+            sampling_profile = "visual_detail"
+        elif sampling.fps <= 0.25 and sampling.max_resolution <= 360:
+            sampling_profile = "language_lean"
+        else:
+            sampling_profile = profile.default_sampling_profile
+        return {
+            "planner_confidence": execution_plan.planner_confidence,
+            "genre_distribution": execution_plan.genre_distribution,
+            "segmentation_profile": execution_plan.segmentation_specification.profile_name,
+            "sampling_profile": sampling_profile,
+        }
+
     def _resolve_subtitle_path(self, workspace_dir: Path, video_path: str, verbose: bool = False) -> str:
         srt_files = list(workspace_dir.glob("*.srt"))
         if srt_files:
@@ -49,14 +65,14 @@ class PipelineMixin:
         _ = video_info["resolution"]
 
         started_at = time.time()
-        video_process_spec = self._probe_video_content(
+        execution_plan = self._plan_video_execution(
             video_path,
             duration_int,
             subtitle_items,
             {"fps": 1, "max_resolution": 480},
         )
-        probe_result = video_process_spec.normalized_strategy
-        video_process_spec.description_sampling.use_subtitles = caption_with_subtitles
+        probe_result = self._planner_result_from_execution_plan(execution_plan)
+        execution_plan.caption_specification.frame_sampling_profile.use_subtitles = caption_with_subtitles
 
         if verbose:
             self._log_info("[Probe] Video analysis completed in %.2fs", time.time() - started_at)
@@ -68,7 +84,7 @@ class PipelineMixin:
             duration_int=duration_int,
             subtitle_items=subtitle_items,
             verbose=verbose,
-            video_process_spec=video_process_spec,
+            execution_plan=execution_plan,
         )
         self._generate_global_context(all_contexts, duration_int, verbose, caption_with_subtitles)
 
@@ -79,10 +95,9 @@ class PipelineMixin:
         result = CreateVideoAtlasResult(
             success=True,
             segment_num=len(all_contexts),
-            segmentation_sampling=video_process_spec.segmentation_sampling,
-            description_sampling=video_process_spec.description_sampling,
-            segment_spec=video_process_spec.segment_spec,
-            caption_spec=video_process_spec.caption_spec,
+            specification=execution_plan,
+            segmentation_sampling=execution_plan.segmentation_specification.frame_sampling_profile,
+            description_sampling=execution_plan.caption_specification.frame_sampling_profile,
         )
         if verbose:
             self._log_info("VideoAtlas construction completed successfully")

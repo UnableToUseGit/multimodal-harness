@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """Prompt templates used by the VideoAtlas pipeline."""
 
-VIDEO_PROBE_PROMPT = {
-"SYSTEM": """You are a "video processing strategy planner". Given a few probes from a video, your goal is to produce an executable, cost-aware, and robust strategy configuration that will drive the SAME multimodal LLM to do:
+PLANNER_PROMPT = {
+"SYSTEM": """You are a planner for a canonical video atlas. Given a few probes from a video, your goal is to produce the key decisions needed to construct an execution plan that will drive the SAME multimodal LLM to do:
 1) full-video segmentation
-2) final segment title generation
-3) per-segment description
+2) downstream segment captioning
 You MUST output strict JSON only. Do not output any extra text.""",
 
 "USER": """
@@ -16,22 +15,20 @@ You will receive:
 - Global statistics for the whole video: total duration, subtitle density (chars/min or tokens/min), and optionally other stats.
 
 Your task:
-Based ONLY on the provided probes and global stats, output a "Strategy Package" (JSON) to drive the multimodal LLM for:
-1) segmentation
-2) final title generation
-3) description
+Based ONLY on the provided probes and global stats, output the key planner decisions (JSON) needed to construct an execution plan for:
+1) genre understanding
+2) segmentation profile selection
+3) shared frame sampling profile selection
 
 HARD CONSTRAINTS
 1) Use ONLY the probes + global stats. Do NOT hallucinate specific plot details. If uncertain, reflect that via lower confidence and/or conservative strategy.
-2) This strategy is for a CANONICAL video atlas, not highlight clipping. Prefer stable, self-contained segments that remain useful for downstream derivation. Avoid micro-segmentation unless the probes strongly justify it.
-3) Prefer LOW-COST but ROBUST strategies. Unless visual detail is clearly required, reduce fps/resolution and rely more on subtitles/audio-text.
+2) This plan is for a CANONICAL video atlas, not highlight clipping. Prefer stable, self-contained segments that remain useful for downstream derivation. Avoid micro-segmentation unless the probes strongly justify it.
+3) Prefer LOW-COST but ROBUST execution decisions. Unless visual detail is clearly required, prefer lower-cost frame sampling.
 4) genre_distribution MUST contain 1–2 genres and MUST sum to 1.
 5) Do NOT include weakly supported "filler" genres just to reach diversity. If one domain is dominant, keep the distribution concentrated on the most defensible genres.
 6) segmentation_profile MUST be exactly ONE value from the profile list below.
-7) segmentation.sampling_profile and description.sampling_profile MUST each be exactly ONE value from the sampling profile list below.
-8) segmentation.policy_notes is optional and should be used only for video-specific overrides. Do NOT restate the whole profile policy there.
-9) title.notes MUST provide one short paragraph describing how final canonical segment titles should be generated.
-10) Output MUST be valid JSON following the schema below. No markdown, no comments, no extra keys.
+7) sampling_profile MUST be exactly ONE value from the sampling profile list below. This single sampling profile will be shared by segmentation and captioning.
+8) Output MUST be valid JSON following the schema below. No markdown, no comments, no extra keys.
 
 SEGMENTATION PROFILE OPTIONS
 - esports_match_broadcast
@@ -66,42 +63,12 @@ GENRE OPTIONS
 - sports_event
 - other
 
-FPS:
-- 0.25
-- 0.5
-- 1
-
-Resolution:
-- 360
-- 480
-- 720
-
 STRICT OUTPUT JSON SCHEMA (MUST FOLLOW EXACTLY)
 {
   "planner_confidence": 0.0,
   "genre_distribution": { "<genre>": 0.0, "<genre>": 0.0 },
   "segmentation_profile": "<profile_name>",
-  "segmentation": {
-    "sampling_profile": "<sampling_profile>",
-    "use_subtitles": true,
-    "policy_notes": "<optional short paragraph: video-specific canonical segmentation override>"
-  },
-  "title": {
-    "notes": "<one short paragraph: how to generate stable canonical titles for finalized segments>"
-  },
-  "description": {
-    "slots_weight": {
-      "cast_speaker": 0.0,
-      "setting": 0.0,
-      "core_events": 0.0,
-      "topic_claims": 0.0,
-      "outcome_progress": 0.0,
-      "notable_cues": 0.0
-    },
-    "sampling_profile": "<sampling_profile>",
-    "use_subtitles": true,
-    "notes": "<one short paragraph: how to prioritize content in descriptions>"
-  }
+  "sampling_profile": "<sampling_profile>"
 }
 
 YOU WILL RECEIVE THE DATA IN THIS FORMAT
@@ -271,7 +238,8 @@ How to use the inputs (follow strictly):
      * visual: include salient visual details; use subtitles as support when available.
      * balanced: synthesize both, while staying conservative when they diverge.
 
-4) Slot Weighting:
+4) Caption Profile:
+   - caption_policy: describes the default descriptive style for this segment family.
    - slots_weight: allocate detail proportional to weights (higher weight => more detail). Use the same priorities when writing final_caption.
 
 Hard rules:
@@ -309,6 +277,7 @@ Captioning priors:
 - genre_distribution: {genre_str}
 - segmentation_profile: {segmentation_profile}
 - signal_priority: {signal_priority}
+- caption_policy: {caption_policy}
 - slots_weight: {slots_weight}
 - notes: {notes}       
 
