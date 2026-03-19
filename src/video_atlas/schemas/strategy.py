@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
+
+from .segmentation_profiles import DEFAULT_SEGMENTATION_PROFILE
 
 
 @dataclass
@@ -15,29 +17,71 @@ class SamplingConfig:
 
 @dataclass
 class SegmentSpec:
+    segmentation_profile: str = DEFAULT_SEGMENTATION_PROFILE
     genre_str: str = ""
-    mode_str: str = ""
-    signal_audio_priority: str = "0.50"
-    signal_visual_priority: str = "0.50"
-    target_segment_length_sec: str = "[90, 480]"
+    signal_priority: str = "balanced"
     boundary_evidence_primary: str = ""
     boundary_evidence_secondary: str = ""
+    segmentation_policy: str = ""
 
 
 @dataclass
 class CaptionSpec:
     genre_str: str = ""
-    mode_str: str = ""
-    signal_audio_priority: str = "0.50"
-    signal_visual_priority: str = "0.50"
+    segmentation_profile: str = DEFAULT_SEGMENTATION_PROFILE
+    signal_priority: str = "balanced"
     slots_weight: str = ""
     notes: str = ""
 
 
 @dataclass
+class TitleSpec:
+    segmentation_profile: str = DEFAULT_SEGMENTATION_PROFILE
+    genre_str: str = ""
+    title_policy: str = ""
+    notes: str = ""
+
+
+@dataclass
+class DetectionWindowSpec:
+    chunk_size_sec: int = 600
+    chunk_overlap_sec: int = 20
+
+
+@dataclass
+class BoundaryPostProcessSpec:
+    target_segment_length_sec: list[int] = field(default_factory=lambda: [90, 480])
+    min_boundary_confidence: float = 0.35
+    merge_short_segment_below_sec: int = 30
+
+
+@dataclass
+class BoundaryCandidate:
+    timestamp: float
+    boundary_rationale: str = ""
+    evidence: list[str] = field(default_factory=list)
+    confidence: float = 0.0
+    title_hint: str = ""
+
+
+@dataclass
+class SegmentDraft:
+    start_time: float
+    end_time: float
+    title_hint: str = ""
+    boundary_rationale: str = ""
+    boundary_confidence: float = 0.0
+    evidence: list[str] = field(default_factory=list)
+    refinement_needed: bool = False
+
+
+@dataclass
 class VideoProcessSpec:
     segment_spec: SegmentSpec
+    title_spec: TitleSpec
     caption_spec: CaptionSpec
+    detection_window_spec: DetectionWindowSpec
+    boundary_postprocess_spec: BoundaryPostProcessSpec
     segmentation_sampling: SamplingConfig
     description_sampling: SamplingConfig
     normalized_strategy: dict[str, Any]
@@ -45,22 +89,16 @@ class VideoProcessSpec:
 
 DEFAULT_STRATEGY_PACKAGE: dict[str, Any] = {
     "planner_confidence": 0.25,
-    "genre_distribution": {"other": 0.6, "vlog_lifestyle": 0.2, "podcast_interview": 0.2},
-    "structure_mode": {"primary": "other", "secondary": []},
-    "signal_priority": {
-        "audio_text": 0.6,
-        "visual": 0.4,
-        "rationale": "Probe unavailable; use a conservative hybrid strategy relying slightly more on subtitles/audio-text.",
-    },
+    "genre_distribution": {"other": 1.0},
+    "segmentation_profile": DEFAULT_SEGMENTATION_PROFILE,
     "segmentation": {
-        "granularity": "hybrid",
-        "target_segment_length_sec": [90, 480],
-        "boundary_evidence_primary": ["topic_shift_in_subtitles", "scene_location_change"],
-        "boundary_evidence_secondary": ["speaker_change", "on_screen_text_title_change"],
-        "sampling": {"fps": 0.5, "max_resolution": 384, "use_subtitles": True},
+        "sampling_profile": "balanced",
+        "policy_notes": "",
+    },
+    "title": {
         "notes": (
-            "Conservative segmentation: prefer fewer, self-contained segments. "
-            "Avoid cutting on minor shot changes or filler. Only cut when there is clear topic/scene change."
+            "Generate stable canonical titles that name the segment's dominant phase, topic, or event. "
+            "Prefer navigational labels over highlight-style headlines."
         ),
     },
     "description": {
@@ -72,13 +110,14 @@ DEFAULT_STRATEGY_PACKAGE: dict[str, Any] = {
             "outcome_progress": 0.18,
             "notable_cues": 0.08,
         },
-        "sampling": {"fps": 0.2, "max_resolution": 384, "use_subtitles": True},
+        "sampling_profile": "balanced",
         "notes": (
-            "Use a stable slot-based description. Prioritize who/where/what + main topic or key events. "
+            "Use a stable slot-based description. Prioritize who/where/what plus the main topic or key events. "
             "Do not narrate frame-by-frame; produce concise, segment-level summaries."
         ),
     },
 }
+
 
 ALLOWED_GENRES = {
     "narrative_film",
@@ -95,20 +134,6 @@ ALLOWED_GENRES = {
     "other",
 }
 
-ALLOWED_STRUCTURE_MODES = {
-    "turn_taking_qa",
-    "lecture_slide_driven",
-    "narrative_scene_based",
-    "chronological_vlog",
-    "step_by_step_procedure",
-    "news_segmented",
-    "compilation_blocks",
-    "sports_play_by_play",
-    "other",
-}
-
-ALLOWED_GRANULARITY = {"scene", "topic_block", "step_block", "hybrid"}
-
 ALLOWED_EVIDENCE = {
     "topic_shift_in_subtitles",
     "speaker_change",
@@ -120,6 +145,8 @@ ALLOWED_EVIDENCE = {
     "time_jump_or_recap",
     "other",
 }
+
+ALLOWED_SIGNAL_PRIORITIES = {"visual", "language", "balanced"}
 
 DESCRIPTION_SLOTS = [
     "cast_speaker",

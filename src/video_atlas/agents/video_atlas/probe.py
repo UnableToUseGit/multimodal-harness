@@ -16,7 +16,7 @@ class ProbeMixin:
         if duration_int <= clip_duration:
             segments.append((0, 0, duration_int))
         else:
-            for ratio in [0.25, 0.50, 0.75]:
+            for ratio in [0.0, 0.25, 0.50, 0.75]:
                 start = int(duration_int * ratio)
                 if start + clip_duration > duration_int:
                     start = duration_int - clip_duration

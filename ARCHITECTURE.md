@@ -26,7 +26,7 @@ When subtitle files are not provided, the system may also generate `subtitles.sr
 
 1. `LocalWorkspace` prepares and mutates output workspaces.
 2. `VideoAtlasTree` provides a read-only structural view over generated workspaces.
-3. `CanonicalVideoAtlasAgent` probes the source video, plans a processing strategy, segments the video, generates per-segment context, and writes a canonical content-aware atlas.
+3. `CanonicalVideoAtlasAgent` probes the source video, plans a processing strategy, detects chunk-local boundary candidates with overlap, post-processes them into canonical segments, generates final segment titles plus per-segment context, and writes a canonical content-aware atlas.
 4. `TaskDerivationAgent` loads a canonical atlas, evaluates segment relevance for a task, and writes a derived task-aware workspace with source provenance.
 5. The transcription flow can extract audio, run ASR, and write `subtitles.srt` when subtitle files are missing.
 6. `video_utils.py` and split utility modules handle frame extraction, subtitle parsing, and video metadata.
@@ -38,6 +38,11 @@ When subtitle files are not provided, the system may also generate `subtitles.sr
 
 - `agents/`: public agent entrypoints and top-level orchestration only
 - `agents/video_atlas/`: internal pipeline stages for parsing, strategy building, probing, segmentation, and workspace writes
+- The canonical segmentation flow is stage-oriented:
+  - probe produces global priors and sampling guidance
+  - boundary detection operates on chunked windows with overlap and returns candidate boundaries
+  - post-processing stabilizes the timeline before captions are generated
+  - final segment titles are generated after segment ranges are fixed rather than being treated as boundary-time ground truth
 - `agents/task_derivation/`: internal pipeline stages for canonical atlas loading, task planning, and derived workspace writing
 - `config/`: runtime config schemas and factories for assembling multi-stage agents from config files
 - `transcription/`: audio extraction, ASR abstraction, and subtitle writing for missing-subtitle workflows
