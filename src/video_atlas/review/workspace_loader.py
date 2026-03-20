@@ -70,7 +70,7 @@ class ReviewWorkspace:
     root_readme_text: str
     root_subtitles_text: str = ""
     task_text: str = ""
-    probe_result: dict[str, Any] | None = None
+    execution_plan: dict[str, Any] | None = None
     derivation: dict[str, Any] | None = None
     source_video_relative_path: str | None = None
     normalized_audio_relative_path: str | None = None
@@ -151,9 +151,11 @@ def load_review_workspace(root_path: str | Path, workspace_id: str, label: str |
 
     source_video = _first_existing(root, ["*.mp4"])
     normalized_audio = _first_existing(root, ["*.wav"])
-    probe_result_path = next(iter(sorted((root / ".agentignore").glob("PROBE_RESULT.json"))), None) if (root / ".agentignore").exists() else None
-    if probe_result_path is None:
-        probe_result_path = next(iter(sorted(root.glob("PROBE_RESULT.json"))), None)
+    execution_plan_path = None
+    if (root / ".agentignore").exists():
+        execution_plan_path = _first_existing(root / ".agentignore", ["EXECUTION_PLAN.json", "PROBE_RESULT.json"])
+    if execution_plan_path is None:
+        execution_plan_path = _first_existing(root, ["EXECUTION_PLAN.json", "PROBE_RESULT.json"])
 
     workspace = ReviewWorkspace(
         workspace_id=workspace_id,
@@ -163,7 +165,7 @@ def load_review_workspace(root_path: str | Path, workspace_id: str, label: str |
         root_readme_text=root_readme_path.read_text(encoding="utf-8"),
         root_subtitles_text=_read_text_if_exists((root / "SUBTITLES.md") if (root / "SUBTITLES.md").exists() else None),
         task_text=_read_text_if_exists((root / "TASK.md") if (root / "TASK.md").exists() else None),
-        probe_result=_read_json_if_exists(probe_result_path),
+        execution_plan=_read_json_if_exists(execution_plan_path),
         derivation=_read_json_if_exists((root / "derivation.json") if (root / "derivation.json").exists() else None),
         source_video_relative_path=str(source_video.relative_to(root)) if source_video is not None else None,
         normalized_audio_relative_path=str(normalized_audio.relative_to(root)) if normalized_audio is not None else None,

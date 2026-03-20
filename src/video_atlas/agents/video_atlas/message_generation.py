@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from ...schemas import FrameSamplingProfile
 
 from ...utils import get_frame_indices, prepare_video_input
 
@@ -42,7 +42,7 @@ class MessageGenerationMixin:
         video_path: str = "",
         start_time: float = 0.0,
         end_time: float = 0.0,
-        video_sampling: dict | None = None,
+        video_sampling: FrameSamplingProfile | None = None,
         messages: list[dict] | None = None,
         generator=None,
     ):
@@ -50,9 +50,9 @@ class MessageGenerationMixin:
             generator = self.planner
 
         if not messages:
-            sampling = video_sampling or {}
-            fps = sampling.get("fps", 1)
-            max_resolution = sampling.get("max_resolution", 480)
+            sampling = video_sampling or FrameSamplingProfile(fps=1.0, max_resolution=480)
+            fps = sampling.fps
+            max_resolution = sampling.max_resolution
             frame_indices = get_frame_indices(video_path, start_time, end_time, fps=fps)
             frame_base64_list, timestamps = prepare_video_input(video_path, frame_indices, max_resolution, max_workers=4)
             messages = self._prepare_messages_w_video(

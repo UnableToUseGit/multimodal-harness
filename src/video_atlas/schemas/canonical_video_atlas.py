@@ -51,7 +51,6 @@ DESCRIPTION_SLOTS = [
 class FrameSamplingProfile:
     fps: float = 0.5
     max_resolution: int = 480
-    use_subtitles: bool = True
 
 
 SamplingConfig = FrameSamplingProfile
@@ -129,12 +128,12 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
 
 ALLOWED_SEGMENTATION_PROFILES = set(SEGMENTATION_PROFILES)
 
-SAMPLING_PROFILE_CONFIGS: dict[str, dict[str, int | float]] = {
-    "language_lean": {"fps": 0.25, "max_resolution": 360},
-    "balanced": {"fps": 0.5, "max_resolution": 480},
-    "visual_detail": {"fps": 1.0, "max_resolution": 720},
-}
 
+SAMPLING_PROFILE_CONFIGS: dict[str, dict[str, int | float]] = {
+    "language_lean": FrameSamplingProfile(fps=0.25, max_resolution=360),
+    "balanced": FrameSamplingProfile(fps=0.5, max_resolution=480),
+    "visual_detail": FrameSamplingProfile(fps=1.0, max_resolution=720),
+}
 
 def resolve_segmentation_profile(name: str) -> tuple[str, SegmentationProfile]:
     if name in SEGMENTATION_PROFILES:
@@ -142,11 +141,10 @@ def resolve_segmentation_profile(name: str) -> tuple[str, SegmentationProfile]:
     return DEFAULT_SEGMENTATION_PROFILE, SEGMENTATION_PROFILES[DEFAULT_SEGMENTATION_PROFILE]
 
 
-def resolve_sampling_profile(name: str, fallback: str) -> tuple[str, dict[str, int | float]]:
+def resolve_sampling_profile(name: str) -> tuple[str, dict[str, int | float]]:
     if name in SAMPLING_PROFILE_CONFIGS:
         return name, SAMPLING_PROFILE_CONFIGS[name]
-    if fallback in SAMPLING_PROFILE_CONFIGS:
-        return fallback, SAMPLING_PROFILE_CONFIGS[fallback]
+    
     return "balanced", SAMPLING_PROFILE_CONFIGS["balanced"]
 
 
@@ -273,14 +271,12 @@ class CandidateBoundary:
     boundary_rationale: str = ""
     evidence: list[str] = field(default_factory=list)
     confidence: float = 0.0
-    title_hint: str = ""
 
 
 @dataclass
 class FinalizedSegment:
     start_time: float
     end_time: float
-    title_hint: str = ""
     boundary_rationale: str = ""
     boundary_confidence: float = 0.0
     evidence: list[str] = field(default_factory=list)
@@ -289,10 +285,10 @@ class FinalizedSegment:
 
 @dataclass
 class CaptionedSegment:
+    seg_id: str
     start_time: float
     end_time: float
-    seg_title: str
-    title_hint: str
     summary: str
     detail: str
+    subtitles_text: str = ""
     token_usage: int = 0

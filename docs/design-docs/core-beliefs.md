@@ -14,4 +14,4 @@ Prompts, schemas, and workspace outputs are part of the system contract. When on
 
 ## Optimize for inspectability
 
-Generated artifacts such as `README.md`, `SUBTITLES.md`, segment folders, and `PROBE_RESULT.json` should stay easy to inspect by humans.
+Generated artifacts such as `README.md`, `SUBTITLES.md`, segment folders, and `EXECUTION_PLAN.json` should stay easy to inspect by humans.

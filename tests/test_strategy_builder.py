@@ -17,12 +17,6 @@ class StrategyBuilderTest(unittest.TestCase):
                 "genre_distribution": {"sports_event": 5, "gameplay": 3, "other": 1},
                 "segmentation_profile": "esports_match_broadcast",
                 "sampling_profile": "visual_detail",
-                "use_subtitles": "true",
-                "segmentation": {"policy_notes": "Prefer stable gameplay phases over kill-by-kill cuts."},
-                "title": {"notes": "Use stable phase names."},
-                "description": {
-                    "notes": "Focus on momentum shifts and objectives.",
-                },
             }
         )
 
@@ -31,12 +25,10 @@ class StrategyBuilderTest(unittest.TestCase):
         self.assertEqual(plan.caption_specification.profile_name, "esports_match_broadcast")
         self.assertEqual(plan.segmentation_specification.profile.signal_priority, "balanced")
         self.assertIn("on_screen_text_title_change", plan.segmentation_specification.profile.boundary_evidence_primary)
-        self.assertEqual(plan.segmentation_specification.policy_notes, "Prefer stable gameplay phases over kill-by-kill cuts.")
         self.assertEqual(plan.segmentation_specification.frame_sampling_profile.fps, 1.0)
         self.assertEqual(plan.segmentation_specification.frame_sampling_profile.max_resolution, 720)
         self.assertEqual(plan.caption_specification.frame_sampling_profile.fps, 1.0)
-        self.assertTrue(plan.caption_specification.frame_sampling_profile.use_subtitles)
-        self.assertEqual(plan.caption_specification.notes, "Focus on momentum shifts and objectives.")
+        self.assertEqual(plan.caption_specification.frame_sampling_profile.max_resolution, 720)
         self.assertEqual(plan.chunk_size_sec, 420)
         self.assertEqual(plan.chunk_overlap_sec, 24)
         self.assertGreater(plan.caption_specification.profile.slots_weight["core_events"], 0.0)

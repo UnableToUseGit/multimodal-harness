@@ -20,7 +20,6 @@ def main() -> int:
 
     from video_atlas.agents import CanonicalVideoAtlasAgent
     from video_atlas.config import build_generator, build_transcriber, load_canonical_pipeline_config
-    from video_atlas.core import VideoAtlasTree
     from video_atlas.workspaces import LocalWorkspace
 
     config = load_canonical_pipeline_config(args.config)
@@ -29,7 +28,6 @@ def main() -> int:
         name="canonical_video_atlas_workspace",
         description="Canonical content-aware VideoAtlas workspace",
     )
-    tree = VideoAtlasTree.create_empty(Path(workspace.root_path))
     planner = build_generator(config.planner)
     segmentor = build_generator(config.segmentor)
     captioner = build_generator(config.captioner) if config.captioner is not None else None
@@ -40,13 +38,14 @@ def main() -> int:
         captioner=captioner,
         transcriber=transcriber,
         generate_subtitles_if_missing=(config.runtime.generate_subtitles_if_missing and not args.disable_auto_subtitles),
+        chunk_size_sec=config.runtime.chunk_size_sec,
+        chunk_overlap_sec=config.runtime.chunk_overlap_sec,
         workspace=workspace,
-        tree=tree,
+        caption_with_subtitles=config.runtime.caption_with_subtitles,
     )
     result = agent.add(
         input_path=args.input_path,
-        verbose=(config.runtime.verbose or args.verbose),
-        caption_with_subtitles=config.runtime.caption_with_subtitles,
+        verbose=(config.runtime.verbose or args.verbose)
     )
 
     print(f"success={result.success}")

@@ -25,32 +25,30 @@ When subtitle files are not provided, the system may also generate `subtitles.sr
 ## Core Flow
 
 1. `LocalWorkspace` prepares and mutates output workspaces.
-2. `VideoAtlasTree` provides a read-only structural view over generated workspaces.
-3. `CanonicalVideoAtlasAgent` probes the source video, plans a processing strategy, detects chunk-local boundary candidates with overlap, post-processes them into canonical segments, generates final segment titles plus per-segment context, and writes a canonical content-aware atlas.
-4. `TaskDerivationAgent` loads a canonical atlas, evaluates segment relevance for a task, and writes a derived task-aware workspace with source provenance.
-5. The transcription flow can extract audio, run ASR, and write `subtitles.srt` when subtitle files are missing.
-6. `video_utils.py` and split utility modules handle frame extraction, subtitle parsing, and video metadata.
-7. The review workbench can load canonical and task-derived workspaces and expose their clips, subtitles, captions, and source mappings in a browser for manual evaluation.
-8. Config objects and checked-in workflow config files define how planner, segmentor, captioner, and transcriber runtimes are assembled for scripts.
-9. Prompts and schemas define the contract between orchestration code and the backing multimodal generator.
+2. `CanonicalVideoAtlasAgent` first plans execution from sampled probes, then parses the video into finalized segments plus local captions, then assembles the final atlas with global description, segment titles, and workspace artifacts.
+3. `TaskDerivationAgent` loads a canonical atlas, evaluates segment relevance for a task, and writes a derived task-aware workspace with source provenance.
+4. The transcription flow can extract audio, run ASR, and write `subtitles.srt` when subtitle files are missing.
+5. Utility modules handle frame extraction, subtitle parsing, and video metadata.
+6. The review workbench can load canonical and task-derived workspaces and expose their clips, subtitles, captions, and source mappings in a browser for manual evaluation.
+7. Config objects and checked-in workflow config files define how planner, segmentor, captioner, and transcriber runtimes are assembled for scripts.
+8. Prompts and schemas define the contract between orchestration code and the backing multimodal generator.
 
 ## Module Boundaries
 
 - `agents/`: public agent entrypoints and top-level orchestration only
-- `agents/video_atlas/`: internal pipeline stages for parsing, strategy building, probing, segmentation, and workspace writes
+- `agents/video_atlas/`: internal canonical pipeline stages for planning, execution-plan construction, video parsing, atlas assembly, and workspace writes
 - The canonical segmentation flow is stage-oriented:
-  - probe produces global priors and sampling guidance
-  - boundary detection operates on chunked windows with overlap and returns candidate boundaries
-  - post-processing stabilizes the timeline before captions are generated
-  - final segment titles are generated after segment ranges are fixed rather than being treated as boundary-time ground truth
+  - the planner inspects sampled probes and emits only `planner_confidence`, `genre_distribution`, `segmentation_profile`, and `sampling_profile`
+  - execution-plan construction resolves those planner outputs into a concrete `CanonicalExecutionPlan`
+  - video parsing operates on chunked windows with overlap, returns candidate boundaries, stabilizes the timeline, and generates local captions
+  - atlas assembly generates global description plus final segment titles and then writes the final workspace artifacts
 - `agents/task_derivation/`: internal pipeline stages for canonical atlas loading, task planning, and derived workspace writing
 - `config/`: runtime config schemas and factories for assembling multi-stage agents from config files
 - `transcription/`: audio extraction, ASR abstraction, and subtitle writing for missing-subtitle workflows
 - `review/`: local review app loading workspace artifacts for browser-based manual evaluation
 - `utils/`: media and subtitle helpers only, split by concern instead of one catch-all module
 - `prompts/`: prompt text only
-- `schemas/`: data contracts only, including workspace-facing markdown models, strategy/result models, and task-derivation models
-- `core/`: read-only workspace and tree models only
+- `schemas/`: data contracts only, including canonical profiles/execution plans/runtime segment data, workspace-facing markdown models, task-derivation models, and result models
 - `workspaces/`: filesystem mutation and command execution only
 - `generators/`: abstract LLM interface only
 

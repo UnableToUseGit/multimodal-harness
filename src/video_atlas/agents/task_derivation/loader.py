@@ -59,14 +59,18 @@ def load_canonical_atlas(source_workspace: str | Path) -> CanonicalAtlas:
         )
 
     source_video_path = next(iter(sorted(root_path.glob("*.mp4"))), None)
-    probe_result_path = root_path / ".agentignore" / "PROBE_RESULT.json"
-    if not probe_result_path.exists():
-        probe_result_path = None
+    execution_plan_path = root_path / ".agentignore" / "EXECUTION_PLAN.json"
+    if execution_plan_path.exists():
+        resolved_execution_plan_path = execution_plan_path
+    else:
+        resolved_execution_plan_path = root_path / ".agentignore" / "PROBE_RESULT.json"
+        if not resolved_execution_plan_path.exists():
+            resolved_execution_plan_path = None
 
     return CanonicalAtlas(
         root_path=root_path,
         root_readme=root_readme_path.read_text(encoding="utf-8"),
         source_video_path=source_video_path,
-        probe_result_path=probe_result_path,
+        execution_plan_path=resolved_execution_plan_path,
         segments=segments,
     )

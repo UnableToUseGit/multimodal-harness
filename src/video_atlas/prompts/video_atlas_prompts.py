@@ -75,6 +75,10 @@ YOU WILL RECEIVE THE DATA IN THIS FORMAT
 [GLOBAL_STATS]
 ... (duration, subtitle_density, etc.)
 
+[PROBE_0%]
+Frames: ...
+Subtitles: ...
+
 [PROBE_25%]
 Frames: ...
 Subtitles: ...
@@ -91,13 +95,12 @@ NOW produce JSON that strictly matches the schema. Output JSON ONLY.
 """
 }
 
-VIDEO_SEGMENT_PROMPT = {
+BOUNDARY_DETECTION_PROMPT = {
 "SYSTEM": r"""
 You are a segmentation boundary detector for long videos.
 
 Goal:
 Given a segmentation specification and ONE detection window [T_start, T_end), detect valid semantic boundaries inside the window.
-You may optionally provide a short `title_hint` for the segment ending at each boundary, but the final segment title will be generated later.
 
 Hard rules (must follow):
 1) Validity:
@@ -124,7 +127,6 @@ Output format:
 Return ONLY a strict JSON array. Each item represents a boundary candidate:
 {
   "timestamp": <number in seconds>,
-  "title_hint": "<optional concise hint about the segment ending at this timestamp>",
   "boundary_rationale": "<brief evidence-based reason for the cut, mention primary evidence>",
   "evidence": ["<evidence_type>", ...],
   "confidence": <0..1>
@@ -153,55 +155,6 @@ Chunk subtitles (each line lies strictly within this chunk):
 
 Now output the JSON list of boundaries within the detection window.
 Only include boundaries whose timestamps fall inside [Core_start, Core_end).
-Use `title_hint` only as a weak semantic hint; do not spend boundary quality on making the title perfect.
-""".strip()
-}
-
-
-TITLE_GENERATION_PROMPT = {
-"SYSTEM": r"""
-You are a segment title generator for a canonical video atlas.
-
-Goal:
-Given ONE finalized segment and lightweight surrounding context, produce a concise, stable, segment-level title.
-
-Hard rules:
-1) The title must describe the dominant phase, topic, or event of the whole segment.
-2) Prefer canonical navigation titles, not highlight headlines.
-3) Use `title_hint` as a weak prior only. Correct it if the segment evidence suggests a better title.
-4) The title must be concise, objective, and self-contained.
-5) Output strict JSON only.
-
-Output schema:
-{
-  "final_title": "<string>",
-  "rationale": "<brief justification>",
-  "confidence": <0..1>
-}
-""".strip(),
-
-"USER": r"""
-Given the above frames and the following:
-
-Segment Context:
-- start_time: {start_time}
-- end_time: {end_time}
-- title_hint: "{title_hint}"
-
-Lightweight global priors:
-- genre_distribution: {genre_str}
-- segmentation_profile: {segmentation_profile}
-- title_policy: {title_policy}
-- notes: {notes}
-
-Neighboring context:
-- previous_title_hint: "{previous_title_hint}"
-- next_title_hint: "{next_title_hint}"
-
-Segment subtitles (if provided; may be noisy/incomplete):
-{subtitles}
-
-Now generate the JSON output.
 """.strip()
 }
 
@@ -211,34 +164,27 @@ CONTEXT_GENERATION_PROMPT = {
 You are a segment captioning model (multimodal LLM).
 
 Goal:
-Given ONE video segment (frames/video + optional subtitles) AND a provided `segment_title`, produce:
+Given ONE video segment (frames/video + optional subtitles), produce:
 1) a concise summary (for human or agent quick viewing).
 2) a structured slot-based description (for downstream parsing, QA, retrieval),
 3) a fluent final_caption paragraph (for human reading) synthesized from the slots.
 
 How to use the inputs (follow strictly):
 
-1) Integration of `segment_title` (CRITICAL):
-   - The `segment_title` provides the high-level semantic theme or main activity of this segment.
-   - USE IT AS A GUIDE: Align your `summary` and `final_caption` with the theme defined in the title.
-   - DO NOT COPY: Never simply repeat the title. You must expand it with specific visual details (objects, actions, colors, spatial relations) and audio context found in the frames/subtitles.
-   - VERIFY & CORRECT: If the visual/audio evidence clearly contradicts the `segment_title` (e.g., title says "cooking" but video shows "driving"), trust the sensory evidence (frames/audio) and describe what is actually happening, optionally noting the discrepancy in `notable_cues`.
-   - EXPAND DETAILS: Use the title as a hypothesis to focus your attention. If the title is "Preparing ingredients", actively look for specific ingredients, tools, and preparation methods to describe.
-
-2) Genre & Segmentation Priors:
+1) Genre & Segmentation Priors:
    - genre_distribution + segmentation_profile: decide WHAT the segment is mainly about and HOW to organize the summary.
      * podcast_topic_conversation: emphasize speakers, key questions, claims, stance, and topic shifts.
      * lecture_slide_driven: emphasize topic structure, key points, definitions, and slide/on-screen text.
      * esports_match_broadcast: emphasize match phase, objectives, teamfight outcomes, replay blocks, and momentum shifts.
      * generic_longform_continuous: emphasize the dominant self-contained topic or event in the segment.
 
-3) Signal Priority:
+2) Signal Priority:
    - signal_priority: decide WHICH modality is authoritative when uncertain or conflicting.
      * language: prefer subtitles/speech meaning; avoid over-interpreting visuals beyond what's supported.
      * visual: include salient visual details; use subtitles as support when available.
      * balanced: synthesize both, while staying conservative when they diverge.
 
-4) Caption Profile:
+3) Caption Profile:
    - caption_policy: describes the default descriptive style for this segment family.
    - slots_weight: allocate detail proportional to weights (higher weight => more detail). Use the same priorities when writing final_caption.
 
@@ -247,8 +193,8 @@ Hard rules:
 - Fill ALL slots. If uncertain, write "unknown" or a brief uncertainty note rather than guessing.
 - Do NOT narrate frame-by-frame. Summarize at the segment level.
 - Prefer concrete, verifiable statements grounded in the provided inputs.
-- summary must be concise (1 sentence), reflecting genre_distribution, segmentation_profile, AND aligning with the segment_title.
-- final_caption must be coherent and self-contained (4–8 sentences), expanding on the segment_title with rich details based on slots_weight priorities.
+- summary must be concise (1 sentence), reflecting genre_distribution and segmentation_profile.
+- final_caption must be coherent and self-contained (4–8 sentences), with rich details based on slots_weight priorities.
 
 Output JSON schema (exact keys only):
 {
@@ -269,32 +215,32 @@ Output JSON schema (exact keys only):
 "USER": r"""
 Given the above frames and the following:
 
-Segment Context:
-- segment_title: "{segment_title}" 
-  (Use this as the semantic anchor for the segment's main activity/topic)
-
 Captioning priors:
 - genre_distribution: {genre_str}
 - segmentation_profile: {segmentation_profile}
 - signal_priority: {signal_priority}
 - caption_policy: {caption_policy}
-- slots_weight: {slots_weight}
-- notes: {notes}       
+- slots_weight: {slots_weight}   
 
 Segment subtitles (if provided; may be noisy/incomplete):
 {subtitles}
 
-Now generate the JSON output, ensuring the description expands upon the `segment_title` with concrete visual and audio details.
+Now generate the JSON output.
 """.strip()
 }
 
 
 VIDEO_GLOBAL_PROMPT = {
 "SYSTEM": """
-You are an expert in video content analysis and summarization. Your task is to generate a concise, informative, and engaging **title** and a clear, coherent **abstract** for a video based solely on its structured segment descriptions.
+You are an expert in video content analysis and summarization. Your task is to generate:
+1) a concise, informative global video title
+2) a coherent global abstract
+3) stable canonical titles for every provided segment
+based solely on the structured segment descriptions.
 
-- The title should capture the core theme or main event of the video in a natural and compelling way.
+- The global title should capture the core theme or main event of the video in a natural and compelling way.
 - The abstract should summarize the key points, narrative flow, or semantic content across all segments, avoiding redundancy and maintaining logical coherence.
+- Each segment title should describe the segment's dominant phase, topic, or event, while remaining consistent with the full-video structure.
 - Do not invent details not supported by the segment descriptions.
 - Use neutral, objective language appropriate for descriptive metadata.
 
@@ -302,7 +248,13 @@ You are an expert in video content analysis and summarization. Your task is to g
 ```json
 {
   "title": "<string>",
-  "abstract": "<string>"
+  "abstract": "<string>",
+  "segment_titles": [
+    {
+      "seg_id": "<segment id>",
+      "title": "<canonical segment title>"
+    }
+  ]
 }
 ```
 
@@ -317,7 +269,7 @@ Given the following video segments description:
 {segments_description}
 ```
 
-Now, generate the video title and abstract.
+Now, generate the video title, abstract, and segment titles.
 """
 }
 

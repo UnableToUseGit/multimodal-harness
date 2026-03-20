@@ -35,6 +35,8 @@ class CanonicalRuntimeConfig:
     caption_with_subtitles: bool = True
     generate_subtitles_if_missing: bool = True
     verbose: bool = False
+    chunk_size_sec: int = 600
+    chunk_overlap_sec: int = 20
 
 
 @dataclass

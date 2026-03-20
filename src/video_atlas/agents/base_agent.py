@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Optional
 from ..workspaces.base import get_logger
 
 if TYPE_CHECKING:
-    from ..core.tree import BaseTree
     from ..generators.base import BaseGenerator
     from ..workspaces.base import BaseWorkspace
 
@@ -16,10 +15,9 @@ class BaseAtlasAgent(ABC):
     """
     Base agent abstraction for the VideoAtlas pipeline.
 
-    Holds generator (LLM/API client), tree (workspace file system view), and workspace (command executor).
+    Holds generator (LLM/API client) and workspace (command executor).
     
     Architecture:
-    - tree: READ-ONLY view of the workspace structure
     - workspace: Executes Linux commands (mkdir, touch, echo, etc.) to modify the file system
     - generator: LLM for intelligent decision making
     
@@ -30,9 +28,6 @@ class BaseAtlasAgent(ABC):
         When the agent wants to create a file:
             workspace.run("echo 'content' > /path/to/file.md")
         
-        After modifications, reload the tree:
-            tree = tree.reload(workspace)
-    
     Public interface:
         add() - The single unified entry point.
     """
@@ -40,11 +35,9 @@ class BaseAtlasAgent(ABC):
     def __init__(
         self,
         generator: Any,
-        tree: Any,
         workspace: Optional[Any] = None,
     ):
         self.generator = generator
-        self.tree = tree
         self.workspace = workspace
         self.logger = workspace.logger if workspace is not None and hasattr(workspace, "logger") else get_logger(self.__class__.__name__)
 
@@ -63,13 +56,6 @@ class BaseAtlasAgent(ABC):
             raise RuntimeError("No workspace configured. Cannot execute commands.")
         return self.workspace.run(command, workdir=workdir)
     
-    def reload_tree(self) -> None:
-        """Reload the tree from disk after workspace modifications."""
-        if self.workspace is None:
-            raise RuntimeError("No workspace configured. Cannot reload tree.")
-        if hasattr(self.tree, 'reload'):
-            self.tree = self.tree.reload(self.workspace)
-
     def _log_info(self, message: str, *args: Any) -> None:
         self.logger.info(message, *args)
 

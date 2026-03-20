@@ -13,24 +13,20 @@
 
 The canonical segmentation pipeline should follow four stages:
 
-1. Probe the source video and produce global priors.
+1. Plan from sampled probes and produce the minimal planner output.
 2. Run chunked boundary detection with overlap.
 3. Post-process boundary candidates into stable draft segments.
-4. Generate final segment titles and captions after segment ranges are fixed.
+4. Assemble the final atlas by generating the global description plus final segment titles and then writing workspace artifacts.
 
-## Probe Outputs Used By Later Stages
+## Planner Outputs Used By Later Stages
 
-Probe outputs are strategy priors, not content facts. Probe identifies the segmentation family and supplies runtime-sensitive controls, while the profile registry expands stable defaults such as signal priority and boundary evidence.
+Planner outputs are execution-plan priors, not content facts. The planner identifies the segmentation family and shared sampling profile, while the execution-plan builder expands stable defaults such as signal priority, boundary evidence, caption policy, and target segment length.
 
+- `planner_confidence`
 - `segmentation_profile`: the single profile identifier that selects the canonical segmentation template
 - `genre_distribution`: lightweight descriptive metadata that helps title/caption generation but does not replace the profile
-- `segmentation.policy_notes`: optional video-specific override text layered on top of the profile's default segmentation policy
 - target segment length is derived from `segmentation_profile` and used internally for post-processing and refinement
-- `title.notes`: title-generation guidance for finalized segments
-- `segmentation.sampling_profile`: controls segmentor video sampling efficiency via a discrete profile mapped in code
-- `description.slots_weight`
-- `description.notes`
-- `description.sampling_profile`: controls caption/title generation video sampling efficiency via a discrete profile mapped in code
+- `sampling_profile`: controls a shared frame-sampling profile that is resolved in code and used by both parsing and caption generation
 
 ## Boundary Detection
 
@@ -48,7 +44,6 @@ The boundary detector should return candidate boundaries, not final segment meta
 - `confidence`
 - `evidence`
 - `boundary_rationale`
-- optional `title_hint`
 
 The detector must allow empty outputs for a chunk. Lack of a boundary in one chunk is not a pipeline failure.
 
@@ -61,19 +56,19 @@ Post-processing is responsible for turning raw boundary candidates into usable c
 - merge obviously too-short segments when appropriate
 - mark overly long segments as candidates for later refinement
 
-## Title Generation
+## Atlas Assembly
 
-Final titles are generated after final segment ranges are known.
+Final titles and global description are generated after final segment ranges and local captions are known.
 
-- boundary-time `title_hint` is optional and weak
 - final titles should be stable navigation labels, not highlight headlines
-- title generation may use lightweight neighboring context and global priors
+- assembly should see all parsed segment descriptions together so titles can reflect global context
+- workspace artifacts such as segment `README.md`, segment `SUBTITLES.md`, segment clips, and root `README.md` should be written only after final titles are available
 
 ## Efficiency Requirements
 
 Runtime efficiency is a first-class requirement.
 
 - probe sampling should stay configurable
-- segmentor sampling should remain independent from caption/title sampling
+- the planner should choose one shared `sampling_profile`, with concrete fps/resolution resolved in code
 - segment processing should continue to run concurrently across finalized segments
-- title generation should reuse the lower-cost caption/title path instead of forcing a second heavy segmentation pass
+- title generation should happen in the global assembly pass, not during boundary detection

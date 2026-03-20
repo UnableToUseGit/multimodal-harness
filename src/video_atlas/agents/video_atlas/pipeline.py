@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 import json
 import time
 from pathlib import Path
@@ -10,22 +11,6 @@ from ...utils import get_video_property, parse_srt
 
 
 class PipelineMixin:
-    def _planner_result_from_execution_plan(self, execution_plan) -> dict:
-        sampling = execution_plan.segmentation_specification.frame_sampling_profile
-        profile = execution_plan.segmentation_specification.profile
-        if sampling.fps >= 1.0 or sampling.max_resolution >= 720:
-            sampling_profile = "visual_detail"
-        elif sampling.fps <= 0.25 and sampling.max_resolution <= 360:
-            sampling_profile = "language_lean"
-        else:
-            sampling_profile = profile.default_sampling_profile
-        return {
-            "planner_confidence": execution_plan.planner_confidence,
-            "genre_distribution": execution_plan.genre_distribution,
-            "segmentation_profile": execution_plan.segmentation_specification.profile_name,
-            "sampling_profile": sampling_profile,
-        }
-
     def _resolve_subtitle_path(self, workspace_dir: Path, video_path: str, verbose: bool = False) -> str:
         srt_files = list(workspace_dir.glob("*.srt"))
         if srt_files:
@@ -51,13 +36,12 @@ class PipelineMixin:
             self._log_warning("Automatic subtitle generation failed: %s", exc)
             return ""
 
-    def _create(self, verbose: bool = False, caption_with_subtitles: bool = True) -> CreateVideoAtlasResult:
+    def _create(self, verbose: bool = False) -> CreateVideoAtlasResult:
         workspace_dir = self._workspace_root()
         video_path = str(list(workspace_dir.glob("*.mp4"))[0])
         srt_path = self._resolve_subtitle_path(workspace_dir, video_path, verbose=verbose)
-
         subtitle_items, subtitles_str = parse_srt(srt_path)
-        if caption_with_subtitles:
+        if self.caption_with_subtitles:
             self._write_workspace_text("SUBTITLES.md", subtitles_str)
 
         video_info = get_video_property(video_path)
@@ -71,30 +55,33 @@ class PipelineMixin:
             subtitle_items,
             {"fps": 1, "max_resolution": 480},
         )
-        probe_result = self._planner_result_from_execution_plan(execution_plan)
-        execution_plan.caption_specification.frame_sampling_profile.use_subtitles = caption_with_subtitles
 
         if verbose:
-            self._log_info("[Probe] Video analysis completed in %.2fs", time.time() - started_at)
-            self._log_info("[Probe] Strategy determined:\n%s", json.dumps(probe_result, indent=2))
+            self._log_info("[Plan] Video planning completed in %.2fs", time.time() - started_at)
+            self._log_info("[Plan] Execution plan:\n%s", json.dumps(asdict(execution_plan), indent=2))
 
-        self._write_workspace_text("PROBE_RESULT.json", json.dumps(probe_result, indent=4))
-        all_contexts = self._generate_segments_and_context(
+        self._write_workspace_text("EXECUTION_PLAN.json", json.dumps(asdict(execution_plan), indent=4))
+        parsed_segments = self._parse_video_into_segments(
             video_path=video_path,
             duration_int=duration_int,
             subtitle_items=subtitle_items,
             verbose=verbose,
             execution_plan=execution_plan,
         )
-        self._generate_global_context(all_contexts, duration_int, verbose, caption_with_subtitles)
+        self._assemble_canonical_atlas(
+            parsed_segments=parsed_segments,
+            video_path=video_path,
+            duration_int=duration_int,
+            verbose=verbose
+        )
 
-        if not self.tree.check_video_workspace(self.workspace):
+        if not self._check_video_workspace():
             raise RuntimeError(f"workspace {self.workspace} is not a valid video workspace")
-        self.tree.organize_video_workspace(self.workspace)
+        self._organize_video_workspace()
 
         result = CreateVideoAtlasResult(
             success=True,
-            segment_num=len(all_contexts),
+            segment_num=len(parsed_segments),
             specification=execution_plan,
             segmentation_sampling=execution_plan.segmentation_specification.frame_sampling_profile,
             description_sampling=execution_plan.caption_specification.frame_sampling_profile,
@@ -108,11 +95,9 @@ class PipelineMixin:
         input_path: str | Path | None = None,
         video_path: str | Path | None = None,
         subtitle_path: str | Path | None = None,
-        verbose: bool = False,
-        caption_with_subtitles: bool = True,
+        verbose: bool = False
     ) -> CreateVideoAtlasResult:
         assert input_path or video_path, "Either input_path or video_path must be provided."
-
         if input_path:
             source_path = Path(input_path)
             if not source_path.exists():
@@ -152,4 +137,4 @@ class PipelineMixin:
             if verbose:
                 self._log_info("Files copied to workspace: %s", workspace_root)
 
-        return self._create(verbose=verbose, caption_with_subtitles=caption_with_subtitles)
+        return self._create(verbose=verbose)

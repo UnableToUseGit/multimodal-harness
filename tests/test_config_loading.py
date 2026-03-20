@@ -12,7 +12,12 @@ class ConfigLoadingTest(unittest.TestCase):
             "planner": {"provider": "openai_compatible", "model_name": "planner-model", "extra_body": {"chat_template_kwargs": {"enable_thinking": True}}},
             "segmentor": {"provider": "openai_compatible", "model_name": "segmentor-model"},
             "captioner": {"provider": "openai_compatible", "model_name": "caption-model", "max_tokens": 3000},
-            "runtime": {"verbose": True, "generate_subtitles_if_missing": False}
+            "runtime": {
+                "verbose": True,
+                "generate_subtitles_if_missing": False,
+                "chunk_size_sec": 420,
+                "chunk_overlap_sec": 24,
+            },
         }
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "canonical.json"
@@ -25,6 +30,8 @@ class ConfigLoadingTest(unittest.TestCase):
         self.assertEqual(config.captioner.max_tokens, 3000)
         self.assertFalse(config.runtime.generate_subtitles_if_missing)
         self.assertTrue(config.runtime.verbose)
+        self.assertEqual(config.runtime.chunk_size_sec, 420)
+        self.assertEqual(config.runtime.chunk_overlap_sec, 24)
         self.assertEqual(config.planner.extra_body, {"chat_template_kwargs": {"enable_thinking": True}})
 
     def test_load_task_derivation_config(self) -> None:

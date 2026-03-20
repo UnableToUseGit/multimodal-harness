@@ -20,12 +20,11 @@ The repository exists to make long-video understanding operational: take raw vid
 This repository is the home of the `VideoAtlas` pipeline. Keep the code surface small and keep repository context in the `docs/` tree.
 
 - `src/video_atlas/agents/`: agent entrypoints and public agent classes.
-- `src/video_atlas/agents/video_atlas/`: internal `CanonicalVideoAtlasAgent` stages such as response parsing, strategy building, probing, segmentation, and workspace IO.
+- `src/video_atlas/agents/video_atlas/`: internal `CanonicalVideoAtlasAgent` stages such as planning, execution-plan building, video parsing, atlas assembly, response parsing, and workspace IO.
 - `src/video_atlas/agents/task_derivation/`: internal `TaskDerivationAgent` stages such as canonical atlas loading, task planning, and derived workspace writing.
-- `src/video_atlas/core/`: read-only tree and filesystem node models.
 - `src/video_atlas/generators/`: abstract generator interface and config models.
 - `src/video_atlas/prompts/`: prompt templates used by `CanonicalVideoAtlasAgent`.
-- `src/video_atlas/schemas/`: video workspace models, strategy/config models, task-derivation models, and result objects.
+- `src/video_atlas/schemas/`: canonical execution-plan models, runtime segment/caption data models, workspace markdown models, task-derivation models, and result objects.
 - `src/video_atlas/config/`: runnable pipeline config schemas, loaders, and factories for scripts.
 - `src/video_atlas/transcription/`: audio extraction, ASR abstraction, and `.srt` generation for missing-subtitle workflows.
 - `src/video_atlas/review/`: local browser-based review tooling for inspecting workspace clips, subtitles, captions, and source mappings.
@@ -156,7 +155,7 @@ This workspace is managed with git. Use small, reviewable commits and clear bran
 Recommended commit style: Conventional Commits, for example:
 
 - `feat: add generator adapter for multimodal backend`
-- `fix: handle missing subtitles in video probe`
+- `fix: handle missing subtitles in planner inputs`
 
 Use a separate branch per task to reduce conflicts and make validation easier.
 

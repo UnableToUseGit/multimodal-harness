@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .strategy import CaptionSpec, SamplingConfig, SegmentSpec
+from .canonical_video_atlas import CanonicalExecutionPlan, SamplingConfig
 
 
 @dataclass
 class CreateVideoAtlasResult:
     success: bool = True
     segment_num: int = 0
+    specification: CanonicalExecutionPlan = field(default_factory=CanonicalExecutionPlan)
     segmentation_sampling: SamplingConfig = field(default_factory=SamplingConfig)
     description_sampling: SamplingConfig = field(default_factory=SamplingConfig)
-    segment_spec: SegmentSpec = field(default_factory=SegmentSpec)
-    caption_spec: CaptionSpec = field(default_factory=CaptionSpec)

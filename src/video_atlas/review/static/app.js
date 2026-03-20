@@ -137,7 +137,7 @@ function render(state) {
           </div>
           <div class="panel card">
             <h3>Task / Source Mapping</h3>
-            <pre class="code-block">${escapeHtml(JSON.stringify(segment?.source_map || workspace.derivation || workspace.probe_result || {}, null, 2) || "No task mapping or probe metadata available.")}</pre>
+            <pre class="code-block">${escapeHtml(JSON.stringify(segment?.source_map || workspace.derivation || workspace.execution_plan || {}, null, 2) || "No task mapping or execution metadata available.")}</pre>
           </div>
           <div class="panel card">
             <h3>Source Segment Context</h3>

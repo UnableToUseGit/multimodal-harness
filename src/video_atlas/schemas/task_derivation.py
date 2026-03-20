@@ -27,7 +27,7 @@ class CanonicalAtlas:
     root_path: Path
     root_readme: str
     source_video_path: Path | None
-    probe_result_path: Path | None
+    execution_plan_path: Path | None
     segments: list[CanonicalSegment] = field(default_factory=list)
 
 
