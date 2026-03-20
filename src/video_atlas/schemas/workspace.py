@@ -6,6 +6,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+def format_timestamp(seconds: float) -> str:
+    total_seconds = max(0, int(round(seconds)))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours > 0:
+        return f"{hours}h {minutes}min {secs}s"
+    if minutes > 0:
+        return f"{minutes}min {secs}s"
+    return f"{secs}s"
+
+
 SEG_TEMPLATE = """# Segment Context
 
 **SegID**: {seg_id}
@@ -31,7 +42,7 @@ SEG_TEMPLATE = """# Segment Context
 GLOBAL_TEMPLATE = """
 **Title**: {title}
 
-**Duration**: {duration} seconds
+**Duration**: {duration}
 
 **Abstract**: {abstract}
 
@@ -65,9 +76,9 @@ class VideoSeg:
             seg_id=self.seg_id,
             seg_title=self.seg_title,
             summary=self.summary,
-            start_time=self.start_time,
-            end_time=self.end_time,
-            duration=self.duration,
+            start_time=format_timestamp(self.start_time),
+            end_time=format_timestamp(self.end_time),
+            duration=format_timestamp(self.duration),
             detail=self.detail,
         )
         if not with_subtitles:
@@ -86,7 +97,7 @@ class VideoGlobal:
     def to_markdown(self, with_subtitles: bool = True) -> str:
         markdown = GLOBAL_TEMPLATE.format(
             title=self.title,
-            duration=self.duration,
+            duration=format_timestamp(self.duration),
             abstract=self.abstract,
             num_segments=self.num_segments,
         )

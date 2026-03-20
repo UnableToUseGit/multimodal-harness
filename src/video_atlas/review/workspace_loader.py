@@ -8,6 +8,9 @@ from typing import Any
 
 
 FIELD_RE = re.compile(r"\*\*(?P<key>[^*]+)\*\*:\s*(?P<value>.*)")
+HUMAN_TIME_RE = re.compile(
+    r"^\s*(?:(?P<hours>\d+)h\s*)?(?:(?P<minutes>\d+)min\s*)?(?:(?P<seconds>\d+)s)?\s*$"
+)
 
 
 def _parse_markdown_fields(text: str) -> dict[str, str]:
@@ -29,6 +32,21 @@ def _read_json_if_exists(path: Path | None) -> dict[str, Any] | None:
     if path is None or not path.exists():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _parse_timestamp(value: str | None, default: float = 0.0) -> float:
+    if not value:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        match = HUMAN_TIME_RE.match(value.strip())
+        if not match:
+            return default
+        hours = int(match.group("hours") or 0)
+        minutes = int(match.group("minutes") or 0)
+        seconds = int(match.group("seconds") or 0)
+        return float(hours * 3600 + minutes * 60 + seconds)
 
 
 def _first_existing(root: Path, patterns: list[str]) -> Path | None:
@@ -94,9 +112,9 @@ def _segment_from_directory(segment_dir: Path, kind: str) -> ReviewSegment | Non
 
     readme_text = readme_path.read_text(encoding="utf-8")
     fields = _parse_markdown_fields(readme_text)
-    start_time = float(fields.get("Start Time", "0") or 0)
-    end_time = float(fields.get("End Time", "0") or 0)
-    duration = float(fields.get("Duration", str(end_time - start_time)) or (end_time - start_time))
+    start_time = _parse_timestamp(fields.get("Start Time"), default=0.0)
+    end_time = _parse_timestamp(fields.get("End Time"), default=0.0)
+    duration = _parse_timestamp(fields.get("Duration"), default=end_time - start_time)
     subtitles_path = segment_dir / "SUBTITLES.md"
     clip_path = segment_dir / "video_clip.mp4"
     source_map_path = segment_dir / "SOURCE_MAP.json"

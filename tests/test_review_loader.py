@@ -45,6 +45,35 @@ class ReviewWorkspaceLoaderTest(unittest.TestCase):
         self.assertEqual(workspace.segments[0].detail, "A detailed caption.")
         self.assertEqual(workspace.segments[0].clip_relative_path, "segments/seg0001-opening/video_clip.mp4")
 
+    def test_loads_human_readable_min_sec_times(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "README.md").write_text("# Canonical\n", encoding="utf-8")
+            segment_dir = root / "segments" / "seg0003-example"
+            segment_dir.mkdir(parents=True)
+            (segment_dir / "README.md").write_text(
+                "\n".join(
+                    [
+                        "# Segment Context",
+                        "",
+                        "**SegID**: seg0003",
+                        "**Start Time**: 2min 29s",
+                        "**End Time**: 3min 32s",
+                        "**Duration**: 1min 3s",
+                        "**Title**: Example",
+                        "**Summary**: Summary.",
+                        "**Detail Description**: Detail.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            workspace = load_review_workspace(root, workspace_id="canonical")
+
+        self.assertEqual(workspace.segments[0].start_time, 149.0)
+        self.assertEqual(workspace.segments[0].end_time, 212.0)
+        self.assertEqual(workspace.segments[0].duration, 63.0)
+
     def test_loads_task_workspace_source_map(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

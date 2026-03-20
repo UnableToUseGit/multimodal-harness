@@ -14,8 +14,17 @@ function escapeHtml(value) {
 }
 
 function fmtTime(seconds) {
-  const value = Number(seconds || 0);
-  return `${value.toFixed(1)}s`;
+  const totalSeconds = Math.max(0, Math.round(Number(seconds || 0)));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes}min ${secs}s`;
+  }
+  if (minutes > 0) {
+    return `${minutes}min ${secs}s`;
+  }
+  return `${secs}s`;
 }
 
 function segmentLabel(segment) {
