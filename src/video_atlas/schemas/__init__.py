@@ -1,31 +1,33 @@
 # -*- coding: utf-8 -*-
 """Scheme exports used by VideoAtlas."""
 
-from .canonical_video_atlas import (
+from .canonical_registry import (
     ALLOWED_EVIDENCE,
     ALLOWED_GENRES,
     ALLOWED_SAMPLING_PROFILES,
     ALLOWED_SEGMENTATION_PROFILES,
     ALLOWED_SIGNAL_PRIORITIES,
     CAPTION_PROFILES,
+    DEFAULT_CAPTION_PROFILE,
+    DEFAULT_SEGMENTATION_PROFILE,
+    DESCRIPTION_SLOTS,
+    SAMPLING_PROFILE_CONFIGS,
+    SEGMENTATION_PROFILES,
+    resolve_caption_profile,
+    resolve_sampling_profile,
+    resolve_segmentation_profile,
+)
+from .canonical_video_atlas import (
     CandidateBoundary,
     CaptionedSegment,
     CanonicalExecutionPlan,
     CaptionProfile,
     CaptionSpecification,
-    DEFAULT_CAPTION_PROFILE,
-    DEFAULT_SEGMENTATION_PROFILE,
-    DESCRIPTION_SLOTS,
     FrameSamplingProfile,
     FinalizedSegment,
-    SAMPLING_PROFILE_CONFIGS,
-    SEGMENTATION_PROFILES,
     SamplingConfig,
     SegmentationProfile,
     SegmentationSpecification,
-    resolve_caption_profile,
-    resolve_sampling_profile,
-    resolve_segmentation_profile,
 )
 from .task_derivation import (
     CanonicalAtlas,

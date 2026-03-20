@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 """Prompt templates used by the VideoAtlas pipeline."""
 
-PLANNER_PROMPT = {
-"SYSTEM": """You are a planner for a canonical video atlas. Given a few probes from a video, your goal is to produce the key decisions needed to construct an execution plan that will drive the SAME multimodal LLM to do:
-1) full-video segmentation
-2) downstream segment captioning
-You MUST output strict JSON only. Do not output any extra text.""",
+from .canonical_prompt_parts import (
+    render_genre_options,
+    render_sampling_profile_options,
+    render_segmentation_profile_options,
+)
 
-"USER": """
+
+PLANNER_SEGMENTATION_PROFILE_OPTIONS = render_segmentation_profile_options()
+PLANNER_SAMPLING_PROFILE_OPTIONS = render_sampling_profile_options()
+PLANNER_GENRE_OPTIONS = render_genre_options()
+
+
+PLANNER_PROMPT_USER = """
 You will receive:
 - 3 probes sampled from the video at progress 25%, 50%, and 75%. Each probe contains:
   - a sequence of frames (in temporal order)
@@ -31,37 +37,14 @@ HARD CONSTRAINTS
 8) Output MUST be valid JSON following the schema below. No markdown, no comments, no extra keys.
 
 SEGMENTATION PROFILE OPTIONS
-- esports_match_broadcast
-  Use for professional esports match broadcasts with casters, overlays, replay blocks, draft/ban phases, and chronological match progression.
-- podcast_topic_conversation
-  Use for long-form spoken conversations, podcasts, interviews, and roundtables where semantic topic shifts matter more than visuals.
-- lecture_slide_driven
-  Use for talks, lectures, or presentations where subtitles/speech and on-screen slide titles jointly define section changes.
-- generic_longform_continuous
-  Use only as fallback when no specialized profile is clearly supported.
+__SEGMENTATION_PROFILE_OPTIONS__
 
 SAMPLING PROFILE OPTIONS
-- language_lean
-  Use when language content is sufficient and visual detail can be sampled sparsely for cost efficiency.
-- balanced
-  Use when both visuals and language matter and a medium-cost setting is appropriate.
-- visual_detail
-  Use when visual state changes are semantically important and higher visual fidelity is worth the cost.
+__SAMPLING_PROFILE_OPTIONS__
 
 ENUMS (MUST USE)
 GENRE OPTIONS
-- narrative_film
-- animation
-- vlog_lifestyle
-- podcast_interview
-- lecture_talk
-- tutorial_howto
-- news_report
-- documentary
-- gameplay
-- compilation_montage
-- sports_event
-- other
+__GENRE_OPTIONS__
 
 STRICT OUTPUT JSON SCHEMA (MUST FOLLOW EXACTLY)
 {
@@ -92,7 +75,17 @@ Frames: ...
 Subtitles: ...
 
 NOW produce JSON that strictly matches the schema. Output JSON ONLY.
-"""
+""".replace("__SEGMENTATION_PROFILE_OPTIONS__", PLANNER_SEGMENTATION_PROFILE_OPTIONS).replace(
+    "__SAMPLING_PROFILE_OPTIONS__", PLANNER_SAMPLING_PROFILE_OPTIONS
+).replace("__GENRE_OPTIONS__", PLANNER_GENRE_OPTIONS)
+
+
+PLANNER_PROMPT = {
+"SYSTEM": """You are a planner for a canonical video atlas. Given a few probes from a video, your goal is to produce the key decisions needed to construct an execution plan that will drive the SAME multimodal LLM to do:
+1) full-video segmentation
+2) downstream segment captioning
+You MUST output strict JSON only. Do not output any extra text.""",
+"USER": PLANNER_PROMPT_USER
 }
 
 BOUNDARY_DETECTION_PROMPT = {
