@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import json
 import time
 
 from ...prompts import BOUNDARY_DETECTION_PROMPT, CONTEXT_GENERATION_PROMPT
@@ -10,6 +11,39 @@ from ...utils import get_subtitle_in_segment
 
 
 class VideoParsingMixin:
+    def _write_candidate_boundaries_debug(
+        self,
+        chunk_index: int,
+        core_start_time: float,
+        core_end_time: float,
+        window_start_time: float,
+        window_end_time: float,
+        last_detection_point: float | None,
+        candidate_boundaries: list[CandidateBoundary],
+    ) -> None:
+        payload = {
+            "chunk_index": chunk_index,
+            "core_start": core_start_time,
+            "core_end": core_end_time,
+            "window_start": window_start_time,
+            "window_end": window_end_time,
+            "last_detection_point": last_detection_point,
+            "candidate_boundaries": [
+                {
+                    "timestamp": item.timestamp,
+                    "boundary_rationale": item.boundary_rationale,
+                    "evidence": list(item.evidence),
+                    "confidence": item.confidence,
+                }
+                for item in candidate_boundaries
+            ],
+        }
+        relative_path = (
+            f".agentignore/boundary_debug/"
+            f"chunk_{chunk_index:04d}_core_{core_start_time:.2f}_{core_end_time:.2f}.json"
+        )
+        self._write_workspace_text(relative_path, json.dumps(payload, indent=2, ensure_ascii=False))
+
     def _clamp_confidence(self, value: float, default: float = 0.0) -> float:
         try:
             numeric = float(value)
@@ -172,11 +206,6 @@ class VideoParsingMixin:
             last_boundary_time = boundary_time
         return candidate_boundaries
 
-    def _update_chunk_start(self, core_end_time: float, candidate_boundaries: list[CandidateBoundary]) -> float:
-        if candidate_boundaries:
-            return candidate_boundaries[-1].timestamp
-        return core_end_time
-
     def _build_raw_segments_from_candidates(
         self,
         segment_start_time: float,
@@ -224,6 +253,7 @@ class VideoParsingMixin:
         core_end_time: float,
         window_start_time: float,
         window_end_time: float,
+        last_detection_point: float | None = None,
         min_confidence: float = 0.35,
     ) -> list[CandidateBoundary]:
         _, subtitles_str_in_seg = get_subtitle_in_segment(subtitle_items, window_start_time, window_end_time)
@@ -235,10 +265,8 @@ class VideoParsingMixin:
             core_end=core_end_time,
             subtitles=subtitles_str_in_seg,
             segmentation_profile=execution_plan.segmentation_specification.profile_name,
-            signal_priority=segmentation_profile.signal_priority,
-            boundary_evidence_primary=", ".join(segmentation_profile.boundary_evidence_primary),
-            boundary_evidence_secondary=", ".join(segmentation_profile.boundary_evidence_secondary),
             segmentation_policy=segmentation_profile.segmentation_policy,
+            last_detection_point="None" if last_detection_point is None else str(last_detection_point),
         )
         output = self._generate_single_w_video(
             system_prompt=BOUNDARY_DETECTION_PROMPT["SYSTEM"],
@@ -329,13 +357,14 @@ class VideoParsingMixin:
             segment_end_time=committed_end,
             candidate_boundaries=candidate_boundaries,
         )
-        committed_segments = self._postprocess_segments(committed_segments, execution_plan)
-        committed_segments = self._refine_segments(
-            video_path=video_path,
-            subtitle_items=subtitle_items,
-            segments=committed_segments,
-            execution_plan=execution_plan,
-        )
+        # NOTE: 暂时注释用于本地测试
+        # committed_segments = self._postprocess_segments(committed_segments, execution_plan)
+        # committed_segments = self._refine_segments(
+        #     video_path=video_path,
+        #     subtitle_items=subtitle_items,
+        #     segments=committed_segments,
+        #     execution_plan=execution_plan,
+        # )
         return committed_segments, committed_end
 
     def _submit_caption_tasks(
@@ -367,6 +396,7 @@ class VideoParsingMixin:
         open_segment_start = 0.0
         chunk_start_time = 0.0
         next_segment_id = 1
+        chunk_index = 0
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
             while chunk_start_time < duration_int:
@@ -375,6 +405,7 @@ class VideoParsingMixin:
                 window_start_time = max(0.0, core_start_time - execution_plan.chunk_overlap_sec)
                 window_end_time = min(float(duration_int), core_end_time + execution_plan.chunk_overlap_sec)
                 started_at = time.time()
+                last_detection_point = open_segment_start
 
                 try:
                     candidate_boundaries = self._detect_candidate_boundaries_for_chunk(
@@ -385,10 +416,21 @@ class VideoParsingMixin:
                         core_end_time=core_end_time,
                         window_start_time=window_start_time,
                         window_end_time=window_end_time,
+                        last_detection_point=last_detection_point,
                     )
                 except Exception as exc:
                     self._log_error("[Chunk %.0f-%.0f] Failed to detect candidate boundaries: %s", core_start_time, core_end_time, exc)
                     candidate_boundaries = []
+
+                self._write_candidate_boundaries_debug(
+                    chunk_index=chunk_index,
+                    core_start_time=core_start_time,
+                    core_end_time=core_end_time,
+                    window_start_time=window_start_time,
+                    window_end_time=window_end_time,
+                    last_detection_point=last_detection_point,
+                    candidate_boundaries=candidate_boundaries,
+                )
 
                 committed_segments, open_segment_start = self._materialize_committed_segments(
                     video_path=video_path,
@@ -418,8 +460,12 @@ class VideoParsingMixin:
                         len(candidate_boundaries),
                     )
 
-                next_chunk_start = self._update_chunk_start(core_end_time, candidate_boundaries)
+                if core_end_time >= duration_int:
+                    break
+
+                next_chunk_start = candidate_boundaries[-1].timestamp if candidate_boundaries else core_end_time
                 chunk_start_time = next_chunk_start if next_chunk_start > chunk_start_time else core_end_time
+                chunk_index += 1
 
             tail_segments, open_segment_start = self._materialize_committed_segments(
                 video_path=video_path,

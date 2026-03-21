@@ -40,6 +40,6 @@
     "generate_subtitles_if_missing": true,
     "verbose": false,
     "chunk_size_sec": 600,
-    "chunk_overlap_sec": 30
+    "chunk_overlap_sec": 60
   }
 }

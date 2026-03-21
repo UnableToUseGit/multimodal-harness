@@ -2,6 +2,7 @@ import tempfile
 import threading
 import time
 import unittest
+import json
 
 from video_atlas.agents.video_atlas.video_parsing import VideoParsingMixin
 from video_atlas.schemas.canonical_video_atlas import (
@@ -62,9 +63,9 @@ class _StreamingSegmentationHarness(VideoParsingMixin):
         core_end = kwargs["core_end_time"]
         self.detect_calls.append((core_start, core_end, self.caption_started.is_set()))
         if core_start == 0:
-            return [CandidateBoundary(timestamp=40, confidence=0.8)]
+            return [CandidateBoundary(timestamp=40, boundary_rationale="topic shift", confidence=0.8)]
         if core_start == 40:
-            return [CandidateBoundary(timestamp=70, confidence=0.9)]
+            return [CandidateBoundary(timestamp=70, boundary_rationale="phase change", confidence=0.9)]
         return []
 
     def _refine_segment(self, **kwargs):
@@ -111,15 +112,6 @@ class SegmentationStreamingTest(unittest.TestCase):
         self.assertEqual(len(revised), 1)
         self.assertEqual(revised[0].timestamp, 12)
         self.assertEqual(revised[0].evidence, ["topic_shift_in_subtitles"])
-
-    def test_update_chunk_start_uses_last_kept_boundary(self):
-        harness = _StreamingSegmentationHarness()
-        next_start = harness._update_chunk_start(
-            core_end_time=60,
-            candidate_boundaries=[CandidateBoundary(timestamp=35), CandidateBoundary(timestamp=44)],
-        )
-        self.assertEqual(next_start, 44)
-        self.assertEqual(harness._update_chunk_start(60, []), 60)
 
     def test_build_then_postprocess_segments_marks_refine_need(self):
         harness = _StreamingSegmentationHarness()
@@ -180,6 +172,43 @@ class SegmentationStreamingTest(unittest.TestCase):
         self.assertEqual([item["start_time"] for item in contexts], [0, 40, 70])
         self.assertFalse(harness.detect_calls[0][2])
         self.assertTrue(harness.detect_calls[1][2])
+
+    def test_parse_video_into_segments_does_not_reprocess_partial_final_chunk(self):
+        harness = _StreamingSegmentationHarness()
+        plan = self._make_plan()
+
+        harness._parse_video_into_segments(
+            video_path="video.mp4",
+            duration_int=100,
+            subtitle_items=[],
+            execution_plan=plan,
+            verbose=False,
+        )
+
+        self.assertEqual([(start, end) for start, end, _ in harness.detect_calls], [(0, 60), (40, 100)])
+
+    def test_parse_video_into_segments_writes_candidate_boundary_debug_files(self):
+        harness = _StreamingSegmentationHarness()
+        plan = self._make_plan()
+
+        harness._parse_video_into_segments(
+            video_path="video.mp4",
+            duration_int=100,
+            subtitle_items=[],
+            execution_plan=plan,
+            verbose=False,
+        )
+
+        first_chunk = ".agentignore/boundary_debug/chunk_0000_core_0.00_60.00.json"
+        second_chunk = ".agentignore/boundary_debug/chunk_0001_core_40.00_100.00.json"
+        self.assertIn(first_chunk, harness._written)
+        self.assertIn(second_chunk, harness._written)
+
+        first_payload = json.loads(harness._written[first_chunk])
+        self.assertEqual(first_payload["core_start"], 0.0)
+        self.assertEqual(first_payload["core_end"], 60.0)
+        self.assertEqual(first_payload["last_detection_point"], 0.0)
+        self.assertEqual(first_payload["candidate_boundaries"][0]["boundary_rationale"], "topic shift")
 
 
 if __name__ == "__main__":

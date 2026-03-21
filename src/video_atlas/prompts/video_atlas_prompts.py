@@ -89,68 +89,61 @@ You MUST output strict JSON only. Do not output any extra text.""",
 }
 
 BOUNDARY_DETECTION_PROMPT = {
-"SYSTEM": r"""
-You are a segmentation boundary detector for long videos.
+    "SYSTEM": r"""
+Role:
+You are a semantic boundary detector for long videos.
 
 Goal:
-Given a segmentation specification and ONE detection window [T_start, T_end), detect valid semantic boundaries inside the window.
+Given a video chunk from T_start to T_end, a core detection window [Core_start, Core_end), and prior information about the video, detect valid semantic boundaries inside the core window.
 
-Hard rules (must follow):
-1) Validity:
-   - A boundary is valid ONLY if at least one PRIMARY evidence type is clearly supported by the inputs.
-2) Signal priority:
-   - If signal_priority is language: favor boundaries that align with completed semantic units in spoken/subtitle content.
-   - If signal_priority is visual: favor strong visual transitions and on-screen structural cues.
-   - If signal_priority is balanced: require the strongest available combination of language and visual cues.
-3) Detection-window edges are NOT boundaries:
-   - Do NOT output T_start or T_end as boundaries.
-4) Canonical bias:
-   - This is for canonical segmentation, not highlight extraction.
-   - Prefer fewer, self-contained segments with strong semantic boundaries.
-   - Do NOT cut on minor camera motion, single routine actions, or weak local excitement alone.
-5) Core-range rule:
-   - You may inspect the full detection window for context, but only output boundaries strictly inside [Core_start, Core_end).
-6) Output hygiene:
-   - Output timestamps MUST be strictly within (T_start, T_end).
-   - Sort boundaries by timestamp ascending.
-   - Remove duplicates (timestamps within 0.5s are duplicates; keep the higher-confidence one).
-   - If no valid boundary exists in (T_start, T_end), return [].
+Input:
+You will be given:
+1. A sequence of frames and subtitles from the video chunk [T_start, T_end].
+2. A core detection window [Core_start, Core_end).
+3. The video category.
+4. A segmentation policy that tells you how this video should be segmented.
+5. The last detection point produced in the previous turn.
+
+Guidelines:
+1) The current chunk is only one part of a longer video. That is why you are given a larger temporal context [T_start, T_end] together with a smaller core detection window [Core_start, Core_end): use the larger context to better understand how the local content relates to what comes before and after.
+2) The video content and category imply the inherent structure of the video. For example, different kinds of matches may have natural rounds or phases.
+3) The segmentation policy comes from a planner that has already analyzed the video. Follow it carefully.
+4) It is completely acceptable to detect no boundary. The provided chunk may belong to a single semantic unit. If you believe there is no valid boundary, return an empty list.
+5) Output hygiene:
+   - Output timestamps MUST be strictly within (Core_start, Core_end).
+   - Sort boundaries by timestamp in ascending order.
+   - Remove duplicates (timestamps within 0.5s count as duplicates; keep the higher-confidence one).
+   - If no valid boundary exists in (Core_start, Core_end), return [].
 
 Output format:
 Return ONLY a strict JSON array. Each item represents a boundary candidate:
 {
   "timestamp": <number in seconds>,
-  "boundary_rationale": "<brief evidence-based reason for the cut, mention primary evidence>",
-  "evidence": ["<evidence_type>", ...],
+  "boundary_rationale": "<brief evidence-based reason for the cut>",
   "confidence": <0..1>
 }
-No extra text.
+Do not output any extra text.
 """.strip(),
+    "USER": r"""
+Given the above frames from [T_start:{t_start}, T_end:{t_end}) and the following:
 
-"USER": r"""
-Given the above frames and the following:
+Subtitles:
+{subtitles}
 
 Detection window:
-- T_start: {t_start}
-- T_end: {t_end}
 - Core_start: {core_start}
 - Core_end: {core_end}
 
-Segmentation specification:
-- segmentation_profile: {segmentation_profile}
-- signal_priority: {signal_priority}
-- primary_boundary_evidence: {boundary_evidence_primary}
-- secondary_boundary_evidence: {boundary_evidence_secondary}
-- segmentation_policy: {segmentation_policy}
+Video category: {segmentation_profile}
 
-Chunk subtitles (each line lies strictly within this chunk):
-{subtitles}
+Segmentation policy: {segmentation_policy}
+
+Last detection point: {last_detection_point}
 
 Now output the JSON list of boundaries within the detection window.
 Only include boundaries whose timestamps fall inside [Core_start, Core_end).
-""".strip()
+""".strip(),
 }
-
 
 CONTEXT_GENERATION_PROMPT = {
 "SYSTEM": r"""

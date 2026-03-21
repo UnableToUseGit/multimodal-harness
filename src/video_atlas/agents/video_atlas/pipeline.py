@@ -39,7 +39,8 @@ class PipelineMixin:
     def _create(self, verbose: bool = False) -> CreateVideoAtlasResult:
         workspace_dir = self._workspace_root()
         video_path = str(list(workspace_dir.glob("*.mp4"))[0])
-        srt_path = self._resolve_subtitle_path(workspace_dir, video_path, verbose=verbose)
+        # srt_path = self._resolve_subtitle_path(workspace_dir, video_path, verbose=verbose)
+        srt_path = '/share/project/minghao/Proj/VideoAFS/VideoEdit/development/local/workspaces/canonical_case_002/.agentignore/subtitles.srt'
         subtitle_items, subtitles_str = parse_srt(srt_path)
         if self.caption_with_subtitles:
             self._write_workspace_text("SUBTITLES.md", subtitles_str)
@@ -98,43 +99,43 @@ class PipelineMixin:
         verbose: bool = False
     ) -> CreateVideoAtlasResult:
         assert input_path or video_path, "Either input_path or video_path must be provided."
-        if input_path:
-            source_path = Path(input_path)
-            if not source_path.exists():
-                raise FileNotFoundError(f"Input path does not exist: {source_path}")
-            if verbose:
-                self._log_info("Processing input video from: %s", source_path)
+        # if input_path:
+        #     source_path = Path(input_path)
+        #     if not source_path.exists():
+        #         raise FileNotFoundError(f"Input path does not exist: {source_path}")
+        #     if verbose:
+        #         self._log_info("Processing input video from: %s", source_path)
 
-            mp4_files = list(source_path.glob("*.mp4"))
-            srt_files = list(source_path.glob("*.srt"))
-            if len(mp4_files) != 1:
-                raise ValueError(f"Expected exactly one .mp4 file in {source_path}, found {len(mp4_files)}")
-            if len(srt_files) > 1 and verbose:
-                self._log_warning("Multiple .srt files found in %s. Using the first one.", source_path)
+        #     mp4_files = list(source_path.glob("*.mp4"))
+        #     srt_files = list(source_path.glob("*.srt"))
+        #     if len(mp4_files) != 1:
+        #         raise ValueError(f"Expected exactly one .mp4 file in {source_path}, found {len(mp4_files)}")
+        #     if len(srt_files) > 1 and verbose:
+        #         self._log_warning("Multiple .srt files found in %s. Using the first one.", source_path)
 
-            workspace_root = self._workspace_root()
-            self.workspace.copy_to_workspace(str(mp4_files[0]), str(workspace_root / mp4_files[0].name))
-            if srt_files:
-                self.workspace.copy_to_workspace(str(srt_files[0]), str(workspace_root / srt_files[0].name))
-            if verbose:
-                self._log_info("Files copied to workspace: %s", workspace_root)
-        elif video_path:
-            source_video_path = Path(video_path)
-            if not source_video_path.exists():
-                raise FileNotFoundError(f"Video path does not exist: {source_video_path}")
-            if verbose:
-                self._log_info("Processing video from: %s", source_video_path)
+        #     workspace_root = self._workspace_root()
+        #     self.workspace.copy_to_workspace(str(mp4_files[0]), str(workspace_root / mp4_files[0].name))
+        #     if srt_files:
+        #         self.workspace.copy_to_workspace(str(srt_files[0]), str(workspace_root / srt_files[0].name))
+        #     if verbose:
+        #         self._log_info("Files copied to workspace: %s", workspace_root)
+        # elif video_path:
+        #     source_video_path = Path(video_path)
+        #     if not source_video_path.exists():
+        #         raise FileNotFoundError(f"Video path does not exist: {source_video_path}")
+        #     if verbose:
+        #         self._log_info("Processing video from: %s", source_video_path)
 
-            workspace_root = self._workspace_root()
-            self.workspace.copy_to_workspace(str(source_video_path), str(workspace_root / source_video_path.name))
-            if subtitle_path:
-                source_subtitle_path = Path(subtitle_path)
-                if not source_subtitle_path.exists():
-                    raise FileNotFoundError(f"Subtitle path does not exist: {source_subtitle_path}")
-                if verbose:
-                    self._log_info("Processing subtitle from: %s", source_subtitle_path)
-                self.workspace.copy_to_workspace(str(source_subtitle_path), str(workspace_root / source_subtitle_path.name))
-            if verbose:
-                self._log_info("Files copied to workspace: %s", workspace_root)
+        #     workspace_root = self._workspace_root()
+        #     self.workspace.copy_to_workspace(str(source_video_path), str(workspace_root / source_video_path.name))
+        #     if subtitle_path:
+        #         source_subtitle_path = Path(subtitle_path)
+        #         if not source_subtitle_path.exists():
+        #             raise FileNotFoundError(f"Subtitle path does not exist: {source_subtitle_path}")
+        #         if verbose:
+        #             self._log_info("Processing subtitle from: %s", source_subtitle_path)
+        #         self.workspace.copy_to_workspace(str(source_subtitle_path), str(workspace_root / source_subtitle_path.name))
+        #     if verbose:
+        #         self._log_info("Files copied to workspace: %s", workspace_root)
 
         return self._create(verbose=verbose)

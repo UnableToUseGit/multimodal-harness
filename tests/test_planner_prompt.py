@@ -16,6 +16,13 @@ class PlannerPromptTest(unittest.TestCase):
         self.assertNotIn('"title":', user_prompt)
         self.assertNotIn('"description":', user_prompt)
 
+    def test_boundary_detection_prompt_mentions_last_detection_point(self) -> None:
+        from video_atlas.prompts import BOUNDARY_DETECTION_PROMPT
+
+        self.assertIn("last detection point", BOUNDARY_DETECTION_PROMPT["SYSTEM"].lower())
+        self.assertIn("Video category:", BOUNDARY_DETECTION_PROMPT["USER"])
+        self.assertIn("{last_detection_point}", BOUNDARY_DETECTION_PROMPT["USER"])
+
 
 if __name__ == "__main__":
     unittest.main()
