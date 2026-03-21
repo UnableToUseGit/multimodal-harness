@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Prompt templates used by the VideoAtlas pipeline."""
+"""Prompt templates used by the canonical VideoAtlas pipeline."""
 
 from .canonical_prompt_parts import (
     render_genre_options,
@@ -81,12 +81,13 @@ NOW produce JSON that strictly matches the schema. Output JSON ONLY.
 
 
 PLANNER_PROMPT = {
-"SYSTEM": """You are a planner for a canonical video atlas. Given a few probes from a video, your goal is to produce the key decisions needed to construct an execution plan that will drive the SAME multimodal LLM to do:
+    "SYSTEM": """You are a planner for a canonical video atlas. Given a few probes from a video, your goal is to produce the key decisions needed to construct an execution plan that will drive the SAME multimodal LLM to do:
 1) full-video segmentation
 2) downstream segment captioning
 You MUST output strict JSON only. Do not output any extra text.""",
-"USER": PLANNER_PROMPT_USER
+    "USER": PLANNER_PROMPT_USER,
 }
+
 
 BOUNDARY_DETECTION_PROMPT = {
     "SYSTEM": r"""
@@ -145,60 +146,45 @@ Only include boundaries whose timestamps fall inside [Core_start, Core_end).
 """.strip(),
 }
 
-CONTEXT_GENERATION_PROMPT = {
-"SYSTEM": r"""
-You are a segment captioning model (multimodal LLM).
+
+CAPTION_GENERATION_PROMPT = {
+    "SYSTEM": r"""
+Role:
+You are a video segment caption writer.
 
 Goal:
 Given ONE video segment (frames/video + optional subtitles), produce:
-1) a concise summary (for human or agent quick viewing).
-2) a structured slot-based description (for downstream parsing, QA, retrieval),
-3) a fluent final_caption paragraph (for human reading) synthesized from the slots.
+1) a concise summary.
+2) a detailed caption paragraph.
 
-How to use the inputs (follow strictly):
+Input:
+You will be given:
+1. A sequence of frames from one video segment.
+2. Optional subtitles for the same segment.
+3. Genre distribution for the full video.
+4. The segmentation profile for the full video.
+5. Signal priority for this video type.
+6. A caption policy that tells you what kind of segment description is expected.
 
-1) Genre & Segmentation Priors:
-   - genre_distribution + segmentation_profile: decide WHAT the segment is mainly about and HOW to organize the summary.
-     * podcast_topic_conversation: emphasize speakers, key questions, claims, stance, and topic shifts.
-     * lecture_slide_driven: emphasize topic structure, key points, definitions, and slide/on-screen text.
-     * esports_match_broadcast: emphasize match phase, objectives, teamfight outcomes, replay blocks, and momentum shifts.
-     * generic_longform_continuous: emphasize the dominant self-contained topic or event in the segment.
+Guidelines:
+1) Use genre_distribution and segmentation_profile to understand what kind of segment this is and what kind of description is most appropriate.
+2) Use signal_priority to decide which modality is more trustworthy when visual evidence and subtitle evidence do not fully align.
+3) Use caption_policy as the main stylistic guide for what to emphasize.
+4) Describe the segment at the segment level, not frame by frame.
+5) Be concrete and evidence-based. Do not invent unsupported details.
+6) It is acceptable to be uncertain. If some detail is unclear, stay conservative instead of guessing.
+7) The summary should be short and easy to scan.
+8) The caption should be self-contained, coherent, and detailed enough to describe the segment as a stable semantic unit.
 
-2) Signal Priority:
-   - signal_priority: decide WHICH modality is authoritative when uncertain or conflicting.
-     * language: prefer subtitles/speech meaning; avoid over-interpreting visuals beyond what's supported.
-     * visual: include salient visual details; use subtitles as support when available.
-     * balanced: synthesize both, while staying conservative when they diverge.
-
-3) Caption Profile:
-   - caption_policy: describes the default descriptive style for this segment family.
-   - slots_weight: allocate detail proportional to weights (higher weight => more detail). Use the same priorities when writing final_caption.
-
-Hard rules:
-- Output MUST be strict JSON only. No extra text.
-- Fill ALL slots. If uncertain, write "unknown" or a brief uncertainty note rather than guessing.
-- Do NOT narrate frame-by-frame. Summarize at the segment level.
-- Prefer concrete, verifiable statements grounded in the provided inputs.
-- summary must be concise (1 sentence), reflecting genre_distribution and segmentation_profile.
-- final_caption must be coherent and self-contained (4–8 sentences), with rich details based on slots_weight priorities.
-
-Output JSON schema (exact keys only):
+Output format:
+Return ONLY a strict JSON object with exactly these keys:
 {
   "summary": "<1 sentence summary>",
-  "slots": {
-    "cast_speaker": "<text>",
-    "setting": "<text>",
-    "core_events": "<text>",
-    "topic_claims": "<text>",
-    "outcome_progress": "<text>",
-    "notable_cues": "<text>"
-  },
-  "final_caption": "<4-8 sentence paragraph>",
+  "caption": "<4-8 sentence paragraph>",
   "confidence": <number between 0 and 1>
 }
 """.strip(),
-
-"USER": r"""
+    "USER": r"""
 Given the above frames and the following:
 
 Captioning priors:
@@ -206,32 +192,41 @@ Captioning priors:
 - segmentation_profile: {segmentation_profile}
 - signal_priority: {signal_priority}
 - caption_policy: {caption_policy}
-- slots_weight: {slots_weight}   
 
 Segment subtitles (if provided; may be noisy/incomplete):
 {subtitles}
 
 Now generate the JSON output.
-""".strip()
+""".strip(),
 }
 
 
 VIDEO_GLOBAL_PROMPT = {
-"SYSTEM": """
-You are an expert in video content analysis and summarization. Your task is to generate:
-1) a concise, informative global video title
-2) a coherent global abstract
-3) stable canonical titles for every provided segment
-based solely on the structured segment descriptions.
+    "SYSTEM": r"""
+Role:
+You are a global atlas writer for a canonical video atlas.
 
-- The global title should capture the core theme or main event of the video in a natural and compelling way.
-- The abstract should summarize the key points, narrative flow, or semantic content across all segments, avoiding redundancy and maintaining logical coherence.
-- Each segment title should describe the segment's dominant phase, topic, or event, while remaining consistent with the full-video structure.
-- Do not invent details not supported by the segment descriptions.
-- Use neutral, objective language appropriate for descriptive metadata.
+Goal:
+Given the structured descriptions of all parsed segments, produce:
+1) a concise global video title,
+2) a coherent global abstract,
+3) stable canonical titles for every segment.
 
-**Output Format**
-```json
+Input:
+You will be given:
+1. A list of segment descriptions that already summarize the video segment by segment.
+2. Segment identifiers that must be preserved when returning segment titles.
+
+Guidelines:
+1) Use the segment descriptions as the only source of truth. Do not invent unsupported details.
+2) The global title should capture the main theme, event, or narrative arc of the full video.
+3) The abstract should summarize the full video coherently, avoiding redundancy while preserving the overall flow.
+4) Each segment title should be stable, descriptive, and useful for navigation.
+5) Segment titles should stay consistent with the full-video structure rather than sounding like clickbait or isolated highlights.
+6) Use neutral, objective language appropriate for descriptive metadata.
+
+Output format:
+Return ONLY a strict JSON object with exactly these keys:
 {
   "title": "<string>",
   "abstract": "<string>",
@@ -242,12 +237,8 @@ based solely on the structured segment descriptions.
     }
   ]
 }
-```
-
-Do not include any additional text or markdown formatting.
-""",
-
-"USER": """
+""".strip(),
+    "USER": r"""
 Given the following video segments description:
 
 **video segments description**
@@ -255,61 +246,6 @@ Given the following video segments description:
 {segments_description}
 ```
 
-Now, generate the video title, abstract, and segment titles.
-"""
-}
-
-
-TASK_DERIVATION_PROMPT = {
-"SYSTEM": """
-You are a task-aware video atlas derivation planner.
-
-You will receive:
-- a task description
-- a canonical video atlas overview
-- a list of canonical segments with titles, times, summaries, and detailed descriptions
-
-Your job is to derive a task-aware view of the video by deciding which canonical segments should be kept for the task, what order they should appear in, and how they should be retitled or resummarized for the task.
-
-Hard rules:
-- Output strict JSON only.
-- Use only the provided canonical atlas information. Do not invent events.
-- First version supports only `keep` or `drop` actions.
-- If a segment is kept, set a positive order starting from 1.
-- If a segment is dropped, set order to 0.
-- Preserve source provenance via the provided source segment identifiers.
-- Prefer concise, task-specific titles and summaries for kept segments.
-
-Output schema:
-{
-  "task_title": "<short task-aware title>",
-  "task_abstract": "<short paragraph describing the derived view>",
-  "selection_strategy": "<one short paragraph>",
-  "derived_segments": [
-    {
-      "source_segment_id": "<seg id>",
-      "source_folder": "<source folder name>",
-      "relevance_score": 0.0,
-      "action": "keep",
-      "derived_title": "<task-aware title>",
-      "derived_summary": "<task-aware summary>",
-      "order": 1,
-      "rationale": "<why it matters for the task>"
-    }
-  ]
-}
+Now generate the global video title, abstract, and segment titles.
 """,
-
-"USER": """
-Task description:
-{task_description}
-
-Canonical atlas overview:
-{root_readme}
-
-Canonical segments:
-{segments_description}
-
-Now output the derivation JSON.
-"""
 }

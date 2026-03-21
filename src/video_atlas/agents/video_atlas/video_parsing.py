@@ -4,7 +4,7 @@ import concurrent.futures
 import json
 import time
 
-from ...prompts import BOUNDARY_DETECTION_PROMPT, CONTEXT_GENERATION_PROMPT
+from ...prompts import BOUNDARY_DETECTION_PROMPT, CAPTION_GENERATION_PROMPT
 from ...schemas import ALLOWED_EVIDENCE
 from ...schemas import CandidateBoundary, CaptionedSegment, FinalizedSegment
 from ...utils import get_subtitle_in_segment
@@ -100,9 +100,6 @@ class VideoParsingMixin:
         genre_top = sorted(genre_distribution.items(), key=lambda item: item[1], reverse=True)
         return ", ".join([f"{key}:{value:.2f}" for key, value in genre_top])
 
-    def _slots_weight_str(self, slots_weight: dict[str, float]) -> str:
-        return ", ".join([f"{slot}:{slots_weight[slot]:.2f}" for slot in sorted(slots_weight.keys())])
-
     def _generate_local_caption(
         self,
         video_path: str,
@@ -120,16 +117,15 @@ class VideoParsingMixin:
             else:
                 subtitles_str_in_seg = ""
 
-            user_prompt = CONTEXT_GENERATION_PROMPT["USER"].format(
+            user_prompt = CAPTION_GENERATION_PROMPT["USER"].format(
                 genre_str=self._genre_distribution_str(execution_plan.genre_distribution),
                 segmentation_profile=execution_plan.segmentation_specification.profile_name,
                 signal_priority=execution_plan.segmentation_specification.profile.signal_priority,
                 caption_policy=caption_spec.profile.caption_policy,
-                slots_weight=self._slots_weight_str(caption_spec.profile.slots_weight),
                 subtitles=subtitles_str_in_seg,
             )
             output = self._generate_single_w_video(
-                system_prompt=CONTEXT_GENERATION_PROMPT["SYSTEM"],
+                system_prompt=CAPTION_GENERATION_PROMPT["SYSTEM"],
                 user_prompt=user_prompt,
                 video_path=video_path,
                 start_time=segment.start_time,
@@ -140,7 +136,7 @@ class VideoParsingMixin:
 
             context = self.parse_response(output["text"])
             summary = context.get("summary") or f"No summary for segment {segment.start_time} to {segment.end_time}"
-            detail = context.get("final_caption") or f"No detail description for segment {segment.start_time} to {segment.end_time}"
+            detail = context.get("caption") or f"No detail description for segment {segment.start_time} to {segment.end_time}"
 
             return CaptionedSegment(
                 seg_id=f"seg_{seg_id:04d}",

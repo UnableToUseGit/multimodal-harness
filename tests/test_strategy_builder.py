@@ -31,7 +31,7 @@ class StrategyBuilderTest(unittest.TestCase):
         self.assertEqual(plan.caption_specification.frame_sampling_profile.max_resolution, 720)
         self.assertEqual(plan.chunk_size_sec, 420)
         self.assertEqual(plan.chunk_overlap_sec, 24)
-        self.assertGreater(plan.caption_specification.profile.slots_weight["core_events"], 0.0)
+        self.assertTrue(plan.caption_specification.profile.caption_policy)
         self.assertEqual(plan.segmentation_specification.profile.target_segment_length_sec, (90, 240))
 
     def test_construct_execution_plan_falls_back_to_generic_profile(self) -> None:

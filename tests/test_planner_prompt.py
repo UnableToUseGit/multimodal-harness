@@ -23,6 +23,41 @@ class PlannerPromptTest(unittest.TestCase):
         self.assertIn("Video category:", BOUNDARY_DETECTION_PROMPT["USER"])
         self.assertIn("{last_detection_point}", BOUNDARY_DETECTION_PROMPT["USER"])
 
+    def test_caption_generation_prompt_uses_summary_caption_confidence_contract(self) -> None:
+        from video_atlas.prompts import CAPTION_GENERATION_PROMPT
+
+        system_prompt = CAPTION_GENERATION_PROMPT["SYSTEM"]
+
+        self.assertIn("Role:", system_prompt)
+        self.assertIn("Goal:", system_prompt)
+        self.assertIn("Input:", system_prompt)
+        self.assertIn("Guidelines:", system_prompt)
+        self.assertIn("Output format:", system_prompt)
+        self.assertIn('"summary": "<1 sentence summary>"', system_prompt)
+        self.assertIn('"caption": "<4-8 sentence paragraph>"', system_prompt)
+        self.assertNotIn('"slots"', system_prompt)
+        self.assertNotIn("final_caption", system_prompt)
+        self.assertNotIn("slots_weight", system_prompt)
+        self.assertNotIn("follow strictly", system_prompt.lower())
+        self.assertNotIn("hard rules", system_prompt.lower())
+
+    def test_video_global_prompt_uses_structured_role_goal_style(self) -> None:
+        from video_atlas.prompts import VIDEO_GLOBAL_PROMPT
+
+        system_prompt = VIDEO_GLOBAL_PROMPT["SYSTEM"]
+        self.assertIn("Role:", system_prompt)
+        self.assertIn("Goal:", system_prompt)
+        self.assertIn("Input:", system_prompt)
+        self.assertIn("Guidelines:", system_prompt)
+        self.assertIn("Output format:", system_prompt)
+        self.assertIn('"segment_titles"', system_prompt)
+        self.assertNotIn("hard rules", system_prompt.lower())
+
+    def test_task_derivation_prompt_remains_exported(self) -> None:
+        from video_atlas.prompts import TASK_DERIVATION_PROMPT
+
+        self.assertIn("task-aware", TASK_DERIVATION_PROMPT["SYSTEM"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()

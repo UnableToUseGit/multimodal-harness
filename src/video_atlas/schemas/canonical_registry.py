@@ -37,15 +37,6 @@ ALLOWED_EVIDENCE = {
 }
 
 ALLOWED_SIGNAL_PRIORITIES = {"visual", "language", "balanced"}
-DESCRIPTION_SLOTS = (
-    "cast_speaker",
-    "setting",
-    "core_events",
-    "topic_claims",
-    "outcome_progress",
-    "notable_cues",
-)
-
 SAMPLING_PROFILE_DESCRIPTIONS: dict[str, str] = {
     "language_lean": "Use when language content is sufficient and visual detail can be sampled sparsely for cost efficiency.",
     "balanced": "Use when both visuals and language matter and a medium-cost setting is appropriate.",
@@ -138,14 +129,6 @@ SAMPLING_PROFILE_CONFIGS: dict[str, FrameSamplingProfile] = {
 
 CAPTION_PROFILES: dict[str, CaptionProfile] = {
     "esports_match_broadcast": CaptionProfile(
-        slots_weight={
-            "cast_speaker": 0.10,
-            "setting": 0.08,
-            "core_events": 0.34,
-            "topic_claims": 0.08,
-            "outcome_progress": 0.30,
-            "notable_cues": 0.10,
-        },
         caption_policy=(
             "Describe each segment as a stable match-phase summary. Prioritize objective setups, teamfights, "
             "replays, map control, and momentum shifts over fine-grained play-by-play."
@@ -157,14 +140,6 @@ CAPTION_PROFILES: dict[str, CaptionProfile] = {
         ),
     ),
     "podcast_topic_conversation": CaptionProfile(
-        slots_weight={
-            "cast_speaker": 0.18,
-            "setting": 0.04,
-            "core_events": 0.08,
-            "topic_claims": 0.44,
-            "outcome_progress": 0.08,
-            "notable_cues": 0.18,
-        },
         caption_policy=(
             "Summarize the main topic, claims, and speaker positions. Prefer topic-level synthesis over turn-by-turn "
             "recap, and only mention delivery cues when they materially shape the exchange."
@@ -175,14 +150,6 @@ CAPTION_PROFILES: dict[str, CaptionProfile] = {
         ),
     ),
     "lecture_slide_driven": CaptionProfile(
-        slots_weight={
-            "cast_speaker": 0.08,
-            "setting": 0.06,
-            "core_events": 0.14,
-            "topic_claims": 0.42,
-            "outcome_progress": 0.20,
-            "notable_cues": 0.10,
-        },
         caption_policy=(
             "Summarize each concept block clearly. Emphasize the section topic, explanatory claims, and progression "
             "through the lecture rather than visual minutiae or sentence-level narration."
@@ -193,17 +160,9 @@ CAPTION_PROFILES: dict[str, CaptionProfile] = {
         ),
     ),
     DEFAULT_CAPTION_PROFILE: CaptionProfile(
-        slots_weight={
-            "cast_speaker": 0.18,
-            "setting": 0.12,
-            "core_events": 0.22,
-            "topic_claims": 0.22,
-            "outcome_progress": 0.18,
-            "notable_cues": 0.08,
-        },
         caption_policy=(
-            "Use a stable slot-based description. Prioritize who, where, what, and the main topic or key events. "
-            "Produce concise segment-level summaries rather than frame-by-frame narration."
+            "Use a stable segment-level description. Prioritize who, where, what, and the main topic or key events. "
+            "Produce concise segment summaries rather than frame-by-frame narration."
         ),
         title_policy=(
             "Prefer neutral descriptive navigation titles that name the segment's dominant phase, topic, or event "

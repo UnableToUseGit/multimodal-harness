@@ -26,7 +26,6 @@ class SegmentationProfile:
 
 @dataclass(frozen=True)
 class CaptionProfile:
-    slots_weight: dict[str, float]
     caption_policy: str
     title_policy: str
 

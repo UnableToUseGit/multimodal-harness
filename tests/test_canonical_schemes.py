@@ -23,7 +23,7 @@ class CanonicalSchemesTest(unittest.TestCase):
             plan.caption_specification.profile,
             CAPTION_PROFILES[DEFAULT_CAPTION_PROFILE],
         )
-        self.assertGreater(plan.caption_specification.profile.slots_weight["core_events"], 0.0)
+        self.assertTrue(plan.caption_specification.profile.caption_policy)
         self.assertEqual(DEFAULT_SEGMENTATION_PROFILE, "generic_longform_continuous")
         self.assertEqual(plan.chunk_size_sec, 600)
         self.assertEqual(plan.chunk_overlap_sec, 20)
