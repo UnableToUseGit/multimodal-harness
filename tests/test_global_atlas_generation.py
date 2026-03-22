@@ -1,6 +1,6 @@
 import unittest
 
-from video_atlas.agents.video_atlas.atlas_assembly import AtlasAssemblyMixin
+from video_atlas.agents.canonical_atlas.atlas_assembly import AtlasAssemblyMixin
 
 
 class _GlobalAtlasHarness(AtlasAssemblyMixin):

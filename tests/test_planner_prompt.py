@@ -53,11 +53,5 @@ class PlannerPromptTest(unittest.TestCase):
         self.assertIn('"segment_titles"', system_prompt)
         self.assertNotIn("hard rules", system_prompt.lower())
 
-    def test_task_derivation_prompt_remains_exported(self) -> None:
-        from video_atlas.prompts import TASK_DERIVATION_PROMPT
-
-        self.assertIn("task-aware", TASK_DERIVATION_PROMPT["SYSTEM"].lower())
-
-
 if __name__ == "__main__":
     unittest.main()

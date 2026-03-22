@@ -162,7 +162,7 @@ Use a separate branch per task to reduce conflicts and make validation easier.
 PRs should include:
 
 - a short summary of behavior changes
-- affected paths, such as `src/video_atlas/agents/canonical_video_atlas_agent.py`
+- affected paths, such as `src/video_atlas/agents/canonical_atlas_agent.py`
 - validation performed
 - sample input/output notes if video processing behavior changed
 

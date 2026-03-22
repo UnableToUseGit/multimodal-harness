@@ -25,7 +25,7 @@ def main() -> int:
     config = load_canonical_pipeline_config(args.config)
     workspace = LocalWorkspace(
         root_path=Path(args.output_workspace),
-        name="canonical_video_atlas_workspace",
+        name="canonical_atlas_workspace",
         description="Canonical content-aware VideoAtlas workspace",
     )
     planner = build_generator(config.planner)

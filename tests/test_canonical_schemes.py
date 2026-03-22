@@ -2,6 +2,28 @@ import unittest
 
 
 class CanonicalSchemesTest(unittest.TestCase):
+    def test_atlas_domain_models_are_available_from_schemas(self) -> None:
+        from video_atlas.schemas import AtlasSegment, CanonicalAtlas
+
+        segment = AtlasSegment(
+            segment_id="seg_0001",
+            title="Opening",
+            start_time=0.0,
+            end_time=10.0,
+            summary="Setup",
+            caption="Opening caption",
+            folder_name="seg0001-opening",
+        )
+        atlas = CanonicalAtlas(
+            title="Atlas",
+            abstract="Overview",
+            segments=[segment],
+            root_path="/tmp/example",
+        )
+
+        self.assertEqual(atlas.segments[0].segment_id, "seg_0001")
+        self.assertEqual(atlas.segments[0].title, "Opening")
+
     def test_canonical_execution_plan_is_available_from_schemas(self) -> None:
         from video_atlas.schemas.canonical_registry import (
             CAPTION_PROFILES,
@@ -9,7 +31,7 @@ class CanonicalSchemesTest(unittest.TestCase):
             DEFAULT_SEGMENTATION_PROFILE,
             SEGMENTATION_PROFILES,
         )
-        from video_atlas.schemas.canonical_video_atlas import CanonicalExecutionPlan
+        from video_atlas.schemas.canonical_atlas import CanonicalExecutionPlan
 
         plan = CanonicalExecutionPlan()
 
@@ -28,8 +50,8 @@ class CanonicalSchemesTest(unittest.TestCase):
         self.assertEqual(plan.chunk_size_sec, 600)
         self.assertEqual(plan.chunk_overlap_sec, 20)
 
-    def test_canonical_video_atlas_module_stays_dataclass_focused(self) -> None:
-        import video_atlas.schemas.canonical_video_atlas as module
+    def test_canonical_atlas_module_stays_dataclass_focused(self) -> None:
+        import video_atlas.schemas.canonical_atlas as module
 
         self.assertFalse(hasattr(module, "SEGMENTATION_PROFILES"))
         self.assertFalse(hasattr(module, "CAPTION_PROFILES"))

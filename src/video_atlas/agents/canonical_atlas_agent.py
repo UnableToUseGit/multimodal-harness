@@ -6,17 +6,17 @@ from ..generators.base import BaseGenerator
 from ..transcription.base import BaseTranscriber
 from ..workspaces.base import BaseWorkspace
 from .base_agent import BaseAtlasAgent
-from .video_atlas.atlas_assembly import AtlasAssemblyMixin
-from .video_atlas.message_generation import MessageGenerationMixin
-from .video_atlas.execution_plan_builder import ExecutionPlanBuilderMixin
-from .video_atlas.plan import PlanMixin
-from .video_atlas.pipeline import PipelineMixin
-from .video_atlas.response_parsing import ResponseParsingMixin
-from .video_atlas.video_parsing import VideoParsingMixin
-from .video_atlas.workspace_io import WorkspaceIOMixin
+from .canonical_atlas.atlas_assembly import AtlasAssemblyMixin
+from .canonical_atlas.message_generation import MessageGenerationMixin
+from .canonical_atlas.execution_plan_builder import ExecutionPlanBuilderMixin
+from .canonical_atlas.plan import PlanMixin
+from .canonical_atlas.pipeline import PipelineMixin
+from .canonical_atlas.response_parsing import ResponseParsingMixin
+from .canonical_atlas.video_parsing import VideoParsingMixin
+from .canonical_atlas.workspace_io import WorkspaceIOMixin
 
 
-class CanonicalVideoAtlasAgent(
+class CanonicalAtlasAgent(
     PipelineMixin,
     AtlasAssemblyMixin,
     VideoParsingMixin,
@@ -28,9 +28,9 @@ class CanonicalVideoAtlasAgent(
     BaseAtlasAgent,
 ):
     """
-    CanonicalVideoAtlasAgent - Canonical Video Atlas Agent
+    CanonicalAtlasAgent - Canonical Atlas Agent
 
-    Handles video planning, parsing, and assembly into a canonical structured video atlas.
+    Handles video planning, parsing, and assembly into a canonical structured atlas.
 
     Architecture:
     - workspace: Executes Linux commands and manages local workspace files
@@ -46,12 +46,12 @@ class CanonicalVideoAtlasAgent(
         self,
         planner: BaseGenerator,
         segmentor: BaseGenerator,
-        captioner: Optional[BaseGenerator] = None,
+        captioner: BaseGenerator,
+        workspace: Optional[BaseWorkspace],
         transcriber: Optional[BaseTranscriber] = None,
         generate_subtitles_if_missing: bool = True,
         chunk_size_sec: int = 600,
         chunk_overlap_sec: int = 20,
-        workspace: Optional[BaseWorkspace] = None,
         caption_with_subtitles: bool = True,
     ):
         super().__init__(generator=planner, workspace=workspace)
@@ -63,6 +63,3 @@ class CanonicalVideoAtlasAgent(
         self.chunk_size_sec = chunk_size_sec
         self.chunk_overlap_sec = chunk_overlap_sec
         self.caption_with_subtitles = caption_with_subtitles
-
-
-VideoAtlasAgent = CanonicalVideoAtlasAgent

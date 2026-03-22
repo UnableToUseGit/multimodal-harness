@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -105,3 +106,33 @@ class CaptionedSegment:
     detail: str
     subtitles_text: str = ""
     token_usage: int = 0
+
+
+@dataclass
+class AtlasSegment:
+    segment_id: str
+    title: str
+    start_time: float
+    end_time: float
+    summary: str
+    caption: str
+    folder_name: str
+    readme_path: Path | None = None
+    clip_path: Path | None = None
+    subtitles_path: Path | None = None
+
+    @property
+    def duration(self) -> float:
+        return self.end_time - self.start_time
+
+
+@dataclass
+class CanonicalAtlas:
+    title: str
+    abstract: str
+    segments: list[AtlasSegment]
+    root_path: Path
+    readme_text: str = ""
+    source_video_path: Path | None = None
+    normalized_audio_path: Path | None = None
+    execution_plan_path: Path | None = None

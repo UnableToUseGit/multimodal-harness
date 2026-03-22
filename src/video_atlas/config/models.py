@@ -48,17 +48,6 @@ class CanonicalPipelineConfig:
     runtime: CanonicalRuntimeConfig = field(default_factory=CanonicalRuntimeConfig)
 
 
-@dataclass
-class TaskDerivationRuntimeConfig:
-    verbose: bool = False
-
-
-@dataclass
-class TaskDerivationConfig:
-    generator: ModelRuntimeConfig
-    runtime: TaskDerivationRuntimeConfig = field(default_factory=TaskDerivationRuntimeConfig)
-
-
 def _read_json(path: str | Path) -> dict[str, Any]:
     with open(path, "r", encoding="utf-8") as file:
         return json.load(file)
@@ -72,12 +61,4 @@ def load_canonical_pipeline_config(path: str | Path) -> CanonicalPipelineConfig:
         captioner=ModelRuntimeConfig(**raw["captioner"]) if raw.get("captioner") else None,
         transcriber=TranscriberRuntimeConfig(**raw.get("transcriber", {})),
         runtime=CanonicalRuntimeConfig(**raw.get("runtime", {})),
-    )
-
-
-def load_task_derivation_config(path: str | Path) -> TaskDerivationConfig:
-    raw = _read_json(path)
-    return TaskDerivationConfig(
-        generator=ModelRuntimeConfig(**raw["generator"]),
-        runtime=TaskDerivationRuntimeConfig(**raw.get("runtime", {})),
     )

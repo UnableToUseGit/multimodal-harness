@@ -7,9 +7,7 @@ from importlib import import_module
 
 _EXPORT_MAP = {
     "BaseAtlasAgent": "video_atlas.agents.base_agent",
-    "CanonicalVideoAtlasAgent": "video_atlas.agents.canonical_video_atlas_agent",
-    "TaskDerivationAgent": "video_atlas.agents.task_derivation_agent",
-    "VideoAtlasAgent": "video_atlas.agents.video_atlas_agent",
+    "CanonicalAtlasAgent": "video_atlas.agents.canonical_atlas_agent",
 }
 
 __all__ = list(_EXPORT_MAP.keys())

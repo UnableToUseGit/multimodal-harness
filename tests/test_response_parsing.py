@@ -1,6 +1,6 @@
 import unittest
 
-from video_atlas.agents.video_atlas.response_parsing import ResponseParsingMixin
+from video_atlas.agents.canonical_atlas.response_parsing import ResponseParsingMixin
 
 
 class _Parser(ResponseParsingMixin):

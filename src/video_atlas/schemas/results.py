@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .canonical_video_atlas import CanonicalExecutionPlan, SamplingConfig
+from .canonical_atlas import CanonicalExecutionPlan, SamplingConfig
 
 
 @dataclass

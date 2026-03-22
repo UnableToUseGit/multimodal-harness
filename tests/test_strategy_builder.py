@@ -1,6 +1,6 @@
 import unittest
 
-from video_atlas.agents.video_atlas.execution_plan_builder import ExecutionPlanBuilderMixin
+from video_atlas.agents.canonical_atlas.execution_plan_builder import ExecutionPlanBuilderMixin
 
 
 class _Builder(ExecutionPlanBuilderMixin):

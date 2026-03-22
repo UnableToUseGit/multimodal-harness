@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .canonical_video_atlas import CaptionProfile, FrameSamplingProfile, SegmentationProfile
+from .canonical_atlas import CaptionProfile, FrameSamplingProfile, SegmentationProfile
 
 
 DEFAULT_SEGMENTATION_PROFILE = "generic_longform_continuous"

@@ -35,7 +35,7 @@ class BaseAtlasAgent(ABC):
     def __init__(
         self,
         generator: Any,
-        workspace: Optional[Any] = None,
+        workspace: Optional[Any],
     ):
         self.generator = generator
         self.workspace = workspace

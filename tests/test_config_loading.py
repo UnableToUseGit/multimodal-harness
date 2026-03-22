@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from video_atlas.config import load_canonical_pipeline_config, load_task_derivation_config
+from video_atlas.config import load_canonical_pipeline_config
 
 
 class ConfigLoadingTest(unittest.TestCase):
@@ -33,21 +33,6 @@ class ConfigLoadingTest(unittest.TestCase):
         self.assertEqual(config.runtime.chunk_size_sec, 420)
         self.assertEqual(config.runtime.chunk_overlap_sec, 24)
         self.assertEqual(config.planner.extra_body, {"chat_template_kwargs": {"enable_thinking": True}})
-
-    def test_load_task_derivation_config(self) -> None:
-        payload = {
-            "generator": {"provider": "openai_compatible", "model_name": "derive-model", "max_tokens": 3200},
-            "runtime": {"verbose": True}
-        }
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "task.json"
-            path.write_text(json.dumps(payload), encoding="utf-8")
-            config = load_task_derivation_config(path)
-
-        self.assertEqual(config.generator.model_name, "derive-model")
-        self.assertEqual(config.generator.max_tokens, 3200)
-        self.assertTrue(config.runtime.verbose)
-
 
 if __name__ == "__main__":
     unittest.main()

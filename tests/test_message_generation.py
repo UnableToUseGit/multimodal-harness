@@ -19,7 +19,7 @@ class MessageGenerationTest(unittest.TestCase):
         fake_utils.prepare_video_input = lambda *args, **kwargs: (["frame1", "frame2"], [0.1, 0.2])
 
         with patch.dict(sys.modules, {"video_atlas.utils": fake_utils}):
-            module = importlib.import_module("video_atlas.agents.video_atlas.message_generation")
+            module = importlib.import_module("video_atlas.agents.canonical_atlas.message_generation")
             importlib.reload(module)
 
             class _MessageGenerationHarness(module.MessageGenerationMixin):

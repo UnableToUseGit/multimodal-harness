@@ -8,13 +8,10 @@ _EXPORT_MAP = {
     "CanonicalPipelineConfig": "video_atlas.config.models",
     "CanonicalRuntimeConfig": "video_atlas.config.models",
     "ModelRuntimeConfig": "video_atlas.config.models",
-    "TaskDerivationConfig": "video_atlas.config.models",
-    "TaskDerivationRuntimeConfig": "video_atlas.config.models",
     "TranscriberRuntimeConfig": "video_atlas.config.models",
     "build_generator": "video_atlas.config.factories",
     "build_transcriber": "video_atlas.config.factories",
     "load_canonical_pipeline_config": "video_atlas.config.models",
-    "load_task_derivation_config": "video_atlas.config.models",
 }
 
 __all__ = list(_EXPORT_MAP.keys())

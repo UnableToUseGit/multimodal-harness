@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from video_atlas.agents.video_atlas.pipeline import PipelineMixin
+from video_atlas.agents.canonical_atlas.pipeline import PipelineMixin
 from video_atlas.workspaces.base import get_logger
 
 
@@ -41,7 +41,7 @@ class VideoAtlasSubtitleResolutionTest(unittest.TestCase):
                 Path(subtitle_path).write_text("generated", encoding="utf-8")
                 return Path(subtitle_path)
 
-            with patch("video_atlas.agents.video_atlas.pipeline.generate_subtitles_for_video", side_effect=_fake_generate):
+            with patch("video_atlas.agents.canonical_atlas.pipeline.generate_subtitles_for_video", side_effect=_fake_generate):
                 resolved = pipeline._resolve_subtitle_path(root, "video.mp4", verbose=True)
 
             self.assertEqual(resolved, str(root / "subtitles.srt"))

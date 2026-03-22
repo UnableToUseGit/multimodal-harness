@@ -4,8 +4,8 @@ import time
 import unittest
 import json
 
-from video_atlas.agents.video_atlas.video_parsing import VideoParsingMixin
-from video_atlas.schemas.canonical_video_atlas import (
+from video_atlas.agents.canonical_atlas.video_parsing import VideoParsingMixin
+from video_atlas.schemas.canonical_atlas import (
     CandidateBoundary,
     CaptionedSegment,
     CanonicalExecutionPlan,
