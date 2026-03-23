@@ -29,19 +29,28 @@ class MessageGenerationTest(unittest.TestCase):
             harness = _MessageGenerationHarness()
             sampling = FrameSamplingProfile(fps=0.5, max_resolution=360)
 
-            with patch.object(module, "get_frame_indices", return_value=[1, 2]) as mock_get_frame_indices:
-                with patch.object(module, "prepare_video_input", return_value=(["frame1", "frame2"], [0.1, 0.2])) as mock_prepare:
-                    harness._generate_single_w_video(
-                        system_prompt="system",
-                        user_prompt="user",
-                        video_path="video.mp4",
-                        start_time=0,
-                        end_time=10,
-                        video_sampling=sampling,
-                    )
+            with patch.object(module, "build_video_messages_from_path") as mock_build_from_path:
+                mock_build_from_path.return_value = [
+                    {"role": "system", "content": "system"},
+                    {"role": "user", "content": "user"},
+                ]
+                harness._generate_single_w_video(
+                    system_prompt="system",
+                    user_prompt="user",
+                    video_path="video.mp4",
+                    start_time=0,
+                    end_time=10,
+                    video_sampling=sampling,
+                )
 
-            mock_get_frame_indices.assert_called_once_with("video.mp4", 0, 10, fps=0.5)
-            mock_prepare.assert_called_once_with("video.mp4", [1, 2], 360, max_workers=4)
+            mock_build_from_path.assert_called_once_with(
+                system_prompt="system",
+                user_prompt="user",
+                video_path="video.mp4",
+                start_time=0,
+                end_time=10,
+                video_sampling=sampling,
+            )
 
 
 if __name__ == "__main__":

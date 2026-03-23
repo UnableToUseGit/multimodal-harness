@@ -53,5 +53,26 @@ class PlannerPromptTest(unittest.TestCase):
         self.assertIn('"segment_titles"', system_prompt)
         self.assertNotIn("hard rules", system_prompt.lower())
 
+    def test_derived_prompts_are_exported_with_expected_contracts(self) -> None:
+        from video_atlas.prompts import (
+            DERIVED_CANDIDATE_PROMPT,
+            DERIVED_CAPTION_PROMPT,
+            DERIVED_GROUNDING_PROMPT,
+        )
+
+        self.assertIn('"candidates"', DERIVED_CANDIDATE_PROMPT["USER"])
+        self.assertIn('"segment_id"', DERIVED_CANDIDATE_PROMPT["USER"])
+        self.assertIn('"intent"', DERIVED_CANDIDATE_PROMPT["USER"])
+        self.assertIn('"grounding_instruction"', DERIVED_CANDIDATE_PROMPT["USER"])
+
+        self.assertIn('"start_time"', DERIVED_GROUNDING_PROMPT["USER"])
+        self.assertIn('"end_time"', DERIVED_GROUNDING_PROMPT["USER"])
+        self.assertIn("Source Segment Range", DERIVED_GROUNDING_PROMPT["USER"])
+
+        self.assertIn('"title"', DERIVED_CAPTION_PROMPT["USER"])
+        self.assertIn('"summary"', DERIVED_CAPTION_PROMPT["USER"])
+        self.assertIn('"caption"', DERIVED_CAPTION_PROMPT["USER"])
+        self.assertIn("Task Request", DERIVED_CAPTION_PROMPT["USER"])
+
 if __name__ == "__main__":
     unittest.main()

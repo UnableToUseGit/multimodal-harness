@@ -45,13 +45,13 @@ There is currently no web/API layer and no bundled example assets.
 
 ### Environment Setup
 
-- `conda activate videoatlas`: enter the dedicated development environment.
+- `conda activate /share/project/minghao/Envs/videoatlas`: enter the dedicated development environment.
 - Required Python packages should be installed manually inside this environment.
 - `ffmpeg` is already installed and can be used directly.
 
 Recommended order for a fresh shell:
 
-1. `conda activate videoatlas`
+1. `conda activate /share/project/minghao/Envs/videoatlas`
 2. `proxy_status`
 3. run `proxy_on` if external network access is needed
 4. run `set_mirror` before package or model downloads

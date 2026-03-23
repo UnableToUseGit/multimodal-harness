@@ -3,16 +3,22 @@ from __future__ import annotations
 from typing import Optional
 
 from ..generators.base import BaseGenerator
+from ..multimodal import build_video_messages_from_path
+from ..parsing import parse_json_response
 from ..workspaces.base import BaseWorkspace
 from .base_agent import BaseAtlasAgent
-from .canonical_atlas.response_parsing import ResponseParsingMixin
 from .canonical_atlas.workspace_io import WorkspaceIOMixin
+from .task_derivation.aggregation import AggregationMixin
+from .task_derivation.candidate_generation import CandidateGenerationMixin
+from .task_derivation.derivation import DerivationMixin
 from .task_derivation.pipeline import DerivedPipelineMixin
 
 
 class DerivedAtlasAgent(
+    AggregationMixin,
+    DerivationMixin,
+    CandidateGenerationMixin,
     DerivedPipelineMixin,
-    ResponseParsingMixin,
     WorkspaceIOMixin,
     BaseAtlasAgent,
 ):
@@ -35,3 +41,22 @@ class DerivedAtlasAgent(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
+
+    def _build_video_messages_from_path(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        video_path: str,
+        start_time: float,
+        end_time: float,
+    ):
+        return build_video_messages_from_path(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            video_path=video_path,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+    def parse_response(self, generated_text: str) -> dict | list:
+        return parse_json_response(generated_text)

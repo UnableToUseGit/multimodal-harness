@@ -30,10 +30,42 @@ class _QueueGenerator:
 
 
 class _TestDerivedAtlasAgent(DerivedAtlasAgent):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.video_message_calls = []
+
     def _extract_clip(self, video_path: str, seg_start_time: float, seg_end_time: float, relative_output_path):
         target = self._workspace_root() / Path(relative_output_path)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(f"{seg_start_time:.1f}-{seg_end_time:.1f}".encode("utf-8"))
+
+    def _build_video_messages_from_path(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        video_path: str,
+        start_time: float,
+        end_time: float,
+    ):
+        self.video_message_calls.append(
+            {
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt,
+                "video_path": video_path,
+                "start_time": start_time,
+                "end_time": end_time,
+            }
+        )
+        return [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": f"video-range:{start_time:.1f}-{end_time:.1f}"},
+                    {"type": "text", "text": user_prompt},
+                ],
+            },
+        ]
 
 
 class DerivedPipelineTest(unittest.TestCase):
@@ -160,6 +192,12 @@ class DerivedPipelineTest(unittest.TestCase):
         self.assertEqual(clip_text, "5.0-15.0")
         self.assertEqual(result_info["derived_atlas_segment_count"], 1)
         self.assertEqual(result_info["derivation_source"]["derived_seg_0001"], "seg_0001")
+        self.assertEqual(len(agent.video_message_calls), 2)
+        self.assertEqual(agent.video_message_calls[0]["video_path"], "/tmp/canonical/video.mp4")
+        self.assertEqual(agent.video_message_calls[0]["start_time"], 0.0)
+        self.assertEqual(agent.video_message_calls[0]["end_time"], 30.0)
+        self.assertEqual(agent.video_message_calls[1]["start_time"], 5.0)
+        self.assertEqual(agent.video_message_calls[1]["end_time"], 15.0)
 
 
 if __name__ == "__main__":
