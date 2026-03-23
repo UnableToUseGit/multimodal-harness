@@ -1,2 +1,0 @@
-Reference placeholder for UI/design-system guidance.
-This repository currently has no frontend surface.

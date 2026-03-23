@@ -1,2 +1,0 @@
-Reference placeholder for uv workflow notes.
-If uv is adopted later, document install, lock, and run commands here.
