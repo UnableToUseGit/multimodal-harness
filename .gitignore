@@ -19,6 +19,7 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+.worktrees/
 
 # Local generated VideoAtlas workspace artifacts
 .agentignore/
