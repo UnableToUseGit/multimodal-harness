@@ -48,6 +48,20 @@ class CanonicalPipelineConfig:
     runtime: CanonicalRuntimeConfig = field(default_factory=CanonicalRuntimeConfig)
 
 
+@dataclass
+class DerivedRuntimeConfig:
+    verbose: bool = False
+    num_workers: int = 1
+
+
+@dataclass
+class DerivedPipelineConfig:
+    planner: ModelRuntimeConfig
+    segmentor: ModelRuntimeConfig
+    captioner: ModelRuntimeConfig
+    runtime: DerivedRuntimeConfig = field(default_factory=DerivedRuntimeConfig)
+
+
 def _read_json(path: str | Path) -> dict[str, Any]:
     with open(path, "r", encoding="utf-8") as file:
         return json.load(file)
@@ -61,4 +75,14 @@ def load_canonical_pipeline_config(path: str | Path) -> CanonicalPipelineConfig:
         captioner=ModelRuntimeConfig(**raw["captioner"]) if raw.get("captioner") else None,
         transcriber=TranscriberRuntimeConfig(**raw.get("transcriber", {})),
         runtime=CanonicalRuntimeConfig(**raw.get("runtime", {})),
+    )
+
+
+def load_derived_pipeline_config(path: str | Path) -> DerivedPipelineConfig:
+    raw = _read_json(path)
+    return DerivedPipelineConfig(
+        planner=ModelRuntimeConfig(**raw["planner"]),
+        segmentor=ModelRuntimeConfig(**raw["segmentor"]),
+        captioner=ModelRuntimeConfig(**raw["captioner"]),
+        runtime=DerivedRuntimeConfig(**raw.get("runtime", {})),
     )

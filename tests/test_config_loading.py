@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from video_atlas.config import load_canonical_pipeline_config
+from video_atlas.config import load_canonical_pipeline_config, load_derived_pipeline_config
 
 
 class ConfigLoadingTest(unittest.TestCase):
@@ -33,6 +33,27 @@ class ConfigLoadingTest(unittest.TestCase):
         self.assertEqual(config.runtime.chunk_size_sec, 420)
         self.assertEqual(config.runtime.chunk_overlap_sec, 24)
         self.assertEqual(config.planner.extra_body, {"chat_template_kwargs": {"enable_thinking": True}})
+
+    def test_load_derived_pipeline_config(self) -> None:
+        payload = {
+            "planner": {"provider": "openai_compatible", "model_name": "planner-model"},
+            "segmentor": {"provider": "openai_compatible", "model_name": "segmentor-model"},
+            "captioner": {"provider": "openai_compatible", "model_name": "caption-model"},
+            "runtime": {
+                "verbose": True,
+                "num_workers": 3,
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "derived.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            config = load_derived_pipeline_config(path)
+
+        self.assertEqual(config.planner.model_name, "planner-model")
+        self.assertEqual(config.segmentor.model_name, "segmentor-model")
+        self.assertEqual(config.captioner.model_name, "caption-model")
+        self.assertTrue(config.runtime.verbose)
+        self.assertEqual(config.runtime.num_workers, 3)
 
 if __name__ == "__main__":
     unittest.main()

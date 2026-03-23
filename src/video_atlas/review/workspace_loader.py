@@ -120,10 +120,10 @@ def _segment_from_directory(segment_dir: Path, kind: str) -> ReviewSegment | Non
     source_map_path = segment_dir / "SOURCE_MAP.json"
 
     if kind == "task":
-        segment_id = fields.get("TaskSegID", segment_dir.name)
+        segment_id = fields.get("DerivedSegID") or fields.get("TaskSegID") or segment_dir.name
         title = fields.get("Title", "")
         summary = fields.get("Summary", "")
-        detail = fields.get("Original Detail", "")
+        detail = fields.get("Detail Description") or fields.get("Original Detail", "")
     else:
         segment_id = fields.get("SegID", segment_dir.name)
         title = fields.get("Title", "")

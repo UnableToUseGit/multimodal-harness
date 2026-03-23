@@ -74,42 +74,47 @@ class ReviewWorkspaceLoaderTest(unittest.TestCase):
         self.assertEqual(workspace.segments[0].end_time, 212.0)
         self.assertEqual(workspace.segments[0].duration, 63.0)
 
-    def test_loads_task_workspace_source_map(self) -> None:
+    def test_loads_derived_workspace_source_map(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            (root / "README.md").write_text("# Task\n", encoding="utf-8")
+            (root / "README.md").write_text("# Derived\n", encoding="utf-8")
             (root / "TASK.md").write_text("task details", encoding="utf-8")
-            (root / "derivation.json").write_text(json.dumps({"task_title": "Highlights"}), encoding="utf-8")
-            segment_dir = root / "segments" / "task_seg_0001-highlight"
+            (root / "derivation.json").write_text(
+                json.dumps({"task_request": "Highlights", "derived_segment_count": 1}),
+                encoding="utf-8",
+            )
+            segment_dir = root / "segments" / "derived-seg-0001-highlight"
             segment_dir.mkdir(parents=True)
             (segment_dir / "README.md").write_text(
                 "\n".join(
                     [
-                        "# Task Segment",
+                        "# Derived Segment",
                         "",
-                        "**TaskSegID**: task_seg_0001",
-                        "**SourceSegID**: seg0004",
+                        "**DerivedSegID**: derived_seg_0001",
+                        "**SourceSegID**: seg_0004",
                         "**Start Time**: 10.0",
                         "**End Time**: 22.0",
                         "**Duration**: 12.0",
                         "**Title**: Key moment",
                         "**Summary**: The important event.",
-                        "**Original Detail**: Source detail.",
+                        "**Detail Description**: Source detail.",
+                        "**Intent**: Show the highlight moment.",
                     ]
                 ),
                 encoding="utf-8",
             )
             (segment_dir / "SOURCE_MAP.json").write_text(
-                json.dumps({"source_segment_ids": ["seg0004"]}),
+                json.dumps({"source_segment_id": "seg_0004"}),
                 encoding="utf-8",
             )
 
             workspace = load_review_workspace(root, workspace_id="task")
 
         self.assertEqual(workspace.kind, "task")
-        self.assertEqual(workspace.derivation, {"task_title": "Highlights"})
-        self.assertEqual(workspace.segments[0].segment_id, "task_seg_0001")
-        self.assertEqual(workspace.segments[0].source_map, {"source_segment_ids": ["seg0004"]})
+        self.assertEqual(workspace.derivation, {"task_request": "Highlights", "derived_segment_count": 1})
+        self.assertEqual(workspace.segments[0].segment_id, "derived_seg_0001")
+        self.assertEqual(workspace.segments[0].detail, "Source detail.")
+        self.assertEqual(workspace.segments[0].source_map, {"source_segment_id": "seg_0004"})
 
 
 if __name__ == "__main__":

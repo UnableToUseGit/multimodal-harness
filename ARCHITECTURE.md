@@ -1,6 +1,6 @@
 # Architecture
 
-This repository centers on two related pipelines: `CanonicalVideoAtlasAgent` and `TaskDerivationAgent`.
+This repository centers on two related pipelines: `CanonicalAtlasAgent` and `DerivedAtlasAgent`.
 
 ## System Goal
 
@@ -26,7 +26,7 @@ When subtitle files are not provided, the system may also generate `subtitles.sr
 
 1. `LocalWorkspace` prepares and mutates output workspaces.
 2. `CanonicalVideoAtlasAgent` first plans execution from sampled probes, then parses the video into finalized segments plus local captions, then assembles the final atlas with global description, segment titles, and workspace artifacts.
-3. `TaskDerivationAgent` loads a canonical atlas, evaluates segment relevance for a task, and writes a derived task-aware workspace with source provenance.
+3. `DerivedAtlasAgent` loads a canonical atlas or a canonical workspace, evaluates segment relevance for a task, re-grounds selected segments into tighter clips, and writes a derived task-aware workspace with source provenance.
 4. The transcription flow can extract audio, run ASR, and write `subtitles.srt` when subtitle files are missing.
 5. Utility modules handle frame extraction, subtitle parsing, and video metadata.
 6. The review workbench can load canonical and task-derived workspaces and expose their clips, subtitles, captions, and source mappings in a browser for manual evaluation.
@@ -42,7 +42,7 @@ When subtitle files are not provided, the system may also generate `subtitles.sr
   - execution-plan construction resolves those planner outputs into a concrete `CanonicalExecutionPlan`
   - video parsing operates on chunked windows with overlap, returns candidate boundaries, stabilizes the timeline, and generates local captions
   - atlas assembly generates global description plus final segment titles and then writes the final workspace artifacts
-- `agents/task_derivation/`: internal pipeline stages for canonical atlas loading, task planning, and derived workspace writing
+- `agents/task_derivation/`: internal pipeline stages for canonical atlas loading, candidate generation, re-grounding, aggregation, and derived workspace writing
 - `config/`: runtime config schemas and factories for assembling multi-stage agents from config files
 - `transcription/`: audio extraction, ASR abstraction, and subtitle writing for missing-subtitle workflows
 - `review/`: local review app loading workspace artifacts for browser-based manual evaluation

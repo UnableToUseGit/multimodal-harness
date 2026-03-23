@@ -1,82 +1,133 @@
 # Data Model Specification
 
 ## Scope
-This document outlines the data schemas specific to the Derived Atlas Generation Pipeline.
 
-## Conventions
-- Schema names use PascalCase, e.g. `CanonicalExecutionPlan`
-- Field names use snake_case, e.g. `source_video_path`
-- Optional fields are marked explicitly
-- Enum values use lowercase strings unless otherwise stated
-- Timestamps use ISO 8601 strings
-- Paths are local workspace-relative paths unless otherwise noted
+This document defines the data schemas and workspace metadata used by the derived atlas generation pipeline.
 
 ## Schema Index
+
 - `DerivationPolicy`
 - `DerivationResultInfo`
 - `DerivedAtlas`
+- `CreateDerivedAtlasResult`
 
 ## `DerivationPolicy`
 
 ### Purpose
-This schema is the domain model of generated policy for derivation.
+
+Captures why and how a selected canonical segment should be derived for the task.
 
 ### Produced By
-- Derived Atlas Agent / **CandidateGeneration** stage
+
+- `DerivedAtlasAgent` / `CandidateGeneration`
 
 ### Consumed By
-- Derived Atlas Agent / **Derivation** stage
-- Derived Atlas Agent / **Aggregation** stage
+
+- `DerivedAtlasAgent` / `Derivation`
+- `DerivedAtlasAgent` / `Aggregation`
 
 ### Fields
+
 | Field | Type | Required | Description |
 |---|---|---:|---|
-| intent | str | yes | The high-level goal of the derivation (i.e., "what information should the derived segment provide").|
-| grounding_instruction | str | yes | a natural language description used for `segmentor` to grounding sub-clips aligh the intent. |
-
+| `intent` | `str` | yes | High-level statement of what information the derived segment should contribute to the task. |
+| `grounding_instruction` | `str` | yes | Natural-language instruction used by the grounding stage to refine the source segment into a tighter sub-clip. |
 
 ## `DerivationResultInfo`
 
 ### Purpose
-This schema conatins necessary information for derivation analysis and review.
+
+Stores derivation bookkeeping for review and debugging.
 
 ### Produced By
-- Derived Atlas Agent / **Derivation** stage
+
+- `DerivedAtlasAgent` / `Derivation`
 
 ### Consumed By
-- Derived Atlas Agent / **Aggregation** stage
+
+- `DerivedAtlasAgent` / `Aggregation`
+- review/debug tooling through `.agentignore/DERIVATION_RESULT.json`
 
 ### Fields
 
 | Field | Type | Required | Description |
 |---|---|---:|---|
-| derived_atlas_segment_count | int | yes | the count of derived AtlasSegments |
-| derivation_reason | dict[str, `DerivationPolicy`] | yes | record the derivation policy for each derived AtlasSegment |
-| derivation_source | dict[str, str] | yes | record the source AtlasSegment segment_id for each derived AtlasSegment |
+| `derived_atlas_segment_count` | `int` | yes | Number of derived atlas segments written to the workspace. |
+| `derivation_reason` | `dict[str, DerivationPolicy]` | yes | Maps each derived segment id to the policy used to derive it. |
+| `derivation_source` | `dict[str, str]` | yes | Maps each derived segment id to its source canonical segment id. |
 
 ### Field Notes
-- The key of `derivation_reason` and `derivation_source` is the segmen_id of derived AtlasSegment.
+
+- keys in both maps are derived segment ids such as `derived_seg_0001`
 
 ## `DerivedAtlas`
 
 ### Purpose
-This schema present the final format of derived atlas.
+
+Represents the final task-aware atlas assembled from the selected canonical source segments.
 
 ### Produced By
-- Derived Atlas Agent / **Aggregation** stage
 
-### Consumed By
-None
+- `DerivedAtlasAgent` / `Aggregation`
 
 ### Fields
+
 | Field | Type | Required | Description |
 |---|---|---:|---|
-| global_summary | str | yes | Provides aggregate statistics, including the total count of derived segments, their cumulative duration, and the average segment duration. |
-| detailed_breakdown | str | yes | Specifies the contribution of each derived AtlasSegment to the task. For every segment, it lists the specific information provided, along with its precise temporal boundaries (e.g., start/end timestamps in ISO 8601 strings). |
-| segments | list[`AtlasSegment`] | yes | a list of derived AtlasSegment |
-| root_path | Path | yes | the path of DerivedAtlas will be written in |
-| readme_text | str | yes | the final string will be written README.md |
-| source_canonical_atlas_path | Path | yes | the path of its source canonical atlas |
+| `global_summary` | `str` | yes | Code-generated aggregate summary containing derived segment count, total duration, and average duration. |
+| `detailed_breakdown` | `str` | yes | Stable human-readable breakdown of each derived segment, including intent and precise start/end times. |
+| `segments` | `list[AtlasSegment]` | yes | Derived atlas segments after re-grounding and re-captioning. |
+| `root_path` | `Path` | yes | Root path of the derived workspace. |
+| `readme_text` | `str` | yes | Final text written to the derived workspace `README.md`. |
+| `source_canonical_atlas_path` | `Path` | yes | Root path of the source canonical atlas workspace. |
 
-### Fields Notes
-None
+## `CreateDerivedAtlasResult`
+
+### Purpose
+
+Top-level result returned by the public `DerivedAtlasAgent.add(...)` workflow.
+
+### Fields
+
+| Field | Type | Required | Description |
+|---|---|---:|---|
+| `success` | `bool` | yes | Whether the workflow completed successfully. |
+| `task_request` | `str` | yes | Original task request passed to the derived workflow. |
+| `source_segment_count` | `int` | yes | Number of canonical segments considered as source material. |
+| `derived_segment_count` | `int` | yes | Number of derived segments written to the output workspace. |
+| `output_root_path` | `Path \| None` | no | Root path of the derived workspace. |
+
+## Workspace Metadata
+
+### Root Files
+
+| Path | Description |
+|---|---|
+| `README.md` | Human-readable overview of the derived atlas. |
+| `TASK.md` | Raw task request text. |
+| `derivation.json` | Review-facing metadata for the derived workspace. |
+| `.agentignore/DERIVATION_RESULT.json` | Detailed derivation bookkeeping. |
+
+### `derivation.json` Fields
+
+| Field | Type | Required | Description |
+|---|---|---:|---|
+| `task_request` | `str` | yes | Task used to derive the workspace. |
+| `global_summary` | `str` | yes | Aggregate summary copied from `DerivedAtlas`. |
+| `detailed_breakdown` | `str` | yes | Per-derived-segment breakdown copied from `DerivedAtlas`. |
+| `derived_segment_count` | `int` | yes | Count of derived segments. |
+| `source_canonical_atlas_path` | `str` | yes | String form of the source canonical atlas root path. |
+
+### Per-Segment README Fields
+
+Each derived segment `README.md` contains:
+
+- `DerivedSegID`
+- `SourceSegID`
+- `Start Time`
+- `End Time`
+- `Duration`
+- `Title`
+- `Summary`
+- `Detail Description`
+- `Intent`

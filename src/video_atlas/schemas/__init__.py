@@ -30,7 +30,8 @@ from .canonical_atlas import (
     SegmentationProfile,
     SegmentationSpecification,
 )
-from .results import CreateVideoAtlasResult
+from .derived_atlas import DerivationPolicy, DerivationResultInfo, DerivedAtlas
+from .results import CreateDerivedAtlasResult, CreateVideoAtlasResult
 from .workspace import VideoGlobal, VideoSeg
 
 __all__ = [
@@ -48,8 +49,12 @@ __all__ = [
     "CaptionProfile",
     "CaptionSpecification",
     "CreateVideoAtlasResult",
+    "CreateDerivedAtlasResult",
     "DEFAULT_CAPTION_PROFILE",
     "DEFAULT_SEGMENTATION_PROFILE",
+    "DerivedAtlas",
+    "DerivationPolicy",
+    "DerivationResultInfo",
     "FrameSamplingProfile",
     "FinalizedSegment",
     "SAMPLING_PROFILE_CONFIGS",
