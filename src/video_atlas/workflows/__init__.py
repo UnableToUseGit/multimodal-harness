@@ -6,9 +6,8 @@ from __future__ import annotations
 from importlib import import_module
 
 _EXPORT_MAP = {
-    "BaseAtlasAgent": "video_atlas.agents.base_agent",
-    "CanonicalAtlasAgent": "video_atlas.agents.canonical_atlas_agent",
-    "DerivedAtlasAgent": "video_atlas.agents.derived_atlas_agent",
+    "CanonicalAtlasWorkflow": "video_atlas.workflows.canonical_atlas_workflow",
+    "DerivedAtlasWorkflow": "video_atlas.workflows.derived_atlas_workflow",
 }
 
 __all__ = list(_EXPORT_MAP.keys())
@@ -17,7 +16,7 @@ __all__ = list(_EXPORT_MAP.keys())
 def __getattr__(name: str):
     module_name = _EXPORT_MAP.get(name)
     if module_name is None:
-        raise AttributeError(f"module 'video_atlas.agents' has no attribute {name!r}")
+        raise AttributeError(f"module 'video_atlas.workflows' has no attribute {name!r}")
 
     module = import_module(module_name)
     value = getattr(module, name)

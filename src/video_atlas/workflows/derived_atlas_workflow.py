@@ -1,34 +1,30 @@
 from __future__ import annotations
 
 from typing import Optional
+from pathlib import Path
 
 from ..generators.base import BaseGenerator
 from ..message_builder import build_video_messages_from_path
 from ..parsing import parse_json_response
-from ..workspaces.base import BaseWorkspace
-from .base_agent import BaseAtlasAgent
-from .task_derivation.aggregation import AggregationMixin
-from .task_derivation.candidate_generation import CandidateGenerationMixin
-from .task_derivation.derivation import DerivationMixin
-from .task_derivation.pipeline import DerivedPipelineMixin
+from .derived_atlas.aggregation import AggregationMixin
+from .derived_atlas.candidate_generation import CandidateGenerationMixin
+from .derived_atlas.derivation import DerivationMixin
+from .derived_atlas.pipeline import DerivedPipelineMixin
 
 
-class DerivedAtlasAgent(
+class DerivedAtlasWorkflow(
     AggregationMixin,
     DerivationMixin,
     CandidateGenerationMixin,
     DerivedPipelineMixin,
-    BaseAtlasAgent,
 ):
     def __init__(
         self,
         planner: BaseGenerator,
         segmentor: BaseGenerator,
         captioner: BaseGenerator,
-        workspace: Optional[BaseWorkspace],
         num_workers: int = 1,
     ):
-        super().__init__(generator=planner, workspace=workspace)
         self.planner = planner
         self.segmentor = segmentor
         self.captioner = captioner
@@ -44,7 +40,7 @@ class DerivedAtlasAgent(
         self,
         system_prompt: str,
         user_prompt: str,
-        video_path: str,
+        video_path: Path | str,
         start_time: float,
         end_time: float,
     ):

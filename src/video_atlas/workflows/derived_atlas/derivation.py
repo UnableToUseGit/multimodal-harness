@@ -86,19 +86,19 @@ class DerivationMixin:
     def _next_derived_segment_id(self, index: int) -> str:
         return f"derived_seg_{index:04d}"
 
-    def _derive_one_segment(self, item: tuple[int, AtlasSegment, DerivationPolicy], task_request: str, source_video_path: str) -> dict | None:
+    def _derive_one_segment(self, item: tuple[int, AtlasSegment, DerivationPolicy], task_request: str, video_path: Path) -> dict | None:
         index, segment, policy = item
         grounding_output = self.segmentor.generate_single(
             messages=self._build_video_messages_from_path(
                 system_prompt=DERIVED_GROUNDING_PROMPT["SYSTEM"],
                 user_prompt=self._grounding_prompt(segment, policy),
-                video_path=source_video_path,
+                video_path=video_path,
                 start_time=segment.start_time,
                 end_time=segment.end_time,
             )
         )
         grounded = self.parse_response(grounding_output["text"])
-        resolved = self._resolve_refined_times(segment, grounded if isinstance(grounded, dict) else {})
+        resolved = self._resolve_refined_times(segment, grounded if isinstance(grounded, dict) else {}) # TODO 明确起始时间
         if resolved is None:
             return None
         start_time, end_time = resolved
@@ -108,7 +108,7 @@ class DerivationMixin:
             messages=self._build_video_messages_from_path(
                 system_prompt=DERIVED_CAPTION_PROMPT["SYSTEM"],
                 user_prompt=self._caption_prompt(task_request, segment, policy, start_time, end_time, pruned_subtitles),
-                video_path=source_video_path,
+                video_path=video_path,
                 start_time=start_time,
                 end_time=end_time,
             )
@@ -134,7 +134,9 @@ class DerivationMixin:
                 end_time=end_time,
                 summary=summary,
                 caption=caption,
+                subtitles_test=None, # TODO
                 folder_name=folder_name,
+                
             ),
             "policy": policy,
             "source_segment_id": segment.segment_id,

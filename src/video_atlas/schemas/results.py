@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from pathlib import Path
-
-from .canonical_atlas import CanonicalExecutionPlan, SamplingConfig
-
+from dataclasses import dataclass
 
 @dataclass
 class CreateDerivedAtlasResult:

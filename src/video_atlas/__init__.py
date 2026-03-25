@@ -27,7 +27,6 @@ _EXPORT_MAP = {
     "CanonicalExecutionPlan": "video_atlas.schemas",
     "CaptionProfile": "video_atlas.schemas",
     "CaptionSpecification": "video_atlas.schemas",
-    "CreateVideoAtlasResult": "video_atlas.schemas",
     "DEFAULT_CAPTION_PROFILE": "video_atlas.schemas",
     "DEFAULT_SEGMENTATION_PROFILE": "video_atlas.schemas",
     "DerivedAtlas": "video_atlas.schemas",

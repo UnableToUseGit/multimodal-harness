@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..schemas import FrameSamplingProfile
+from pathlib import Path
 
 
 def _load_video_helpers():
@@ -48,7 +49,7 @@ def build_video_messages(
 def build_video_messages_from_path(
     system_prompt: str,
     user_prompt: str,
-    video_path: str,
+    video_path: Path | str,
     start_time: float,
     end_time: float,
     video_sampling: FrameSamplingProfile | None = None,

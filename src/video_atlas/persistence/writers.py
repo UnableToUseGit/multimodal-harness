@@ -28,7 +28,7 @@ def copy_to(src_path: Path, destination: Path) -> Path:
     return dest
 
 
-def write_text_to(destination: str | Path, relative_path: str | Path, content: str) -> None:
+def write_text_to(destination: str | Path, relative_path: str | Path, content: str) -> Path:
     target_path = Path(destination) / Path(relative_path)
     target_path.parent.mkdir(parents=True, exist_ok=True)
     target_path.write_text(content, encoding="utf-8")
@@ -98,24 +98,25 @@ class CanonicalAtlasWriter:
         )
         
     def _global_readme_text(self, atlas, max_end_time) -> str:
-        
         return "\n".join(
             [
+                "# Canonical Atlas",
+                "",
                 f"**Title**: {atlas.title}",
                 f"**Duration**: {max_end_time:.1f}",
                 f"**Abstract**: {atlas.abstract}",
-                "**# Segmentation Context**:",
-                f"There are {len(atlas.segments)} segments are extracted from raw video."
-                "- Each segment is saved in `./segments`."
-                "- Each segment includes:"
-                "- A `README.md` file containing the title, description, start time, and end time."
-                "- A `video_clip.mp4` file with the corresponding video clip."
-                "- A `SUBTITLES.md` file with the corresponding subtitles."
                 "",
-                "# Additional Files"
-                "- Raw video: `./video.mp4`"
-                "- Detail information of segments: `./segments/`"
-                "- Full subtitles for this video: `./SUBTITLES.md`"
+                "# Segmentation Context",
+                f"There are {len(atlas.segments)} segments extracted from the raw video.",
+                "- Each segment is saved in `./segments`.",
+                "- Each segment includes a `README.md` file containing the title, description, start time, and end time.",
+                "- Each segment includes a `video_clip.mp4` file with the corresponding video clip.",
+                "- Each segment includes a `SUBTITLES.md` file with the corresponding subtitles.",
+                "",
+                "# Additional Files",
+                "- Raw video: `./video.mp4`",
+                "- Segment detail information: `./segments/`",
+                "- Full subtitles for this video: `./SUBTITLES.md`",
             ]
         )
     
@@ -144,8 +145,7 @@ class CanonicalAtlasWriter:
                 f"- {segment.segment_id} ({segment.title}): {segment.start_time:.1f} - {segment.end_time:.1f} seconds: {segment.summary}"
             )
 
-        # TODO segments_quickview_items 没用上，是否还需要添加？
-        markdown_text = self._global_readme_text(atlas, atlas.duration, "\n".join(segments_quickview_items)
+        markdown_text = self._global_readme_text(atlas, atlas.duration)
                                  
         if not self.caption_with_subtitles:
             markdown_text = markdown_text.replace("- Full subtitles for this video: `./SUBTITLES.md`", "").replace("- A `SUBTITLES.md` file with the corresponding subtitles.", "")

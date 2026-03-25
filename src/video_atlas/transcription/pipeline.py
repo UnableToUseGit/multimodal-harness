@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Callable, tuple
+from typing import Callable
 
 from .audio_prep import extract_audio_ffmpeg
 from .base import BaseTranscriber

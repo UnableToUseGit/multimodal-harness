@@ -5,7 +5,7 @@ from typing import Optional
 from ..generators.base import BaseGenerator
 from ..transcription.base import BaseTranscriber
 
-from ..message_builder import build_video_messages_from_path
+from ..message_builder import build_text_messages, build_video_messages_from_path
 from ..parsing import parse_json_response
 
 from .canonical_atlas.atlas_assembly import AtlasAssemblyMixin
@@ -58,10 +58,7 @@ class CanonicalAtlasWorkflow(
 
 
     def _prepare_messages(self, system_prompt: str, user_prompt: str):
-        return [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
+        return build_text_messages(system_prompt=system_prompt, user_prompt=user_prompt)
 
     def _build_video_messages_from_path(
         self,

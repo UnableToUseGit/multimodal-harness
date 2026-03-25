@@ -4,16 +4,17 @@ from dataclasses import asdict
 import json
 import time
 from pathlib import Path
-from typing import tuple
 import math
 
-from ...schemas import CreateVideoAtlasResult
 from ...transcription import generate_subtitles_for_video
 from ...utils import get_video_property, parse_srt
-from ...persistence import copy_to, write_text_to
+from ...persistence import CanonicalAtlasWriter, copy_to, write_text_to
+from ...schemas import CanonicalAtlas
 
 class PipelineMixin:
-    def _resolve_srt_file_path(self, output_dir: Path, video_path: Path, verbose: bool = False) -> tuple[Path, Path]:
+    def _resolve_srt_file_path(
+        self, output_dir: Path, video_path: Path, verbose: bool = False
+    ) -> tuple[Path | None, Path | None]:
         srt_files = list(output_dir.glob("*.srt"))
         if srt_files:
             return srt_files[0], None
@@ -51,7 +52,9 @@ class PipelineMixin:
         if verbose:
             self._log_info("Processing video from: %s", source_video_path)
 
+        output_dir.mkdir(parents=True, exist_ok=True)
         video_path = copy_to(source_video_path, output_dir)
+        srt_file_path: Path | None = None
         if source_srt_file_path:
             if not source_srt_file_path.exists():
                 raise FileNotFoundError(f"Subtitle srt file path does not exist: {source_srt_file_path}")
@@ -61,10 +64,15 @@ class PipelineMixin:
         if verbose:
             self._log_info("Files copied to output directory: %s", output_dir)
 
-        # srt_file_path, audio_path = self._resolve_srt_file_path(output_dir, video_path, verbose=verbose)
-        srt_file_path = Path('/share/project/minghao/Proj/VideoAFS/VideoEdit/development/local/workspaces/canonical_case_002/.agentignore/subtitles.srt')
-        audio_path = Path('/share/project/minghao/Proj/VideoAFS/VideoEdit/development/local/workspaces/canonical_case_002/lol.wav')
-        subtitle_items, subtitles_str = parse_srt(srt_file_path)
+        if srt_file_path is None:
+            srt_file_path, audio_path = self._resolve_srt_file_path(output_dir, video_path, verbose=verbose)
+        else:
+            audio_path = None
+        if srt_file_path is not None:
+            subtitle_items, subtitles_str = parse_srt(srt_file_path)
+        else:
+            subtitle_items, subtitles_str = [], ""
+        subtitles_path = None
         if self.caption_with_subtitles:
             subtitles_path = write_text_to(output_dir, "SUBTITLES.md", subtitles_str)
 

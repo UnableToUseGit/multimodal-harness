@@ -4,27 +4,25 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from ...persistence import DerivedAtlasWriter
-from ...schemas import CreateDerivedAtlasResult, DerivationResultInfo
+from ...schemas import CreateDerivedAtlasResult, DerivationResultInfo, CanonicalAtlas
 
 class DerivedPipelineMixin:
-    def add(self, task_request: str, canonical_atlas, verbose: bool = False) -> CreateDerivedAtlasResult:
+    def create(self, task_request: str, canonical_atlas: CanonicalAtlas, verbose: bool = False) -> CreateDerivedAtlasResult:
         del verbose
         work_items = self._build_candidate_work_items(task_request, canonical_atlas)
 
-        if canonical_atlas.source_video_path is None:
-            raise ValueError("Canonical atlas source_video_path is required for derived clip extraction")
-
+        video_path = canonical_atlas.atlas_dir / canonical_atlas.relative_video_path
         if self.num_workers > 1 and len(work_items) > 1:
             with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
                 raw_results = list(
                     executor.map(
-                        lambda item: self._derive_one_segment(item, task_request, str(canonical_atlas.source_video_path)),
+                        lambda item: self._derive_one_segment(item, task_request, video_path),
                         work_items,
                     )
                 )
         else:
             raw_results = [
-                self._derive_one_segment(item, task_request, str(canonical_atlas.source_video_path))
+                self._derive_one_segment(item, task_request, video_path)
                 for item in work_items
             ]
 

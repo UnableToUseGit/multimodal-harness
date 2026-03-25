@@ -17,11 +17,11 @@ class AtlasAssemblyMixin:
         execution_plan: CanonicalExecutionPlan,
         parsed_segments: List[dict],
         video_path: Path,
-        audio_path: Path,
-        subtitles_path: Path,
-        srt_file_path: Path,
-        verbose: bool
-    ):
+        audio_path: Path | None,
+        subtitles_path: Path | None,
+        srt_file_path: Path | None,
+        verbose: bool,
+    ) -> CanonicalAtlas:
         started_at = time.time()
         segments_description = "\n".join(
             [
@@ -52,11 +52,12 @@ class AtlasAssemblyMixin:
                     title_map[seg_id.strip()] = seg_title.strip()
 
         atlas_segments: list[AtlasSegment] = []
-        segment_artifacts: dict[str, dict[str, str]] = {}
         for seg in parsed_segments:
             seg_title = title_map.get(seg["seg_id"], seg.get("seg_title") or seg["seg_id"])
-            seg_index = int(seg["seg_id"].split("_")[-1])
-            save_name = f"{seg["seg_id"]}-{slugify_segment_title(seg_title)}-{seg["start_time"]:.2f}-{seg["end_time"]:.2f}s"
+            save_name = (
+                f"{seg['seg_id']}-{slugify_segment_title(seg_title)}-"
+                f"{seg['start_time']:.2f}-{seg['end_time']:.2f}s"
+            )
             atlas_segments.append(
                 AtlasSegment(
                     segment_id=seg["seg_id"],
@@ -67,8 +68,8 @@ class AtlasAssemblyMixin:
                     caption=seg["detail"],
                     subtitles_text=seg.get("subtitles_text", ""),
                     folder_name=save_name,
-                    relative_clip_path= Path(f"segments/{folder_name}/video_clip.mp4")
-                    relative_subtitles_path= Path(f"segments/{folder_name}/SUBTITLES.md")
+                    relative_clip_path=Path(f"segments/{save_name}/video_clip.mp4"),
+                    relative_subtitles_path=Path(f"segments/{save_name}/SUBTITLES.md"),
                 )
             )
             
@@ -80,9 +81,9 @@ class AtlasAssemblyMixin:
             execution_plan=execution_plan,
             atlas_dir=atlas_dir,
             relative_video_path=video_path.relative_to(atlas_dir),
-            relative_audio_path=audio_path.relative_to(atlas_dir),
-            relative_subtitles_path=subtitles_path.relative_to(atlas_dir),
-            relative_srt_file_path=srt_file_path.relative_to(atlas_dir),
+            relative_audio_path=audio_path.relative_to(atlas_dir) if audio_path is not None else None,
+            relative_subtitles_path=subtitles_path.relative_to(atlas_dir) if subtitles_path is not None else None,
+            relative_srt_file_path=srt_file_path.relative_to(atlas_dir) if srt_file_path is not None else None,
         )
         
         return atlas

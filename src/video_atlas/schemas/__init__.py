@@ -31,7 +31,7 @@ from .canonical_atlas import (
     SegmentationSpecification,
 )
 from .derived_atlas import DerivationPolicy, DerivationResultInfo, DerivedAtlas
-from .results import CreateDerivedAtlasResult, CreateVideoAtlasResult
+from .results import CreateDerivedAtlasResult
 
 __all__ = [
     "ALLOWED_EVIDENCE",
@@ -47,7 +47,6 @@ __all__ = [
     "CanonicalAtlas",
     "CaptionProfile",
     "CaptionSpecification",
-    "CreateVideoAtlasResult",
     "CreateDerivedAtlasResult",
     "DEFAULT_CAPTION_PROFILE",
     "DEFAULT_SEGMENTATION_PROFILE",
