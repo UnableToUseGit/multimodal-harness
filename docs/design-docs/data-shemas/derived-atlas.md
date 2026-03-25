@@ -1,133 +1,95 @@
-# Data Model Specification
+# DerivedAtlas
 
-## Scope
+## 文档目标
 
-This document defines the data schemas and workspace metadata used by the derived atlas generation pipeline.
+本文档用于说明 `DerivedAtlas` 的设计目的、字段定义和使用约束。
 
-## Schema Index
+## Schema 概览
 
-- `DerivationPolicy`
-- `DerivationResultInfo`
-- `DerivedAtlas`
-- `CreateDerivedAtlasResult`
+- 名称：`DerivedAtlas`
+- 主要职责：表达 derived workflow 的标准输出结果
+- 实现形式：`dataclass`
 
-## `DerivationPolicy`
+## 字段定义
 
-### Purpose
+| 字段名 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `task_request` | `str` | 是 | 无 | 派生任务请求 |
+| `global_summary` | `str` | 是 | 无 | 全局摘要 |
+| `detailed_breakdown` | `str` | 是 | 无 | 分段细分说明 |
+| `segments` | `list[AtlasSegment]` | 是 | 无 | 最终 derived 片段列表 |
+| `derivation_result_info` | `DerivationResultInfo` | 是 | 无 | 来源映射与策略信息 |
+| `atlas_dir` | `Path` | 是 | 无 | derived atlas 根目录 |
+| `source_canonical_atlas_dir` | `Path` | 是 | 无 | source canonical atlas 根目录 |
+| `source_video_path` | `Path` | 是 | 无 | source 视频路径 |
 
-Captures why and how a selected canonical segment should be derived for the task.
+## 字段说明
 
-### Produced By
+### `task_request`
 
-- `DerivedAtlasAgent` / `CandidateGeneration`
+- 语义：驱动当前 derived atlas 生成的任务请求。
+- 约束：应为非空字符串。
+- 注意事项：这是 derived atlas 与 canonical atlas 的核心区分之一。
 
-### Consumed By
+### `global_summary`
 
-- `DerivedAtlasAgent` / `Derivation`
-- `DerivedAtlasAgent` / `Aggregation`
+- 语义：对整个 derived atlas 的全局总结。
+- 约束：应为可读文本。
+- 注意事项：通常由 aggregation 阶段代码生成。
 
-### Fields
+### `detailed_breakdown`
 
-| Field | Type | Required | Description |
-|---|---|---:|---|
-| `intent` | `str` | yes | High-level statement of what information the derived segment should contribute to the task. |
-| `grounding_instruction` | `str` | yes | Natural-language instruction used by the grounding stage to refine the source segment into a tighter sub-clip. |
+- 语义：对各 derived 片段的进一步拆解说明。
+- 约束：应为可读文本。
+- 注意事项：常用于根级 README 和 review。
 
-## `DerivationResultInfo`
+### `segments`
 
-### Purpose
+- 语义：derived atlas 中的最终片段列表。
+- 约束：元素应为有效的 `AtlasSegment`。
+- 注意事项：这是 writer 直接消费的主体内容。
 
-Stores derivation bookkeeping for review and debugging.
+### `derivation_result_info`
 
-### Produced By
+- 语义：记录来源映射与派生原因。
+- 约束：应为有效的 `DerivationResultInfo`。
+- 注意事项：用于解释 derived atlas 的形成过程。
 
-- `DerivedAtlasAgent` / `Derivation`
+### `atlas_dir`
 
-### Consumed By
+- 语义：derived atlas 的根目录。
+- 约束：应指向目标 workspace 根路径。
+- 注意事项：writer 会直接使用该字段落盘。
 
-- `DerivedAtlasAgent` / `Aggregation`
-- review/debug tooling through `.agentignore/DERIVATION_RESULT.json`
+### `source_canonical_atlas_dir`
 
-### Fields
+- 语义：source canonical atlas 的根目录。
+- 约束：应为合法路径。
+- 注意事项：用于记录 derived atlas 的来源。
 
-| Field | Type | Required | Description |
-|---|---|---:|---|
-| `derived_atlas_segment_count` | `int` | yes | Number of derived atlas segments written to the workspace. |
-| `derivation_reason` | `dict[str, DerivationPolicy]` | yes | Maps each derived segment id to the policy used to derive it. |
-| `derivation_source` | `dict[str, str]` | yes | Maps each derived segment id to its source canonical segment id. |
+### `source_video_path`
 
-### Field Notes
+- 语义：用于裁剪 derived clip 的 source 视频路径。
+- 约束：应为合法路径。
+- 注意事项：writer 会基于它抽取最终片段视频。
 
-- keys in both maps are derived segment ids such as `derived_seg_0001`
+## 校验规则与约束
 
-## `DerivedAtlas`
+- `segments` 中的 `segment_id` 应唯一。
+- `derivation_result_info` 应与 `segments` 保持一致。
+- `source_video_path` 应能被 writer 用于 clip 提取。
 
-### Purpose
+## 示例
 
-Represents the final task-aware atlas assembled from the selected canonical source segments.
-
-### Produced By
-
-- `DerivedAtlasAgent` / `Aggregation`
-
-### Fields
-
-| Field | Type | Required | Description |
-|---|---|---:|---|
-| `global_summary` | `str` | yes | Code-generated aggregate summary containing derived segment count, total duration, and average duration. |
-| `detailed_breakdown` | `str` | yes | Stable human-readable breakdown of each derived segment, including intent and precise start/end times. |
-| `segments` | `list[AtlasSegment]` | yes | Derived atlas segments after re-grounding and re-captioning. |
-| `root_path` | `Path` | yes | Root path of the derived workspace. |
-| `readme_text` | `str` | yes | Final text written to the derived workspace `README.md`. |
-| `source_canonical_atlas_path` | `Path` | yes | Root path of the source canonical atlas workspace. |
-
-## `CreateDerivedAtlasResult`
-
-### Purpose
-
-Top-level result returned by the public `DerivedAtlasAgent.add(...)` workflow.
-
-### Fields
-
-| Field | Type | Required | Description |
-|---|---|---:|---|
-| `success` | `bool` | yes | Whether the workflow completed successfully. |
-| `task_request` | `str` | yes | Original task request passed to the derived workflow. |
-| `source_segment_count` | `int` | yes | Number of canonical segments considered as source material. |
-| `derived_segment_count` | `int` | yes | Number of derived segments written to the output workspace. |
-| `output_root_path` | `Path \| None` | no | Root path of the derived workspace. |
-
-## Workspace Metadata
-
-### Root Files
-
-| Path | Description |
-|---|---|
-| `README.md` | Human-readable overview of the derived atlas. |
-| `TASK.md` | Raw task request text. |
-| `derivation.json` | Review-facing metadata for the derived workspace. |
-| `.agentignore/DERIVATION_RESULT.json` | Detailed derivation bookkeeping. |
-
-### `derivation.json` Fields
-
-| Field | Type | Required | Description |
-|---|---|---:|---|
-| `task_request` | `str` | yes | Task used to derive the workspace. |
-| `global_summary` | `str` | yes | Aggregate summary copied from `DerivedAtlas`. |
-| `detailed_breakdown` | `str` | yes | Per-derived-segment breakdown copied from `DerivedAtlas`. |
-| `derived_segment_count` | `int` | yes | Count of derived segments. |
-| `source_canonical_atlas_path` | `str` | yes | String form of the source canonical atlas root path. |
-
-### Per-Segment README Fields
-
-Each derived segment `README.md` contains:
-
-- `DerivedSegID`
-- `SourceSegID`
-- `Start Time`
-- `End Time`
-- `Duration`
-- `Title`
-- `Summary`
-- `Detail Description`
-- `Intent`
+```python
+DerivedAtlas(
+    task_request="Find the opening setup needed for my edit",
+    global_summary="Derived 1 segment for the task.",
+    detailed_breakdown="- derived_seg_0001: ...",
+    segments=[...],
+    derivation_result_info=some_result_info,
+    atlas_dir=Path("/tmp/derived"),
+    source_canonical_atlas_dir=Path("/tmp/canonical"),
+    source_video_path=Path("/tmp/canonical/video.mp4"),
+)
+```
