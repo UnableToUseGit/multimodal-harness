@@ -22,10 +22,25 @@ class DerivationResultInfo:
 
 
 @dataclass
+class DerivedSegmentDraft:
+    derived_segment_id: str
+    source_segment_id: str
+    policy: DerivationPolicy
+    start_time: float
+    end_time: float
+    title: str
+    summary: str
+    caption: str
+    subtitles_text: str
+
+
+@dataclass
 class DerivedAtlas:
+    task_request: str
     global_summary: str
     detailed_breakdown: str
     segments: list[AtlasSegment]
-    root_path: Path
-    readme_text: str
-    source_canonical_atlas_path: Path
+    derivation_result_info: DerivationResultInfo
+    atlas_dir: Path
+    source_canonical_atlas_dir: Path
+    source_video_path: Path

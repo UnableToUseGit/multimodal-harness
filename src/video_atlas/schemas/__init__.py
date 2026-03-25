@@ -30,8 +30,7 @@ from .canonical_atlas import (
     SegmentationProfile,
     SegmentationSpecification,
 )
-from .derived_atlas import DerivationPolicy, DerivationResultInfo, DerivedAtlas
-from .results import CreateDerivedAtlasResult
+from .derived_atlas import DerivationPolicy, DerivationResultInfo, DerivedAtlas, DerivedSegmentDraft
 
 __all__ = [
     "ALLOWED_EVIDENCE",
@@ -47,10 +46,10 @@ __all__ = [
     "CanonicalAtlas",
     "CaptionProfile",
     "CaptionSpecification",
-    "CreateDerivedAtlasResult",
     "DEFAULT_CAPTION_PROFILE",
     "DEFAULT_SEGMENTATION_PROFILE",
     "DerivedAtlas",
+    "DerivedSegmentDraft",
     "DerivationPolicy",
     "DerivationResultInfo",
     "FrameSamplingProfile",

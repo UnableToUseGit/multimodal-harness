@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...schemas import AtlasSegment, DerivationResultInfo, DerivedAtlas
+from ...persistence import slugify_segment_title
+from ...schemas import AtlasSegment, DerivedAtlas, DerivedSegmentDraft, DerivationResultInfo
 
 
 class AggregationMixin:
@@ -26,9 +27,35 @@ class AggregationMixin:
         self,
         task_request: str,
         canonical_atlas,
-        derived_segments: list[AtlasSegment],
-        result_info: DerivationResultInfo,
+        derived_segment_drafts: list[DerivedSegmentDraft],
+        output_dir: Path,
     ) -> DerivedAtlas:
+        derivation_result_info = DerivationResultInfo(
+            derived_atlas_segment_count=len(derived_segment_drafts),
+            derivation_reason={
+                draft.derived_segment_id: draft.policy for draft in derived_segment_drafts
+            },
+            derivation_source={
+                draft.derived_segment_id: draft.source_segment_id for draft in derived_segment_drafts
+            },
+        )
+        derived_segments = [
+            AtlasSegment(
+                segment_id=draft.derived_segment_id,
+                title=draft.title,
+                start_time=draft.start_time,
+                end_time=draft.end_time,
+                summary=draft.summary,
+                caption=draft.caption,
+                subtitles_text=draft.subtitles_text,
+                folder_name=(
+                    f"{draft.derived_segment_id.replace('_', '-')}-"
+                    f"{slugify_segment_title(draft.title)}-{draft.start_time:.2f}-{draft.end_time:.2f}s"
+                ),
+            )
+            for draft in derived_segment_drafts
+        ]
+
         total_duration = sum(segment.duration for segment in derived_segments)
         average_duration = total_duration / len(derived_segments) if derived_segments else 0.0
         global_summary = (
@@ -38,16 +65,18 @@ class AggregationMixin:
         detailed_breakdown = "\n".join(
             [
                 f"- {segment.segment_id}: {segment.title} | "
-                f"intent={result_info.derivation_reason.get(segment.segment_id).intent if result_info.derivation_reason.get(segment.segment_id) else ''} | "
+                f"intent={draft.policy.intent} | "
                 f"range={segment.start_time:.1f}-{segment.end_time:.1f}"
-                for segment in derived_segments
+                for segment, draft in zip(derived_segments, derived_segment_drafts)
             ]
         )
         return DerivedAtlas(
+            task_request=task_request,
             global_summary=global_summary,
             detailed_breakdown=detailed_breakdown,
             segments=derived_segments,
-            root_path=Path(self.workspace.root_path),
-            readme_text=self._root_readme_text(task_request, global_summary, detailed_breakdown),
-            source_canonical_atlas_path=canonical_atlas.root_path,
+            derivation_result_info=derivation_result_info,
+            atlas_dir=output_dir,
+            source_canonical_atlas_dir=canonical_atlas.atlas_dir,
+            source_video_path=canonical_atlas.atlas_dir / canonical_atlas.relative_video_path,
         )

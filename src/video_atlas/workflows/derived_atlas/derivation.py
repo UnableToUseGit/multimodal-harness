@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import re
 
-from ...persistence import slugify_segment_title
 from ...prompts import DERIVED_CAPTION_PROMPT, DERIVED_GROUNDING_PROMPT
-from ...schemas import AtlasSegment, DerivationPolicy
+from ...schemas import AtlasSegment, DerivationPolicy, DerivedSegmentDraft
 
 
 class DerivationMixin:
-    def _grounding_prompt(self, segment: AtlasSegment, policy: DerivationPolicy) -> str:
+    def _grounding_prompt(self, segment: AtlasSegment, policy: DerivationPolicy, subtitles_text: str) -> str:
         return DERIVED_GROUNDING_PROMPT["USER"].format(
             segment_id=segment.segment_id,
             segment_start_time=segment.start_time,
@@ -17,6 +16,7 @@ class DerivationMixin:
             grounding_instruction=policy.grounding_instruction,
             summary=segment.summary,
             detail=segment.caption,
+            subtitles=subtitles_text,
         )
 
     def _caption_prompt(
@@ -39,11 +39,6 @@ class DerivationMixin:
             detail=segment.caption,
             subtitles=subtitles_text,
         )
-
-    def _load_subtitles_text(self, segment: AtlasSegment) -> str:
-        if segment.subtitles_path is None or not segment.subtitles_path.exists():
-            return ""
-        return segment.subtitles_path.read_text(encoding="utf-8")
 
     def _prune_subtitles_text(self, subtitles_text: str, start_time: float, end_time: float) -> str:
         if not subtitles_text.strip():
@@ -86,12 +81,18 @@ class DerivationMixin:
     def _next_derived_segment_id(self, index: int) -> str:
         return f"derived_seg_{index:04d}"
 
-    def _derive_one_segment(self, item: tuple[int, AtlasSegment, DerivationPolicy], task_request: str, video_path: Path) -> dict | None:
+    def _derive_one_segment(
+        self,
+        item: tuple[int, AtlasSegment, DerivationPolicy],
+        task_request: str,
+        video_path: Path,
+    ) -> DerivedSegmentDraft | None:
         index, segment, policy = item
+        source_subtitles = segment.subtitles_text or ""
         grounding_output = self.segmentor.generate_single(
             messages=self._build_video_messages_from_path(
                 system_prompt=DERIVED_GROUNDING_PROMPT["SYSTEM"],
-                user_prompt=self._grounding_prompt(segment, policy),
+                user_prompt=self._grounding_prompt(segment, policy, source_subtitles),
                 video_path=video_path,
                 start_time=segment.start_time,
                 end_time=segment.end_time,
@@ -103,7 +104,7 @@ class DerivationMixin:
             return None
         start_time, end_time = resolved
 
-        pruned_subtitles = self._prune_subtitles_text(self._load_subtitles_text(segment), start_time, end_time)
+        pruned_subtitles = self._prune_subtitles_text(source_subtitles, start_time, end_time)
         caption_output = self.captioner.generate_single(
             messages=self._build_video_messages_from_path(
                 system_prompt=DERIVED_CAPTION_PROMPT["SYSTEM"],
@@ -121,24 +122,14 @@ class DerivationMixin:
         title = str(caption_data.get("title", f"Derived Segment {index}"))
         summary = str(caption_data.get("summary", segment.summary))
         caption = str(caption_data.get("caption", segment.caption))
-        folder_name = (
-            f"{derived_segment_id.replace('_', '-')}-"
-            f"{slugify_segment_title(title)}-{start_time:.2f}-{end_time:.2f}s"
+        return DerivedSegmentDraft(
+            derived_segment_id=derived_segment_id,
+            source_segment_id=segment.segment_id,
+            policy=policy,
+            start_time=start_time,
+            end_time=end_time,
+            title=title,
+            summary=summary,
+            caption=caption,
+            subtitles_text=pruned_subtitles,
         )
-
-        return {
-            "segment": AtlasSegment(
-                segment_id=derived_segment_id,
-                title=title,
-                start_time=start_time,
-                end_time=end_time,
-                summary=summary,
-                caption=caption,
-                subtitles_test=None, # TODO
-                folder_name=folder_name,
-                
-            ),
-            "policy": policy,
-            "source_segment_id": segment.segment_id,
-            "subtitles_text": pruned_subtitles,
-        }

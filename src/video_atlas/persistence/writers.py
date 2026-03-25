@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from ..schemas import CanonicalAtlas, DerivationResultInfo, DerivedAtlas
+from ..schemas import CanonicalAtlas, DerivedAtlas
 
 def copy_to(src_path: Path, destination: Path) -> Path:
     """Copy a file/directory to destination dir."""
@@ -39,18 +39,18 @@ def slugify_segment_title(title: str) -> str:
     return normalized or "untitled"
 
 
-def clip_exists(workspace_root: str | Path, relative_path: str | Path) -> bool:
-    return (Path(workspace_root) / Path(relative_path)).exists()
+def clip_exists(destination: str | Path, relative_path: str | Path) -> bool:
+    return (Path(destination) / Path(relative_path)).exists()
 
 
 def extract_clip(
-    workspace_root: str | Path,
+    destination: str | Path,
     video_path: str,
     seg_start_time: float,
     seg_end_time: float,
     relative_output_path: str | Path,
 ) -> None:
-    root_path = Path(workspace_root)
+    root_path = Path(destination)
     output_path = root_path / Path(relative_output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     command = (
@@ -157,6 +157,22 @@ class DerivedAtlasWriter:
     def __init__(self, caption_with_subtitles: bool = True) -> None:
         self.caption_with_subtitles = caption_with_subtitles
 
+    def _root_readme_text(self, derived_atlas: DerivedAtlas) -> str:
+        return "\n".join(
+            [
+                "# Derived Atlas",
+                "",
+                "## Task Request",
+                derived_atlas.task_request,
+                "",
+                "## Global Summary",
+                derived_atlas.global_summary,
+                "",
+                "## Detailed Breakdown",
+                derived_atlas.detailed_breakdown,
+            ]
+        )
+
     def _segment_readme_text(self, segment, source_segment_id: str, intent: str) -> str:
         return "\n".join(
             [
@@ -181,32 +197,28 @@ class DerivedAtlasWriter:
     def write(
         self,
         derived_atlas: DerivedAtlas,
-        result_info: DerivationResultInfo,
-        task_request: str,
-        source_video_path: str,
-        workspace_root: str | Path,
-        segment_artifacts: dict[str, dict[str, str]] | None = None,
     ) -> None:
-        segment_artifacts = segment_artifacts or {}
-        write_text_to(workspace_root, "README.md", derived_atlas.readme_text)
-        write_text_to(workspace_root, "TASK.md", task_request)
+        atlas_dir = derived_atlas.atlas_dir
+        result_info = derived_atlas.derivation_result_info
+        write_text_to(atlas_dir, "README.md", self._root_readme_text(derived_atlas))
+        write_text_to(atlas_dir, "TASK.md", derived_atlas.task_request)
         write_text_to(
-            workspace_root,
+            atlas_dir,
             "derivation.json",
             json.dumps(
                 {
-                    "task_request": task_request,
+                    "task_request": derived_atlas.task_request,
                     "global_summary": derived_atlas.global_summary,
                     "detailed_breakdown": derived_atlas.detailed_breakdown,
                     "derived_segment_count": len(derived_atlas.segments),
-                    "source_canonical_atlas_path": str(derived_atlas.source_canonical_atlas_path),
+                    "source_canonical_atlas_path": str(derived_atlas.source_canonical_atlas_dir),
                 },
                 ensure_ascii=False,
                 indent=2,
             ),
         )
         write_text_to(
-            workspace_root,
+            atlas_dir,
             ".agentignore/DERIVATION_RESULT.json",
             json.dumps(asdict(result_info), ensure_ascii=False, indent=2),
         )
@@ -216,12 +228,12 @@ class DerivedAtlasWriter:
             policy = result_info.derivation_reason.get(segment.segment_id)
             intent = policy.intent if policy is not None else ""
             segment_dir = Path("segments") / segment.folder_name
-            write_text_to(workspace_root, segment_dir / "README.md", self._segment_readme_text(segment, source_segment_id, intent))
-            subtitles_text = segment_artifacts.get(segment.segment_id, {}).get("subtitles_text", "")
+            write_text_to(atlas_dir, segment_dir / "README.md", self._segment_readme_text(segment, source_segment_id, intent))
+            subtitles_text = segment.subtitles_text
             if self.caption_with_subtitles and subtitles_text:
-                write_text_to(workspace_root, segment_dir / "SUBTITLES.md", subtitles_text)
+                write_text_to(atlas_dir, segment_dir / "SUBTITLES.md", subtitles_text)
             write_text_to(
-                workspace_root,
+                atlas_dir,
                 segment_dir / "SOURCE_MAP.json",
                 json.dumps(
                     {
@@ -233,4 +245,10 @@ class DerivedAtlasWriter:
                 ),
             )
 
-            extract_clip(workspace_root, source_video_path, segment.start_time, segment.end_time, segment_dir / "video_clip.mp4")
+            extract_clip(
+                atlas_dir,
+                str(derived_atlas.source_video_path),
+                segment.start_time,
+                segment.end_time,
+                segment_dir / "video_clip.mp4",
+            )

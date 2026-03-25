@@ -9,6 +9,7 @@ from pathlib import Path
 from video_atlas.schemas import (
     AtlasSegment,
     CanonicalAtlas,
+    CanonicalExecutionPlan,
     DerivationPolicy,
     DerivationResultInfo,
     DerivedAtlas,
@@ -61,6 +62,7 @@ class WorkspaceWritersTest(unittest.TestCase):
         writer = CanonicalAtlasWriter(caption_with_subtitles=True)
         atlas = CanonicalAtlas(
             title="Match Overview",
+            duration=20.0,
             abstract="A concise abstract.",
             segments=[
                 AtlasSegment(
@@ -70,32 +72,26 @@ class WorkspaceWritersTest(unittest.TestCase):
                     end_time=20.0,
                     summary="Opening summary",
                     caption="Opening detail",
+                    subtitles_text="segment subtitles",
                     folder_name="seg0001-opening-0.00-20.00s",
                 )
             ],
-            root_path=Path("/tmp/canonical"),
+            execution_plan=CanonicalExecutionPlan(),
+            atlas_dir=Path("/tmp/canonical"),
+            relative_video_path=Path("video.mp4"),
         )
 
         with patch("video_atlas.persistence.writers.write_text_to") as mock_write:
             with patch("video_atlas.persistence.writers.clip_exists", return_value=False):
                 with patch("video_atlas.persistence.writers.extract_clip") as mock_extract:
-                    writer.write(
-                        atlas=atlas,
-                        source_video_path="video.mp4",
-                        workspace_root=Path("/tmp/out"),
-                        segment_artifacts={
-                            "seg_0001": {
-                                "subtitles_text": "segment subtitles",
-                            }
-                        },
-                    )
+                    writer.write(atlas=atlas)
 
         for call in mock_write.call_args_list:
             harness.written[str(call.args[1])] = call.args[2]
         harness.written["segments/seg0001-opening-0.00-20.00s/video_clip.mp4"] = "clip"
         mock_extract.assert_called_once_with(
-            Path("/tmp/out"),
-            "video.mp4",
+            Path("/tmp/canonical"),
+            Path("/tmp/canonical/video.mp4"),
             0.0,
             20.0,
             Path("segments/seg0001-opening-0.00-20.00s/video_clip.mp4"),
@@ -114,6 +110,7 @@ class WorkspaceWritersTest(unittest.TestCase):
         harness = _WriterHarness()
         writer = DerivedAtlasWriter(caption_with_subtitles=True)
         derived_atlas = DerivedAtlas(
+            task_request="find the key task moment",
             global_summary="Derived 1 segment.",
             detailed_breakdown="- derived_seg_0001: summary",
             segments=[
@@ -124,45 +121,35 @@ class WorkspaceWritersTest(unittest.TestCase):
                     end_time=15.0,
                     summary="Task summary",
                     caption="Task detail",
+                    subtitles_text="pruned subtitles",
                     folder_name="derived-seg-0001-task-segment-5.00-15.00s",
                 )
             ],
-            root_path=Path("/tmp/derived"),
-            readme_text="# Derived Atlas",
-            source_canonical_atlas_path=Path("/tmp/canonical"),
-        )
-        result_info = DerivationResultInfo(
-            derived_atlas_segment_count=1,
-            derivation_reason={
-                "derived_seg_0001": DerivationPolicy(
-                    intent="Find the key task moment",
-                    grounding_instruction="focus on the setup action",
-                )
-            },
-            derivation_source={"derived_seg_0001": "seg_0001"},
+            derivation_result_info=DerivationResultInfo(
+                derived_atlas_segment_count=1,
+                derivation_reason={
+                    "derived_seg_0001": DerivationPolicy(
+                        intent="Find the key task moment",
+                        grounding_instruction="focus on the setup action",
+                    )
+                },
+                derivation_source={"derived_seg_0001": "seg_0001"},
+            ),
+            atlas_dir=Path("/tmp/out"),
+            source_canonical_atlas_dir=Path("/tmp/canonical"),
+            source_video_path=Path("/tmp/canonical/video.mp4"),
         )
 
         with patch("video_atlas.persistence.writers.write_text_to") as mock_write:
             with patch("video_atlas.persistence.writers.extract_clip") as mock_extract:
-                writer.write(
-                    derived_atlas=derived_atlas,
-                    result_info=result_info,
-                    task_request="find the key task moment",
-                    source_video_path="video.mp4",
-                    workspace_root=Path("/tmp/out"),
-                    segment_artifacts={
-                        "derived_seg_0001": {
-                            "subtitles_text": "pruned subtitles",
-                        }
-                    },
-                )
+                writer.write(derived_atlas=derived_atlas)
 
         for call in mock_write.call_args_list:
             harness.written[str(call.args[1])] = call.args[2]
         harness.written["segments/derived-seg-0001-task-segment-5.00-15.00s/video_clip.mp4"] = "clip"
         mock_extract.assert_called_once_with(
             Path("/tmp/out"),
-            "video.mp4",
+            "/tmp/canonical/video.mp4",
             5.0,
             15.0,
             Path("segments/derived-seg-0001-task-segment-5.00-15.00s/video_clip.mp4"),

@@ -3,12 +3,11 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
-from unittest.mock import patch
 from pathlib import Path
+from unittest.mock import patch
 
-from video_atlas.agents.derived_atlas_agent import DerivedAtlasAgent
-from video_atlas.schemas import AtlasSegment, CanonicalAtlas
-from video_atlas.workspaces import LocalWorkspace
+from video_atlas.schemas import AtlasSegment, CanonicalAtlas, CanonicalExecutionPlan
+from video_atlas.workflows.derived_atlas_workflow import DerivedAtlasWorkflow
 
 
 class _QueueGenerator:
@@ -25,12 +24,8 @@ class _QueueGenerator:
             "response": {"usage": {"total_tokens": 1}},
         }
 
-    def generate_batch(self, prompts=None, messages_list=None, schema=None, extra_body=None):
-        entries = messages_list if messages_list is not None else prompts or []
-        return [self.generate_single() for _ in entries]
 
-
-class _TestDerivedAtlasAgent(DerivedAtlasAgent):
+class _TestDerivedAtlasWorkflow(DerivedAtlasWorkflow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.video_message_calls = []
@@ -39,7 +34,7 @@ class _TestDerivedAtlasAgent(DerivedAtlasAgent):
         self,
         system_prompt: str,
         user_prompt: str,
-        video_path: str,
+        video_path: Path | str,
         start_time: float,
         end_time: float,
     ):
@@ -47,7 +42,7 @@ class _TestDerivedAtlasAgent(DerivedAtlasAgent):
             {
                 "system_prompt": system_prompt,
                 "user_prompt": user_prompt,
-                "video_path": video_path,
+                "video_path": str(video_path),
                 "start_time": start_time,
                 "end_time": end_time,
             }
@@ -65,12 +60,11 @@ class _TestDerivedAtlasAgent(DerivedAtlasAgent):
 
 
 class DerivedPipelineTest(unittest.TestCase):
-    def test_agent_derives_workspace_and_metadata(self) -> None:
+    def test_workflow_derives_workspace_and_metadata(self) -> None:
         canonical = CanonicalAtlas(
             title="Canonical Title",
+            duration=60.0,
             abstract="Canonical abstract",
-            root_path=Path("/tmp/canonical"),
-            source_video_path=Path("/tmp/canonical/video.mp4"),
             segments=[
                 AtlasSegment(
                     segment_id="seg_0001",
@@ -79,8 +73,18 @@ class DerivedPipelineTest(unittest.TestCase):
                     end_time=30.0,
                     summary="Opening summary",
                     caption="Opening detail",
+                    subtitles_text="\n".join(
+                        [
+                            "Start Time: 4.0 --> End Time: 4.8 Subtitle: before",
+                            "",
+                            "Start Time: 6.0 --> End Time: 7.0 Subtitle: keep this",
+                            "",
+                            "Start Time: 14.0 --> End Time: 14.8 Subtitle: keep that",
+                            "",
+                            "Start Time: 16.0 --> End Time: 17.0 Subtitle: after",
+                        ]
+                    ),
                     folder_name="seg0001-opening-0.00-30.00s",
-                    subtitles_path=Path("/tmp/canonical/segments/seg0001-opening-0.00-30.00s/SUBTITLES.md"),
                 ),
                 AtlasSegment(
                     segment_id="seg_0002",
@@ -89,9 +93,13 @@ class DerivedPipelineTest(unittest.TestCase):
                     end_time=60.0,
                     summary="Middle summary",
                     caption="Middle detail",
+                    subtitles_text="",
                     folder_name="seg0002-middle-30.00-60.00s",
                 ),
             ],
+            execution_plan=CanonicalExecutionPlan(),
+            atlas_dir=Path("/tmp/canonical"),
+            relative_video_path=Path("video.mp4"),
         )
 
         planner = _QueueGenerator(
@@ -126,29 +134,10 @@ class DerivedPipelineTest(unittest.TestCase):
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            workspace = LocalWorkspace(root_path=tmpdir, name="derived", description="derived test workspace")
-            source_subtitles = canonical.segments[0].subtitles_path
-            assert source_subtitles is not None
-            source_subtitles.parent.mkdir(parents=True, exist_ok=True)
-            source_subtitles.write_text(
-                "\n".join(
-                    [
-                        "Start Time: 4.0 --> End Time: 4.8 Subtitle: before",
-                        "",
-                        "Start Time: 6.0 --> End Time: 7.0 Subtitle: keep this",
-                        "",
-                        "Start Time: 14.0 --> End Time: 14.8 Subtitle: keep that",
-                        "",
-                        "Start Time: 16.0 --> End Time: 17.0 Subtitle: after",
-                    ]
-                ),
-                encoding="utf-8",
-            )
-            agent = _TestDerivedAtlasAgent(
+            workflow = _TestDerivedAtlasWorkflow(
                 planner=planner,
                 segmentor=segmentor,
                 captioner=captioner,
-                workspace=workspace,
                 num_workers=2,
             )
 
@@ -158,9 +147,10 @@ class DerivedPipelineTest(unittest.TestCase):
                 target.write_bytes(f"{seg_start_time:.1f}-{seg_end_time:.1f}".encode("utf-8"))
 
             with patch("video_atlas.persistence.writers.extract_clip", side_effect=fake_extract_clip):
-                result = agent.add(
+                result = workflow.create(
                     task_request="Find the opening setup needed for my edit",
                     canonical_atlas=canonical,
+                    output_dir=Path(tmpdir),
                 )
 
             root = Path(tmpdir)
@@ -194,12 +184,13 @@ class DerivedPipelineTest(unittest.TestCase):
         self.assertEqual(clip_text, "5.0-15.0")
         self.assertEqual(result_info["derived_atlas_segment_count"], 1)
         self.assertEqual(result_info["derivation_source"]["derived_seg_0001"], "seg_0001")
-        self.assertEqual(len(agent.video_message_calls), 2)
-        self.assertEqual(agent.video_message_calls[0]["video_path"], "/tmp/canonical/video.mp4")
-        self.assertEqual(agent.video_message_calls[0]["start_time"], 0.0)
-        self.assertEqual(agent.video_message_calls[0]["end_time"], 30.0)
-        self.assertEqual(agent.video_message_calls[1]["start_time"], 5.0)
-        self.assertEqual(agent.video_message_calls[1]["end_time"], 15.0)
+        self.assertEqual(len(workflow.video_message_calls), 2)
+        self.assertEqual(workflow.video_message_calls[0]["video_path"], "/tmp/canonical/video.mp4")
+        self.assertEqual(workflow.video_message_calls[0]["start_time"], 0.0)
+        self.assertEqual(workflow.video_message_calls[0]["end_time"], 30.0)
+        self.assertIn("keep this", workflow.video_message_calls[0]["user_prompt"])
+        self.assertEqual(workflow.video_message_calls[1]["start_time"], 5.0)
+        self.assertEqual(workflow.video_message_calls[1]["end_time"], 15.0)
 
 
 if __name__ == "__main__":

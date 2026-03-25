@@ -63,6 +63,8 @@ Intent: {intent}
 Grounding Instruction: {grounding_instruction}
 Summary: {summary}
 Detail: {detail}
+Subtitles:
+{subtitles}
 """.strip(),
 }
 
