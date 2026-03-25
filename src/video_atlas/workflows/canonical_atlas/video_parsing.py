@@ -124,14 +124,17 @@ class VideoParsingMixin:
                 caption_policy=caption_spec.profile.caption_policy,
                 subtitles=subtitles_str_in_seg,
             )
-            output = self._generate_single_w_video(
-                system_prompt=CAPTION_GENERATION_PROMPT["SYSTEM"],
-                user_prompt=user_prompt,
-                video_path=video_path,
-                start_time=segment.start_time,
-                end_time=segment.end_time,
-                video_sampling=description_sampling,
-                generator=self.captioner,
+            
+            
+            output = self.captioner.generate_single(
+                messages=self._build_video_messages_from_path(
+                    system_prompt=CAPTION_GENERATION_PROMPT["SYSTEM"],
+                    user_prompt=user_prompt,
+                    video_path=video_path,
+                    start_time=segment.start_time,
+                    end_time=segment.end_time,
+                    video_sampling=description_sampling
+                )
             )
 
             context = self.parse_response(output["text"])
@@ -264,15 +267,19 @@ class VideoParsingMixin:
             segmentation_policy=segmentation_profile.segmentation_policy,
             last_detection_point="None" if last_detection_point is None else str(last_detection_point),
         )
-        output = self._generate_single_w_video(
-            system_prompt=BOUNDARY_DETECTION_PROMPT["SYSTEM"],
-            user_prompt=user_prompt,
-            video_path=video_path,
-            start_time=window_start_time,
-            end_time=window_end_time,
-            video_sampling=execution_plan.segmentation_specification.frame_sampling_profile,
-            generator=self.segmentor,
+        
+        
+        output = self.segmentor.generate_single(
+            messages=self._build_video_messages_from_path(
+                system_prompt=BOUNDARY_DETECTION_PROMPT["SYSTEM"],
+                user_prompt=user_prompt,
+                video_path=video_path,
+                start_time=window_start_time,
+                end_time=window_end_time,
+                video_sampling=execution_plan.segmentation_specification.frame_sampling_profile,
+            )
         )
+        
         raw_boundary_output = self.parse_response(output["text"])
         return self._check_candidate_boundaries(
             raw_boundary_output=raw_boundary_output,
@@ -386,7 +393,7 @@ class VideoParsingMixin:
             next_segment_id += 1
         return next_segment_id
 
-    def _parse_video_into_segments(self, video_path: str, duration_int: int, subtitle_items: list, execution_plan, verbose: bool = False):
+    def _parse_video_into_segments(self, video_path: str, duration: float, subtitle_items: list, execution_plan, verbose: bool = False):
         parsed_segments = []
         caption_futures = []
         open_segment_start = 0.0
@@ -395,11 +402,11 @@ class VideoParsingMixin:
         chunk_index = 0
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
-            while chunk_start_time < duration_int:
+            while chunk_start_time < duration:
                 core_start_time = chunk_start_time
-                core_end_time = min(chunk_start_time + execution_plan.chunk_size_sec, duration_int)
+                core_end_time = min(chunk_start_time + execution_plan.chunk_size_sec, duration)
                 window_start_time = max(0.0, core_start_time - execution_plan.chunk_overlap_sec)
-                window_end_time = min(float(duration_int), core_end_time + execution_plan.chunk_overlap_sec)
+                window_end_time = min(float(duration), core_end_time + execution_plan.chunk_overlap_sec)
                 started_at = time.time()
                 last_detection_point = open_segment_start
 
@@ -456,7 +463,7 @@ class VideoParsingMixin:
                         len(candidate_boundaries),
                     )
 
-                if core_end_time >= duration_int:
+                if core_end_time >= duration:
                     break
 
                 next_chunk_start = candidate_boundaries[-1].timestamp if candidate_boundaries else core_end_time
@@ -469,7 +476,7 @@ class VideoParsingMixin:
                 execution_plan=execution_plan,
                 open_segment_start=open_segment_start,
                 candidate_boundaries=[],
-                segment_end_time=float(duration_int),
+                segment_end_time=float(duration),
             )
             next_segment_id = self._submit_caption_tasks(
                 executor=executor,

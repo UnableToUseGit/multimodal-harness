@@ -2,17 +2,24 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from typing import List
 
 from ...persistence import CanonicalAtlasWriter, slugify_segment_title
 from ...prompts import VIDEO_GLOBAL_PROMPT
-from ...schemas import AtlasSegment, CanonicalAtlas
+from ...schemas import AtlasSegment, CanonicalAtlas, CanonicalExecutionPlan
+
 
 class AtlasAssemblyMixin:
     def _assemble_canonical_atlas(
         self,
-        parsed_segments,
-        video_path: str,
-        duration_int: int,
+        atlas_dir: Path,
+        duration: float,
+        execution_plan: CanonicalExecutionPlan,
+        parsed_segments: List[dict],
+        video_path: Path,
+        audio_path: Path,
+        subtitles_path: Path,
+        srt_file_path: Path,
         verbose: bool
     ):
         started_at = time.time()
@@ -58,20 +65,24 @@ class AtlasAssemblyMixin:
                     end_time=seg["end_time"],
                     summary=seg["summary"],
                     caption=seg["detail"],
+                    subtitles_text=seg.get("subtitles_text", ""),
                     folder_name=save_name,
+                    relative_clip_path= Path(f"segments/{folder_name}/video_clip.mp4")
+                    relative_subtitles_path= Path(f"segments/{folder_name}/SUBTITLES.md")
                 )
             )
-            segment_artifacts[seg["seg_id"]] = {"subtitles_text": seg.get("subtitles_text", "")}
-
+            
         atlas = CanonicalAtlas(
             title=global_context.get("title", ""),
+            duration=duration,
             abstract=global_context.get("abstract", ""),
             segments=atlas_segments,
-            root_path=self._workspace_root() if hasattr(self, "_workspace_root") else Path("."),
+            execution_plan=execution_plan,
+            atlas_dir=atlas_dir,
+            relative_video_path=video_path.relative_to(atlas_dir),
+            relative_audio_path=audio_path.relative_to(atlas_dir),
+            relative_subtitles_path=subtitles_path.relative_to(atlas_dir),
+            relative_srt_file_path=srt_file_path.relative_to(atlas_dir),
         )
-        CanonicalAtlasWriter(caption_with_subtitles=self.caption_with_subtitles).write(
-            atlas=atlas,
-            source_video_path=video_path,
-            workspace_root=self._workspace_root() if hasattr(self, "_workspace_root") else Path("."),
-            segment_artifacts=segment_artifacts,
-        )
+        
+        return atlas

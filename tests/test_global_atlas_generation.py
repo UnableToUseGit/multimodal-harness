@@ -76,7 +76,7 @@ class GlobalAtlasGenerationTest(unittest.TestCase):
                     harness._assemble_canonical_atlas(
                         parsed_segments=parsed_segments,
                         video_path="video.mp4",
-                        duration_int=60,
+                        duration=60,
                         verbose=False,
                     )
 

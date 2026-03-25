@@ -163,7 +163,7 @@ class SegmentationStreamingTest(unittest.TestCase):
         plan = self._make_plan()
         contexts = harness._parse_video_into_segments(
             video_path="video.mp4",
-            duration_int=100,
+            duration=100,
             subtitle_items=[],
             execution_plan=plan,
             verbose=False,
@@ -179,7 +179,7 @@ class SegmentationStreamingTest(unittest.TestCase):
 
         harness._parse_video_into_segments(
             video_path="video.mp4",
-            duration_int=100,
+            duration=100,
             subtitle_items=[],
             execution_plan=plan,
             verbose=False,
@@ -193,7 +193,7 @@ class SegmentationStreamingTest(unittest.TestCase):
 
         harness._parse_video_into_segments(
             video_path="video.mp4",
-            duration_int=100,
+            duration=100,
             subtitle_items=[],
             execution_plan=plan,
             verbose=False,

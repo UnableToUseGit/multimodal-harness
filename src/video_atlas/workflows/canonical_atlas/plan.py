@@ -7,19 +7,19 @@ from ...utils import get_frame_indices, get_subtitle_in_segment, prepare_video_i
 
 
 class PlanMixin:
-    def _collect_probe_inputs(self, video_path: str, duration_int: int, subtitle_items: list | None = None, frame_sampling_params: dict | None = None):
+    def _collect_probe_inputs(self, video_path: str, duration: float, subtitle_items: list | None = None, frame_sampling_params: dict | None = None):
         subtitle_items = subtitle_items or []
         frame_sampling_params = frame_sampling_params or {}
 
         segments = []
         clip_duration = 30
-        if duration_int <= clip_duration:
-            segments.append((0, 0, duration_int))
+        if duration <= clip_duration:
+            segments.append((0, 0, duration))
         else:
             for ratio in [0.0, 0.25, 0.50, 0.75]:
-                start = int(duration_int * ratio)
-                if start + clip_duration > duration_int:
-                    start = duration_int - clip_duration
+                start = int(duration * ratio)
+                if start + clip_duration > duration:
+                    start = duration - clip_duration
                 segments.append((int(ratio * 100), start, start + clip_duration))
             segments = sorted(list(set(segments)))
 
@@ -45,7 +45,7 @@ class PlanMixin:
 
         return sorted(prepared_inputs, key=lambda item: item[0])
 
-    def _run_plan_planner(self, prepared_probe_inputs, duration_int: int, subtitle_items: list | None = None):
+    def _run_plan_planner(self, prepared_probe_inputs, duration: float, subtitle_items: list | None = None):
         subtitle_items = subtitle_items or []
         user_content = [
             {"type": "text", "text": PLANNER_PROMPT["USER"]},
@@ -53,7 +53,7 @@ class PlanMixin:
             {
                 "type": "text",
                 "text": (
-                    f"- Duration: {duration_int} seconds.\n"
+                    f"- Duration: {duration} seconds.\n"
                     f"- Subtitle word count: {len(' '.join([item['text'] for item in subtitle_items]).split())}.\n"
                 ),
             },
@@ -79,26 +79,27 @@ class PlanMixin:
             {"role": "system", "content": PLANNER_PROMPT["SYSTEM"]},
             {"role": "user", "content": user_content},
         ]
-        output = self._generate_single_w_video(messages=messages, generator=self.planner)
+
+        output = self.planner.generate_single(messages=messages)        
         planner_output = self.parse_response(output["text"])
         return planner_output
 
     def _plan_video_execution(
         self,
         video_path: str,
-        duration_int: int,
+        duration: float,
         subtitle_items: list | None = None,
         frame_sampling_params: dict | None = None,
     ):
         prepared_probe_inputs = self._collect_probe_inputs(
             video_path=video_path,
-            duration_int=duration_int,
+            duration=duration,
             subtitle_items=subtitle_items,
             frame_sampling_params=frame_sampling_params,
         )
         planner_output = self._run_plan_planner(
             prepared_probe_inputs=prepared_probe_inputs,
-            duration_int=duration_int,
+            duration=duration,
             subtitle_items=subtitle_items,
         )
         return self._construct_execution_plan(planner_output)

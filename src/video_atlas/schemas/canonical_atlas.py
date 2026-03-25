@@ -116,10 +116,10 @@ class AtlasSegment:
     end_time: float
     summary: str
     caption: str
+    subtitles_text: str
     folder_name: str
-    readme_path: Path | None = None
-    clip_path: Path | None = None
-    subtitles_path: Path | None = None
+    relative_clip_path: Path | None = None
+    relative_subtitles_path: Path | None = None
 
     @property
     def duration(self) -> float:
@@ -129,10 +129,12 @@ class AtlasSegment:
 @dataclass
 class CanonicalAtlas:
     title: str
+    duration: float
     abstract: str
     segments: list[AtlasSegment]
-    root_path: Path
-    readme_text: str = ""
-    source_video_path: Path | None = None
-    normalized_audio_path: Path | None = None
-    execution_plan_path: Path | None = None
+    execution_plan: CanonicalExecutionPlan
+    atlas_dir: Path
+    relative_video_path: Path
+    relative_audio_path: Path | None = None
+    relative_subtitles_path: Path | None = None
+    relative_srt_file_path: Path | None = None

@@ -4,6 +4,8 @@ from dataclasses import asdict
 import json
 import time
 from pathlib import Path
+from typing import tuple
+import math
 
 from ...schemas import CreateVideoAtlasResult
 from ...transcription import generate_subtitles_for_video
@@ -11,68 +13,69 @@ from ...utils import get_video_property, parse_srt
 from ...persistence import copy_to, write_text_to
 
 class PipelineMixin:
-    def _resolve_subtitle_path(self, output_dir: Path, video_path: Path, verbose: bool = False) -> Path:
+    def _resolve_srt_file_path(self, output_dir: Path, video_path: Path, verbose: bool = False) -> tuple[Path, Path]:
         srt_files = list(output_dir.glob("*.srt"))
         if srt_files:
-            return str(srt_files[0])
+            return srt_files[0], None
 
         if not getattr(self, "generate_subtitles_if_missing", False):
             if verbose:
                 self._log_warning("No subtitle file found and subtitle generation is disabled")
-            return ""
+            return None, None
 
         transcriber = getattr(self, "transcriber", None)
         if transcriber is None:
             self._log_warning("No subtitle file found and no transcriber configured; continuing without subtitles")
-            return ""
+            return None, None
 
-        subtitle_path = output_dir / "subtitles.srt"
+        srt_file_path = output_dir / "subtitles.srt"
         try:
-            generate_subtitles_for_video(video_path, subtitle_path, transcriber=transcriber, logger=self.logger)
+            srt_file_path, audio_path = generate_subtitles_for_video(video_path, srt_file_path, transcriber=transcriber, logger=self.logger)
             if verbose:
-                self._log_info("Generated subtitles at %s", subtitle_path)
-            return subtitle_path
+                self._log_info("Generated subtitles at %s", srt_file_path)
+            return srt_file_path, audio_path
         except Exception as exc:
             self._log_warning("Automatic subtitle generation failed: %s", exc)
-            return ""
+            return None, None
 
     def create(
         self,
-        video_path: Path,
         output_dir: Path,
-        subtitle_path: Path | None = None,
+        source_video_path: Path,
+        source_srt_file_path: Path | None = None,
         verbose: bool = False
-    ) -> CreateVideoAtlasResult:
+    ) -> CanonicalAtlas:
         
-        if not video_path.exists():
-            raise FileNotFoundError(f"Video path does not exist: {video_path}")
+        if not source_video_path.exists():
+            raise FileNotFoundError(f"Video path does not exist: {source_video_path}")
         if verbose:
-            self._log_info("Processing video from: %s", video_path)
+            self._log_info("Processing video from: %s", source_video_path)
 
-        video_pat = copy_to(video_path, output_dir)
-        if subtitle_path:
-            if not subtitle_path.exists():
-                raise FileNotFoundError(f"Subtitle path does not exist: {subtitle_path}")
+        video_path = copy_to(source_video_path, output_dir)
+        if source_srt_file_path:
+            if not source_srt_file_path.exists():
+                raise FileNotFoundError(f"Subtitle srt file path does not exist: {source_srt_file_path}")
             if verbose:
-                self._log_info("Processing subtitle from: %s", subtitle_path)
-            subtitle_path = copy_to(subtitle_path, output_dir)
+                self._log_info("Processing subtitle from: %s", source_srt_file_path)
+            srt_file_path = copy_to(source_srt_file_path, output_dir)
         if verbose:
             self._log_info("Files copied to output directory: %s", output_dir)
 
-        # srt_path = self._resolve_subtitle_path(output_dir, video_path, verbose=verbose)
-        srt_path = Path('/share/project/minghao/Proj/VideoAFS/VideoEdit/development/local/workspaces/canonical_case_002/.agentignore/subtitles.srt')
-        subtitle_items, subtitles_str = parse_srt(srt_path)
+        # srt_file_path, audio_path = self._resolve_srt_file_path(output_dir, video_path, verbose=verbose)
+        srt_file_path = Path('/share/project/minghao/Proj/VideoAFS/VideoEdit/development/local/workspaces/canonical_case_002/.agentignore/subtitles.srt')
+        audio_path = Path('/share/project/minghao/Proj/VideoAFS/VideoEdit/development/local/workspaces/canonical_case_002/lol.wav')
+        subtitle_items, subtitles_str = parse_srt(srt_file_path)
         if self.caption_with_subtitles:
-            write_text_to(output_dir, "SUBTITLES.md", subtitles_str)
+            subtitles_path = write_text_to(output_dir, "SUBTITLES.md", subtitles_str)
 
         video_info = get_video_property(video_path)
-        duration_int = int(video_info["duration"])
+        duration = math.trunc(video_info["duration"] * 10) / 10
         _ = video_info["resolution"]
 
         started_at = time.time()
         execution_plan = self._plan_video_execution(
             video_path,
-            duration_int,
+            duration,
             subtitle_items,
             {"fps": 1, "max_resolution": 480},
         )
@@ -84,26 +87,27 @@ class PipelineMixin:
         write_text_to(output_dir, "EXECUTION_PLAN.json", json.dumps(asdict(execution_plan), indent=4))
         parsed_segments = self._parse_video_into_segments(
             video_path=video_path,
-            duration_int=duration_int,
+            duration=duration,
             subtitle_items=subtitle_items,
             verbose=verbose,
             execution_plan=execution_plan,
         )
-        self._assemble_canonical_atlas(
+        
+        atlas = self._assemble_canonical_atlas(
+            atlas_dir=output_dir,
+            duration=duration,
+            execution_plan=execution_plan,
             parsed_segments=parsed_segments,
             video_path=video_path,
-            duration_int=duration_int,
+            audio_path=audio_path,
+            subtitles_path=subtitles_path,
+            srt_file_path=srt_file_path,
             verbose=verbose
         )
         
-        result = CreateVideoAtlasResult(
-            success=True,
-            segment_num=len(parsed_segments),
-            specification=execution_plan,
-            segmentation_sampling=execution_plan.segmentation_specification.frame_sampling_profile,
-            description_sampling=execution_plan.caption_specification.frame_sampling_profile,
-        )
+        CanonicalAtlasWriter(caption_with_subtitles=self.caption_with_subtitles).write(atlas=atlas)
+        
         if verbose:
             self._log_info("VideoAtlas construction completed successfully")
             
-        return result
+        return atlas

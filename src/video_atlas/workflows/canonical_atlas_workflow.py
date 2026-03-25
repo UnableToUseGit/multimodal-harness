@@ -7,16 +7,12 @@ from ..transcription.base import BaseTranscriber
 
 from ..message_builder import build_video_messages_from_path
 from ..parsing import parse_json_response
-from ..workspaces.base import BaseWorkspace
 
 from .canonical_atlas.atlas_assembly import AtlasAssemblyMixin
-from .canonical_atlas.message_generation import MessageGenerationMixin
 from .canonical_atlas.execution_plan_builder import ExecutionPlanBuilderMixin
 from .canonical_atlas.plan import PlanMixin
 from .canonical_atlas.pipeline import PipelineMixin
-from .canonical_atlas.response_parsing import ResponseParsingMixin
 from .canonical_atlas.video_parsing import VideoParsingMixin
-from .canonical_atlas.workspace_io import WorkspaceIOMixin
 
 
 class CanonicalAtlasWorkflow(
@@ -25,9 +21,6 @@ class CanonicalAtlasWorkflow(
     VideoParsingMixin,
     PlanMixin,
     ExecutionPlanBuilderMixin,
-    MessageGenerationMixin,
-    ResponseParsingMixin,
-    WorkspaceIOMixin
 ):
     """
     CanonicalAtlasWorkflow - Canonical Atlas Workflow

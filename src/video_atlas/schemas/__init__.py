@@ -32,7 +32,6 @@ from .canonical_atlas import (
 )
 from .derived_atlas import DerivationPolicy, DerivationResultInfo, DerivedAtlas
 from .results import CreateDerivedAtlasResult, CreateVideoAtlasResult
-from .workspace import VideoGlobal, VideoSeg
 
 __all__ = [
     "ALLOWED_EVIDENCE",
@@ -62,8 +61,6 @@ __all__ = [
     "SamplingConfig",
     "SegmentationProfile",
     "SegmentationSpecification",
-    "VideoGlobal",
-    "VideoSeg",
     "resolve_caption_profile",
     "resolve_sampling_profile",
     "resolve_segmentation_profile",

@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from ..schemas import CanonicalAtlas, DerivationResultInfo, DerivedAtlas, VideoGlobal, VideoSeg
+from ..schemas import CanonicalAtlas, DerivationResultInfo, DerivedAtlas
 
 def copy_to(src_path: Path, destination: Path) -> Path:
     """Copy a file/directory to destination dir."""
@@ -32,7 +32,7 @@ def write_text_to(destination: str | Path, relative_path: str | Path, content: s
     target_path = Path(destination) / Path(relative_path)
     target_path.parent.mkdir(parents=True, exist_ok=True)
     target_path.write_text(content, encoding="utf-8")
-
+    return target_path
 
 def slugify_segment_title(title: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
@@ -77,50 +77,80 @@ class CanonicalAtlasWriter:
     def __init__(self, caption_with_subtitles: bool = True) -> None:
         self.caption_with_subtitles = caption_with_subtitles
 
+    def _segment_readme_text(self, segment) -> str:
+        
+        return "\n".join(
+            [
+                "# Segment",
+                "",
+                f"**SegID**: {segment.segment_id}",
+                f"**Start Time**: {segment.start_time:.1f}",
+                f"**End Time**: {segment.end_time:.1f}",
+                f"**Duration**: {segment.duration:.1f}",
+                f"**Title**: {segment.title}",
+                f"**Summary**: {segment.summary}",
+                f"**Detail Description**: {segment.caption}",
+                "",
+                "# Additional Files",
+                "- Raw video for this segment: `./video_clip.mp4`",
+                "- Subtitles for this segment: `./SUBTITLES.md`",
+            ]
+        )
+        
+    def _global_readme_text(self, atlas, max_end_time) -> str:
+        
+        return "\n".join(
+            [
+                f"**Title**: {atlas.title}",
+                f"**Duration**: {max_end_time:.1f}",
+                f"**Abstract**: {atlas.abstract}",
+                "**# Segmentation Context**:",
+                f"There are {len(atlas.segments)} segments are extracted from raw video."
+                "- Each segment is saved in `./segments`."
+                "- Each segment includes:"
+                "- A `README.md` file containing the title, description, start time, and end time."
+                "- A `video_clip.mp4` file with the corresponding video clip."
+                "- A `SUBTITLES.md` file with the corresponding subtitles."
+                "",
+                "# Additional Files"
+                "- Raw video: `./video.mp4`"
+                "- Detail information of segments: `./segments/`"
+                "- Full subtitles for this video: `./SUBTITLES.md`"
+            ]
+        )
+    
     def write(
         self,
         atlas: CanonicalAtlas,
-        source_video_path: str,
-        workspace_root: str | Path,
-        segment_artifacts: dict[str, dict[str, str]] | None = None,
     ) -> None:
-        segment_artifacts = segment_artifacts or {}
         segments_quickview_items = []
-        max_end_time = 0.0
+        
+        atlas_dir = atlas.atlas_dir
+        video_path = atlas.atlas_dir / atlas.relative_video_path
+
         for segment in atlas.segments:
             segment_dir = Path("segments") / segment.folder_name
-            video_seg = VideoSeg(
-                seg_id=segment.segment_id,
-                seg_title=segment.title,
-                summary=segment.summary,
-                start_time=segment.start_time,
-                end_time=segment.end_time,
-                duration=segment.duration,
-                detail=segment.caption,
-            )
-            write_text_to(workspace_root, segment_dir / "README.md", video_seg.to_markdown(with_subtitles=self.caption_with_subtitles))
-
-            subtitles_text = segment_artifacts.get(segment.segment_id, {}).get("subtitles_text", "")
+            write_text_to(atlas_dir, segment_dir / "README.md", self._segment_readme_text(segment))
+            
+            subtitles_text = segment.subtitles_text
             if self.caption_with_subtitles and subtitles_text:
-                write_text_to(workspace_root, segment_dir / "SUBTITLES.md", subtitles_text)
+                write_text_to(atlas_dir, segment_dir / "SUBTITLES.md", subtitles_text)
 
             clip_relative_path = segment_dir / "video_clip.mp4"
-            if not clip_exists(workspace_root, clip_relative_path):
-                extract_clip(workspace_root, source_video_path, segment.start_time, segment.end_time, clip_relative_path)
+            if not clip_exists(atlas_dir, clip_relative_path):
+                extract_clip(atlas_dir, video_path, segment.start_time, segment.end_time, clip_relative_path)
 
             segments_quickview_items.append(
                 f"- {segment.segment_id} ({segment.title}): {segment.start_time:.1f} - {segment.end_time:.1f} seconds: {segment.summary}"
             )
-            max_end_time = max(max_end_time, segment.end_time)
 
-        video_global = VideoGlobal(
-            title=atlas.title,
-            abstract=atlas.abstract,
-            duration=max_end_time,
-            num_segments=len(atlas.segments),
-            segments_quickview="\n".join(segments_quickview_items),
-        )
-        write_text_to(workspace_root, "README.md", video_global.to_markdown(with_subtitles=self.caption_with_subtitles))
+        # TODO segments_quickview_items 没用上，是否还需要添加？
+        markdown_text = self._global_readme_text(atlas, atlas.duration, "\n".join(segments_quickview_items)
+                                 
+        if not self.caption_with_subtitles:
+            markdown_text = markdown_text.replace("- Full subtitles for this video: `./SUBTITLES.md`", "").replace("- A `SUBTITLES.md` file with the corresponding subtitles.", "")
+                                 
+        write_text_to(atlas_dir, "README.md", markdown_text)
 
 
 class DerivedAtlasWriter:
