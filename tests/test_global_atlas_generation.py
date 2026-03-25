@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from video_atlas.agents.canonical_atlas.atlas_assembly import AtlasAssemblyMixin
 
@@ -43,10 +44,6 @@ class _GlobalAtlasHarness(AtlasAssemblyMixin):
     def _clip_exists(self, relative_path):
         return False
 
-    def _extract_clip(self, video_path, seg_start_time, seg_end_time, relative_output_path):
-        self._written[str(relative_output_path)] = f"clip:{seg_start_time:.1f}-{seg_end_time:.1f}"
-        return None
-
     def _segment_save_name(self, seg_id, seg_title, seg_start_time, seg_end_time):
         return f"seg{seg_id:04d}-{seg_title.lower().replace(' ', '-')}-{seg_start_time:.2f}-{seg_end_time:.2f}s"
 
@@ -73,12 +70,20 @@ class GlobalAtlasGenerationTest(unittest.TestCase):
             },
         ]
 
-        harness._assemble_canonical_atlas(
-            parsed_segments=parsed_segments,
-            video_path="video.mp4",
-            duration_int=60,
-            verbose=False,
-        )
+        with patch("video_atlas.persistence.writers.write_text_to") as mock_write:
+            with patch("video_atlas.persistence.writers.clip_exists", return_value=False):
+                with patch("video_atlas.persistence.writers.extract_clip") as mock_extract:
+                    harness._assemble_canonical_atlas(
+                        parsed_segments=parsed_segments,
+                        video_path="video.mp4",
+                        duration_int=60,
+                        verbose=False,
+                    )
+
+        for call in mock_write.call_args_list:
+            harness._written[str(call.args[1])] = call.args[2]
+        for call in mock_extract.call_args_list:
+            harness._written[str(call.args[4])] = f"clip:{call.args[2]:.1f}-{call.args[3]:.1f}"
 
         self.assertIn("README.md", harness._written)
         self.assertIn("segments/seg0001-draft-and-ban-0.00-30.00s/README.md", harness._written)

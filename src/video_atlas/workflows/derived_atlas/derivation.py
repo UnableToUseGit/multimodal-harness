@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from ...persistence import slugify_segment_title
 from ...prompts import DERIVED_CAPTION_PROMPT, DERIVED_GROUNDING_PROMPT
 from ...schemas import AtlasSegment, DerivationPolicy
 
@@ -122,7 +123,7 @@ class DerivationMixin:
         caption = str(caption_data.get("caption", segment.caption))
         folder_name = (
             f"{derived_segment_id.replace('_', '-')}-"
-            f"{self._slugify_segment_title(title)}-{start_time:.2f}-{end_time:.2f}s"
+            f"{slugify_segment_title(title)}-{start_time:.2f}-{end_time:.2f}s"
         )
 
         return {

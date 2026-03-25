@@ -3,11 +3,10 @@ from __future__ import annotations
 from typing import Optional
 
 from ..generators.base import BaseGenerator
-from ..multimodal import build_video_messages_from_path
+from ..message_builder import build_video_messages_from_path
 from ..parsing import parse_json_response
 from ..workspaces.base import BaseWorkspace
 from .base_agent import BaseAtlasAgent
-from .canonical_atlas.workspace_io import WorkspaceIOMixin
 from .task_derivation.aggregation import AggregationMixin
 from .task_derivation.candidate_generation import CandidateGenerationMixin
 from .task_derivation.derivation import DerivationMixin
@@ -19,7 +18,6 @@ class DerivedAtlasAgent(
     DerivationMixin,
     CandidateGenerationMixin,
     DerivedPipelineMixin,
-    WorkspaceIOMixin,
     BaseAtlasAgent,
 ):
     def __init__(

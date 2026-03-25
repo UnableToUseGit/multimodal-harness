@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`src/video_atlas/persistence/workspace_writers.py` contains writer classes that persist atlas domain objects into the repository's workspace format.
+`src/video_atlas/persistence/writers.py` contains writer classes that persist atlas domain objects into the repository's workspace format.
 
 This module is responsible for converting instantiated schema objects into the expected on-disk directory layout and file contents.
 
@@ -21,7 +21,7 @@ This persistence step is separate from agent reasoning. The agent decides what t
 
 ## Public Classes
 
-## `CanonicalWorkspaceWriter`
+## `CanonicalAtlasWriter`
 
 **Purpose**
 
@@ -47,7 +47,7 @@ Persist a `CanonicalAtlas` into the canonical workspace layout.
 - writes each segment `SUBTITLES.md` when enabled and available
 - writes each segment `video_clip.mp4`
 
-## `DerivedWorkspaceWriter`
+## `DerivedAtlasWriter`
 
 **Purpose**
 
@@ -96,5 +96,5 @@ This module does not:
 
 ## Current Usage
 
-- canonical atlas assembly uses `CanonicalWorkspaceWriter`
-- derived atlas pipeline uses `DerivedWorkspaceWriter`
+- canonical atlas assembly uses `CanonicalAtlasWriter`
+- derived atlas pipeline uses `DerivedAtlasWriter`

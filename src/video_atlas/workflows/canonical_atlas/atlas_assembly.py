@@ -3,10 +3,9 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from ...persistence import CanonicalWorkspaceWriter
+from ...persistence import CanonicalAtlasWriter, slugify_segment_title
 from ...prompts import VIDEO_GLOBAL_PROMPT
 from ...schemas import AtlasSegment, CanonicalAtlas
-
 
 class AtlasAssemblyMixin:
     def _assemble_canonical_atlas(
@@ -50,7 +49,7 @@ class AtlasAssemblyMixin:
         for seg in parsed_segments:
             seg_title = title_map.get(seg["seg_id"], seg.get("seg_title") or seg["seg_id"])
             seg_index = int(seg["seg_id"].split("_")[-1])
-            save_name = self._segment_save_name(seg_index, seg_title, seg["start_time"], seg["end_time"])
+            save_name = f"{seg["seg_id"]}-{slugify_segment_title(seg_title)}-{seg["start_time"]:.2f}-{seg["end_time"]:.2f}s"
             atlas_segments.append(
                 AtlasSegment(
                     segment_id=seg["seg_id"],
@@ -70,13 +69,9 @@ class AtlasAssemblyMixin:
             segments=atlas_segments,
             root_path=self._workspace_root() if hasattr(self, "_workspace_root") else Path("."),
         )
-        CanonicalWorkspaceWriter(
-            write_text=self._write_workspace_text,
-            extract_clip=self._extract_clip,
-            clip_exists=self._clip_exists,
-            caption_with_subtitles=self.caption_with_subtitles,
-        ).write(
+        CanonicalAtlasWriter(caption_with_subtitles=self.caption_with_subtitles).write(
             atlas=atlas,
             source_video_path=video_path,
+            workspace_root=self._workspace_root() if hasattr(self, "_workspace_root") else Path("."),
             segment_artifacts=segment_artifacts,
         )

@@ -2,34 +2,86 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import json
+import re
+import shlex
+import shutil
+import subprocess
 from pathlib import Path
-from typing import Callable
 
 from ..schemas import CanonicalAtlas, DerivationResultInfo, DerivedAtlas, VideoGlobal, VideoSeg
 
+def copy_to(src_path: Path, destination: Path) -> Path:
+    """Copy a file/directory to destination dir."""
+    src = Path(src_path)
+    dest_dir = Path(destination)
 
-WriteText = Callable[[str | Path, str], None]
-ExtractClip = Callable[[str, float, float, str | Path], None]
-ClipExists = Callable[[str | Path], bool]
+    if not dest_dir.exists() or not dest_dir.is_dir():
+        raise ValueError("destination must be an existing directory")
+    if not src.exists():
+        raise FileNotFoundError(src)
+
+    dest = dest_dir / src.name
+    if src.is_dir():
+        shutil.copytree(src, dest)
+    else:
+        shutil.copy2(src, dest)
+    return dest
 
 
-class CanonicalWorkspaceWriter:
-    def __init__(
-        self,
-        write_text: WriteText,
-        extract_clip: ExtractClip,
-        clip_exists: ClipExists,
-        caption_with_subtitles: bool = True,
-    ) -> None:
-        self.write_text = write_text
-        self.extract_clip = extract_clip
-        self.clip_exists = clip_exists
+def write_text_to(destination: str | Path, relative_path: str | Path, content: str) -> None:
+    target_path = Path(destination) / Path(relative_path)
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_text(content, encoding="utf-8")
+
+
+def slugify_segment_title(title: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    return normalized or "untitled"
+
+
+def clip_exists(workspace_root: str | Path, relative_path: str | Path) -> bool:
+    return (Path(workspace_root) / Path(relative_path)).exists()
+
+
+def extract_clip(
+    workspace_root: str | Path,
+    video_path: str,
+    seg_start_time: float,
+    seg_end_time: float,
+    relative_output_path: str | Path,
+) -> None:
+    root_path = Path(workspace_root)
+    output_path = root_path / Path(relative_output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    command = (
+        "ffmpeg -y -loglevel quiet "
+        f"-ss {seg_start_time} -to {seg_end_time} "
+        f"-i {shlex.quote(Path(video_path).name)} "
+        f"-c copy {shlex.quote(str(output_path.relative_to(root_path)))}"
+    )
+    result = subprocess.run(
+        command,
+        shell=True,
+        cwd=root_path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed with exit code {result.returncode}: {result.stdout}")
+
+
+class CanonicalAtlasWriter:
+    def __init__(self, caption_with_subtitles: bool = True) -> None:
         self.caption_with_subtitles = caption_with_subtitles
 
     def write(
         self,
         atlas: CanonicalAtlas,
         source_video_path: str,
+        workspace_root: str | Path,
         segment_artifacts: dict[str, dict[str, str]] | None = None,
     ) -> None:
         segment_artifacts = segment_artifacts or {}
@@ -46,15 +98,15 @@ class CanonicalWorkspaceWriter:
                 duration=segment.duration,
                 detail=segment.caption,
             )
-            self.write_text(segment_dir / "README.md", video_seg.to_markdown(with_subtitles=self.caption_with_subtitles))
+            write_text_to(workspace_root, segment_dir / "README.md", video_seg.to_markdown(with_subtitles=self.caption_with_subtitles))
 
             subtitles_text = segment_artifacts.get(segment.segment_id, {}).get("subtitles_text", "")
             if self.caption_with_subtitles and subtitles_text:
-                self.write_text(segment_dir / "SUBTITLES.md", subtitles_text)
+                write_text_to(workspace_root, segment_dir / "SUBTITLES.md", subtitles_text)
 
             clip_relative_path = segment_dir / "video_clip.mp4"
-            if not self.clip_exists(clip_relative_path):
-                self.extract_clip(source_video_path, segment.start_time, segment.end_time, clip_relative_path)
+            if not clip_exists(workspace_root, clip_relative_path):
+                extract_clip(workspace_root, source_video_path, segment.start_time, segment.end_time, clip_relative_path)
 
             segments_quickview_items.append(
                 f"- {segment.segment_id} ({segment.title}): {segment.start_time:.1f} - {segment.end_time:.1f} seconds: {segment.summary}"
@@ -68,26 +120,14 @@ class CanonicalWorkspaceWriter:
             num_segments=len(atlas.segments),
             segments_quickview="\n".join(segments_quickview_items),
         )
-        self.write_text("README.md", video_global.to_markdown(with_subtitles=self.caption_with_subtitles))
+        write_text_to(workspace_root, "README.md", video_global.to_markdown(with_subtitles=self.caption_with_subtitles))
 
 
-class DerivedWorkspaceWriter:
-    def __init__(
-        self,
-        write_text: WriteText,
-        extract_clip: ExtractClip,
-        caption_with_subtitles: bool = True,
-    ) -> None:
-        self.write_text = write_text
-        self.extract_clip = extract_clip
+class DerivedAtlasWriter:
+    def __init__(self, caption_with_subtitles: bool = True) -> None:
         self.caption_with_subtitles = caption_with_subtitles
 
-    def _segment_readme_text(
-        self,
-        segment,
-        source_segment_id: str,
-        intent: str,
-    ) -> str:
+    def _segment_readme_text(self, segment, source_segment_id: str, intent: str) -> str:
         return "\n".join(
             [
                 "# Derived Segment",
@@ -114,12 +154,14 @@ class DerivedWorkspaceWriter:
         result_info: DerivationResultInfo,
         task_request: str,
         source_video_path: str,
+        workspace_root: str | Path,
         segment_artifacts: dict[str, dict[str, str]] | None = None,
     ) -> None:
         segment_artifacts = segment_artifacts or {}
-        self.write_text("README.md", derived_atlas.readme_text)
-        self.write_text("TASK.md", task_request)
-        self.write_text(
+        write_text_to(workspace_root, "README.md", derived_atlas.readme_text)
+        write_text_to(workspace_root, "TASK.md", task_request)
+        write_text_to(
+            workspace_root,
             "derivation.json",
             json.dumps(
                 {
@@ -133,18 +175,23 @@ class DerivedWorkspaceWriter:
                 indent=2,
             ),
         )
-        self.write_text(".agentignore/DERIVATION_RESULT.json", json.dumps(asdict(result_info), ensure_ascii=False, indent=2))
+        write_text_to(
+            workspace_root,
+            ".agentignore/DERIVATION_RESULT.json",
+            json.dumps(asdict(result_info), ensure_ascii=False, indent=2),
+        )
 
         for segment in derived_atlas.segments:
             source_segment_id = result_info.derivation_source.get(segment.segment_id, "")
             policy = result_info.derivation_reason.get(segment.segment_id)
             intent = policy.intent if policy is not None else ""
             segment_dir = Path("segments") / segment.folder_name
-            self.write_text(segment_dir / "README.md", self._segment_readme_text(segment, source_segment_id, intent))
+            write_text_to(workspace_root, segment_dir / "README.md", self._segment_readme_text(segment, source_segment_id, intent))
             subtitles_text = segment_artifacts.get(segment.segment_id, {}).get("subtitles_text", "")
             if self.caption_with_subtitles and subtitles_text:
-                self.write_text(segment_dir / "SUBTITLES.md", subtitles_text)
-            self.write_text(
+                write_text_to(workspace_root, segment_dir / "SUBTITLES.md", subtitles_text)
+            write_text_to(
+                workspace_root,
                 segment_dir / "SOURCE_MAP.json",
                 json.dumps(
                     {
@@ -155,4 +202,5 @@ class DerivedWorkspaceWriter:
                     indent=2,
                 ),
             )
-            self.extract_clip(source_video_path, segment.start_time, segment.end_time, segment_dir / "video_clip.mp4")
+
+            extract_clip(workspace_root, source_video_path, segment.start_time, segment.end_time, segment_dir / "video_clip.mp4")

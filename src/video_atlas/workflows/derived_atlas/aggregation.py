@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from ...schemas import AtlasSegment, DerivationResultInfo, DerivedAtlas
 
 
@@ -45,7 +47,7 @@ class AggregationMixin:
             global_summary=global_summary,
             detailed_breakdown=detailed_breakdown,
             segments=derived_segments,
-            root_path=self._workspace_root(),
+            root_path=Path(self.workspace.root_path),
             readme_text=self._root_readme_text(task_request, global_summary, detailed_breakdown),
             source_canonical_atlas_path=canonical_atlas.root_path,
         )

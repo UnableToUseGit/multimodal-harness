@@ -9,7 +9,7 @@ class CandidateGenerationMixin:
         canonical_segments = "\n".join(
             [
                 f"- {segment.segment_id}: {segment.start_time:.1f}-{segment.end_time:.1f}s | "
-                f"title={segment.title} | summary={segment.summary} | detail={segment.caption}"
+                f"title={segment.title} | detail={segment.caption}"
                 for segment in canonical_atlas.segments
             ]
         )

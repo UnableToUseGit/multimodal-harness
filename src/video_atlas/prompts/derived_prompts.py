@@ -9,7 +9,7 @@ DERIVED_CANDIDATE_PROMPT = {
     "USER": """
 You will receive:
 - a task request
-- canonical atlas segments with ids, titles, time ranges, summaries, and details
+- canonical atlas segments with ids, titles, time ranges, and detailed captions
 
 Your task:
 Select the canonical segments relevant to the task.

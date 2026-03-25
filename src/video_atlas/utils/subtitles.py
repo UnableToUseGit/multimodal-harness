@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 from typing import Dict, List
+from pathlib import Path
 
 
 def _ts_to_seconds(ts: str) -> float:
@@ -13,8 +14,8 @@ def _ts_to_seconds(ts: str) -> float:
     return int(hh) * 3600 + int(mm) * 60 + int(ss) + int(ms) / 1000.0
 
 
-def parse_srt(srt_path: str):
-    if not os.path.exists(srt_path):
+def parse_srt(srt_path: Path):
+    if not srt_path.exists:
         return [], ""
 
     with open(srt_path, "r", encoding="utf-8", errors="replace") as file:

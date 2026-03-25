@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from video_atlas.agents.derived_atlas_agent import DerivedAtlasAgent
@@ -33,11 +34,6 @@ class _TestDerivedAtlasAgent(DerivedAtlasAgent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.video_message_calls = []
-
-    def _extract_clip(self, video_path: str, seg_start_time: float, seg_end_time: float, relative_output_path):
-        target = self._workspace_root() / Path(relative_output_path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(f"{seg_start_time:.1f}-{seg_end_time:.1f}".encode("utf-8"))
 
     def _build_video_messages_from_path(
         self,
@@ -156,10 +152,16 @@ class DerivedPipelineTest(unittest.TestCase):
                 num_workers=2,
             )
 
-            result = agent.add(
-                task_request="Find the opening setup needed for my edit",
-                canonical_atlas=canonical,
-            )
+            def fake_extract_clip(workspace_root, video_path, seg_start_time, seg_end_time, relative_output_path):
+                target = Path(workspace_root) / Path(relative_output_path)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(f"{seg_start_time:.1f}-{seg_end_time:.1f}".encode("utf-8"))
+
+            with patch("video_atlas.persistence.writers.extract_clip", side_effect=fake_extract_clip):
+                result = agent.add(
+                    task_request="Find the opening setup needed for my edit",
+                    canonical_atlas=canonical,
+                )
 
             root = Path(tmpdir)
             self.assertTrue(result.success)

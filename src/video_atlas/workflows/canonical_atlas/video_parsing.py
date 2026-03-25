@@ -11,38 +11,38 @@ from ...utils import get_subtitle_in_segment
 
 
 class VideoParsingMixin:
-    def _write_candidate_boundaries_debug(
-        self,
-        chunk_index: int,
-        core_start_time: float,
-        core_end_time: float,
-        window_start_time: float,
-        window_end_time: float,
-        last_detection_point: float | None,
-        candidate_boundaries: list[CandidateBoundary],
-    ) -> None:
-        payload = {
-            "chunk_index": chunk_index,
-            "core_start": core_start_time,
-            "core_end": core_end_time,
-            "window_start": window_start_time,
-            "window_end": window_end_time,
-            "last_detection_point": last_detection_point,
-            "candidate_boundaries": [
-                {
-                    "timestamp": item.timestamp,
-                    "boundary_rationale": item.boundary_rationale,
-                    "evidence": list(item.evidence),
-                    "confidence": item.confidence,
-                }
-                for item in candidate_boundaries
-            ],
-        }
-        relative_path = (
-            f".agentignore/boundary_debug/"
-            f"chunk_{chunk_index:04d}_core_{core_start_time:.2f}_{core_end_time:.2f}.json"
-        )
-        self._write_workspace_text(relative_path, json.dumps(payload, indent=2, ensure_ascii=False))
+    # def _write_candidate_boundaries_debug(
+    #     self,
+    #     chunk_index: int,
+    #     core_start_time: float,
+    #     core_end_time: float,
+    #     window_start_time: float,
+    #     window_end_time: float,
+    #     last_detection_point: float | None,
+    #     candidate_boundaries: list[CandidateBoundary],
+    # ) -> None:
+    #     payload = {
+    #         "chunk_index": chunk_index,
+    #         "core_start": core_start_time,
+    #         "core_end": core_end_time,
+    #         "window_start": window_start_time,
+    #         "window_end": window_end_time,
+    #         "last_detection_point": last_detection_point,
+    #         "candidate_boundaries": [
+    #             {
+    #                 "timestamp": item.timestamp,
+    #                 "boundary_rationale": item.boundary_rationale,
+    #                 "evidence": list(item.evidence),
+    #                 "confidence": item.confidence,
+    #             }
+    #             for item in candidate_boundaries
+    #         ],
+    #     }
+    #     relative_path = (
+    #         f".agentignore/boundary_debug/"
+    #         f"chunk_{chunk_index:04d}_core_{core_start_time:.2f}_{core_end_time:.2f}.json"
+    #     )
+    #     self.write_text_to(relative_path, json.dumps(payload, indent=2, ensure_ascii=False))
 
     def _clamp_confidence(self, value: float, default: float = 0.0) -> float:
         try:
@@ -418,15 +418,15 @@ class VideoParsingMixin:
                     self._log_error("[Chunk %.0f-%.0f] Failed to detect candidate boundaries: %s", core_start_time, core_end_time, exc)
                     candidate_boundaries = []
 
-                self._write_candidate_boundaries_debug(
-                    chunk_index=chunk_index,
-                    core_start_time=core_start_time,
-                    core_end_time=core_end_time,
-                    window_start_time=window_start_time,
-                    window_end_time=window_end_time,
-                    last_detection_point=last_detection_point,
-                    candidate_boundaries=candidate_boundaries,
-                )
+                # self._write_candidate_boundaries_debug(
+                #     chunk_index=chunk_index,
+                #     core_start_time=core_start_time,
+                #     core_end_time=core_end_time,
+                #     window_start_time=window_start_time,
+                #     window_end_time=window_end_time,
+                #     last_detection_point=last_detection_point,
+                #     candidate_boundaries=candidate_boundaries,
+                # )
 
                 committed_segments, open_segment_start = self._materialize_committed_segments(
                     video_path=video_path,

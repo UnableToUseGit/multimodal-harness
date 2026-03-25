@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...multimodal import build_text_messages, build_video_messages, build_video_messages_from_path
+from ...message_builder import build_text_messages, build_video_messages, build_video_messages_from_path
 from ...schemas import FrameSamplingProfile
 
 

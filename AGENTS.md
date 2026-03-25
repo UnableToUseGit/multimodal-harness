@@ -1,175 +1,84 @@
 # Repository Guidelines
 
-## What This Repo Is
+## 仓库定位
 
-`VideoAtlas` provides a video parsing service that turns long, hard-to-use videos into an LLM-friendly file-directory representation.
+`VideoAtlas` 是一个面向长视频理解与重组的系统。它的目标不是简单生成摘要，而是把原始视频转换成结构化、可检索、可复用的 atlas，使后续应用、代理系统和人工协作都能稳定消费这些结果。
 
-The core goal is not just to summarize a video, but to reorganize it into structured artifacts that downstream applications can consume reliably, such as:
+项目当前主要围绕两类能力展开：
 
-- a global overview in `README.md`
-- segment-level folders under `segments/`
-- per-segment summaries, detailed descriptions, clips, and optional subtitles
-- probe outputs and intermediate planning artifacts for inspection
+- 将原始视频解析为内容稳定、目录结构清晰的 canonical atlas
+- 在 canonical atlas 基础上，根据具体任务进一步提炼和组织轻量化资产
 
-The repository also supports task-aware derivation: starting from a canonical content-aware atlas, derive a second workspace that keeps, drops, reorders, and retitles segments for a specific business task.
+该仓库同时承载实现、规范、文档和工作流约定，因此所有开发活动都应以“结构清晰、契约稳定、可持续演进”为目标。
 
-The repository exists to make long-video understanding operational: take raw video input, extract structured context, and write it into a workspace that humans and language models can both navigate easily.
+## 规范索引
 
-## Project Structure & Module Organization
+本文件只提供一层轻量索引。各类详细规范请直接查阅 `docs/project-spec/` 下的对应文档：
 
-This repository is the home of the `VideoAtlas` pipeline. Keep the code surface small and keep repository context in the `docs/` tree.
+- 基础编码规范：
+  [docs/project-spec/basic-coding.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/basic-coding.md)
+- 架构与设计规范：
+  [docs/project-spec/architecture-and-design.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/architecture-and-design.md)
+- 工程化与运维规范：
+  [docs/project-spec/engineering-and-operations.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/engineering-and-operations.md)
+- 测试规范：
+  [docs/project-spec/testing.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/testing.md)
+- 质量保障规范：
+  [docs/project-spec/quality-assurance.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/quality-assurance.md)
+- 协作与交付规范：
+  [docs/project-spec/collaboration-and-delivery.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/collaboration-and-delivery.md)
 
-- `src/video_atlas/agents/`: agent entrypoints and public agent classes.
-- `src/video_atlas/agents/video_atlas/`: internal `CanonicalVideoAtlasAgent` stages such as planning, execution-plan building, video parsing, atlas assembly, response parsing, and workspace IO.
-- `src/video_atlas/agents/task_derivation/`: internal `TaskDerivationAgent` stages such as canonical atlas loading, task planning, and derived workspace writing.
-- `src/video_atlas/generators/`: abstract generator interface and config models.
-- `src/video_atlas/prompts/`: prompt templates used by `CanonicalVideoAtlasAgent`.
-- `src/video_atlas/schemas/`: canonical execution-plan models, runtime segment/caption data models, workspace markdown models, task-derivation models, and result objects.
-- `src/video_atlas/config/`: runnable pipeline config schemas, loaders, and factories for scripts.
-- `src/video_atlas/transcription/`: audio extraction, ASR abstraction, and `.srt` generation for missing-subtitle workflows.
-- `src/video_atlas/review/`: local browser-based review tooling for inspecting workspace clips, subtitles, captions, and source mappings.
-- `src/video_atlas/utils/`: video helpers split by concern, such as frame extraction, subtitle parsing, and video metadata.
-- `src/video_atlas/workspaces/`: local command execution abstraction.
-- `src/video_atlas/cli/`: minimal local development CLI.
-- `configs/`: checked-in runnable config files for canonical and task-derivation workflows.
-- `tests/`: smoke tests and future automated checks.
-- `scripts/`: local validation helpers.
-- `docs/design-docs/`: architecture beliefs and design decisions.
-- `docs/product-specs/`: user-facing behavior and workflow expectations.
-- `docs/exec-plans/`: active plans, completed plans, and tracked debt.
-- Root docs: `ARCHITECTURE.md`, `docs/DESIGN.md`, `docs/PLANS.md`, `docs/SECURITY.md`.
+如后续新增领域特定规范，应继续放在 `docs/project-spec/` 下，并在本文件中补充入口索引。
 
-There is currently no web/API layer and no bundled example assets.
+## 开发工作方式
 
-## Build, Test, and Development Commands
+### 新功能开发
 
-### Environment Setup
+- 开发任何新功能前，应先明确设计方案。
+- 若用户已经提供完整设计文档，应先基于该文档确认实现边界与验收标准。
+- 若用户未提供设计文档，开发者应先补一版简要设计说明，并在正式开发前征求用户意见。
+- 设计确认后，应新建独立分支开展开发工作。
+- 开发过程中，应同时遵循本仓库的相关规范文档，包括编码规范、架构规范、测试规范和质量保障规范。
+- 功能开发完成后，应按规范执行测试与验证。
+- 测试通过后，应等待用户验收。
+- 若验收未通过，应根据用户反馈继续修改，直到满足预期。
+- 若验收通过，应补充或修订相关文档，随后再进行正式提交。
 
-- `conda activate /share/project/minghao/Envs/videoatlas`: enter the dedicated development environment.
-- Required Python packages should be installed manually inside this environment.
-- `ffmpeg` is already installed and can be used directly.
+### 既有功能改进
 
-Recommended order for a fresh shell:
+- 对既有功能的改进，默认遵循与新功能开发相同的流程。
+- 在开始实现前，应先明确改动目标、影响范围和验收标准。
+- 若改动涉及行为调整、接口变化或模块职责变化，应先形成简要设计说明，再进入开发。
+- 改进完成后，同样需要经过规范测试、用户验收、文档更新和最终提交。
+
+### Bug 修复
+
+- 对明确、局部、低风险的 bug 修复，可以直接在当前分支上修改，不强制要求先写设计文档。
+- 若 bug 修复会引起公共行为变化、稳定契约变化、较大范围重构或架构调整，则仍应先补充简要说明，再开始修改。
+- bug 修复完成后，仍应进行必要验证。
+- 若修复内容会影响用户可见行为、接口契约或使用方式，也应同步更新相关文档。
+
+## 环境准备
+
+- `conda activate /share/project/minghao/Envs/videoatlas`：进入专用开发环境。
+- 所需 Python 包应通过 `pip` 在该环境内手动安装。
+
+推荐在一个全新的 shell 中按以下顺序操作：
 
 1. `conda activate /share/project/minghao/Envs/videoatlas`
 2. `proxy_status`
-3. run `proxy_on` if external network access is needed
-4. run `set_mirror` before package or model downloads
-5. install dependencies
-6. run validation commands
+3. 若需要访问外部网络，执行 `proxy_on`
+4. 在下载包或模型前执行 `set_mirror`
+5. 安装依赖
+6. 运行验证命令
 
-### Network Helpers
+## 网络辅助命令
 
-For mainland China network constraints, use the shell helpers already defined in `.bashrc`:
+针对中国大陆网络环境限制，请使用 `.bashrc` 中已定义的以下 shell 辅助命令：
 
-- `proxy_status`: check whether outbound proxy is enabled.
-- `proxy_on`: enable proxy access before installing or downloading from external services.
-- `proxy_off`: disable proxy access.
-- `set_mirror`: configure mirrors for `pip`, `conda`, `npm`, and Hugging Face downloads.
-- `test_mirror`: inspect current mirror configuration.
-- `unset_mirror`: clear mirror configuration when no longer needed.
-
-### Install Commands
-
-- `pip install -r requirements.txt`: install runtime dependencies.
-- `pip install -e .`: install the package in editable mode.
-
-Dependency policy:
-
-- add new dependencies only when necessary
-- record shared dependencies in the repository instead of leaving them as ad hoc local installs
-- if installs fail, check `proxy_status` and `test_mirror` before debugging elsewhere
-
-### Validation Commands
-
-- `PYTHONPATH=src python3 -m compileall src/video_atlas`: checks syntax and module-level import integrity.
-- `PYTHONPATH=src python3 -m video_atlas.cli check-import`: smoke test the package entrypoint.
-- `PYTHONPATH=src python3 -m video_atlas.cli config`: inspect whether API config is loaded from env or `.env`.
-- `PYTHONPATH=src python3 -m unittest discover -s tests`: run the minimal automated smoke tests.
-- `PYTHONPATH=src python3 scripts/run_review_app.py --canonical-workspace ... [--task-workspace ...]`: launch the local browser-based review workbench for manual evaluation.
-- `PYTHONPATH=src python3 scripts/run_video_atlas.py --config configs/canonical/default.json --input-path ... --output-workspace ...`: run a real canonical VideoAtlas generation test against an OpenAI-compatible API.
-- `PYTHONPATH=src python3 scripts/run_task_derivation.py --config configs/task_derivation/default.json --source-workspace ... --output-workspace ... --task-description ...`: run a real task-derivation test against an OpenAI-compatible API.
-
-### Runtime Configuration
-
-- Set environment-level API connection config through environment variables: `VIDEO_ATLAS_API_BASE`, `VIDEO_ATLAS_API_KEY`.
-- For local development, fill in the project-root `.env` file or copy `.env.example` to `.env`, but never commit the real `.env`.
-- Application code should read runtime config through `src/video_atlas/settings.py` instead of scattered direct `os.environ` access.
-- Pass workflow-level model selection through checked-in config files under `configs/`, not through `settings.py`.
-- Prefer checked-in workflow configs under `configs/` for model/runtime parameters. Use CLI flags only for input/output paths and a small number of temporary overrides.
-- Keep environment-level connection settings such as `api_base` and `api_key` in `settings.py` and environment variables, not in checked-in workflow config files.
-- Keep workflow-level execution settings such as model selection, temperatures, token limits, VAD, and batching in `configs/`.
-- Keep CLI usage narrow: it should select config files, provide input/output paths, and allow a small number of temporary overrides. It should not be the primary carrier for full model/runtime configuration.
-
-### Local Test Data Convention
-
-- Keep local videos, subtitles, and generated workspaces under the project-root `local/` directory.
-- Recommended layout:
-  - `local/inputs/<case_name>/` for raw inputs such as `.mp4` and optional `.srt`
-  - `local/workspaces/canonical_<case_name>/` for canonical content-aware atlas outputs
-  - `local/workspaces/task_<case_name>/` for task-aware derived atlas outputs
-- Treat `local/` as machine-local working data only. It should stay out of version control.
-
-If you change the `CanonicalVideoAtlasAgent` pipeline, the `TaskDerivationAgent` pipeline, workspace-writing behavior, or video utility logic, also validate with a small local `.mp4` and optional `.srt`.
-
-### Notes
-
-- This repository has a minimal smoke test suite under `tests/`, but no formal full-coverage test suite, `Makefile`, or task runner yet.
-- Before downloading models, packages, or external assets, verify proxy and mirror setup first.
-- Before major changes, read `ARCHITECTURE.md`, `docs/design-docs/index.md`, `docs/PLANS.md`, and the relevant file under `docs/product-specs/`.
-
-## Coding Style & Naming Conventions
-
-- Use Python 3.10+ and 4-space indentation.
-- Follow PEP 8 naming: `snake_case` for functions/modules, `PascalCase` for classes, `UPPER_SNAKE_CASE` for constants.
-- Keep new modules aligned with the core VideoAtlas workflow; avoid adding unrelated product surfaces before a clear need exists.
-- Prefer type hints on public methods and dataclass/Pydantic fields.
-- Keep comments sparse and functional; explain non-obvious behavior only.
-- For internal runtime messaging, use the workspace/agent logger instead of direct `print` calls. CLI commands and top-level scripts may print final user-facing summaries.
-- When subtitle files are missing, prefer generating `subtitles.srt` through the transcription pipeline instead of embedding ad hoc ASR logic into the main video pipeline.
-- When subtitles are auto-generated, keep the extracted normalized audio file in the canonical workspace root next to `subtitles.srt` for inspection and reruns.
-
-## Testing Guidelines
-
-There is no formal automated test suite yet. Use lightweight validation for now.
-
-For changes:
-
-- run `PYTHONPATH=src python3 -m compileall src/video_atlas`
-- run a targeted import smoke test with `PYTHONPATH=src python3 -m video_atlas.cli check-import`
-- run `PYTHONPATH=src python3 -m unittest discover -s tests`
-- if you change runtime behavior, perform a small manual validation with a local `.mp4` and optional `.srt`
-
-If you add tests later, place them under `tests/` and name files `test_*.py`.
-
-Documentation updates are part of the definition of done for behavior-changing work.
-
-- If development workflow, install steps, config flow, or validation commands change, update `AGENTS.md` in the same change.
-- If system boundaries, workspace artifact contracts, core flow, or module responsibilities change, update `ARCHITECTURE.md` in the same change.
-- If user-visible behavior, processing expectations, or implementation plans change materially, update the matching file under `docs/product-specs/` or `docs/exec-plans/` in the same change.
-
-## Commit & Pull Request Guidelines
-
-This workspace is managed with git. Use small, reviewable commits and clear branch boundaries.
-
-Recommended commit style: Conventional Commits, for example:
-
-- `feat: add generator adapter for multimodal backend`
-- `fix: handle missing subtitles in planner inputs`
-
-Use a separate branch per task to reduce conflicts and make validation easier.
-
-PRs should include:
-
-- a short summary of behavior changes
-- affected paths, such as `src/video_atlas/agents/canonical_atlas_agent.py`
-- validation performed
-- sample input/output notes if video processing behavior changed
-
-## Operational Safety
-
-- Do not commit API keys, proxy settings, local video assets, or generated workspace outputs.
-- Keep large media files and temporary parsing outputs outside version control unless they are intentionally curated fixtures.
-- Treat `LocalWorkspace` command execution as privileged; review shell command construction and path handling carefully.
-- Be careful when interpolating filenames, subtitles, or generated text into shell commands or output paths.
-- Before downloading packages, models, or external assets, confirm proxy and mirror configuration for the current shell.
+- `proxy_status`：检查当前是否已启用外部代理。
+- `proxy_on`：在安装依赖或下载外部资源前启用代理访问。
+- `proxy_off`：关闭代理访问。
+- `set_mirror`：为 `pip`、`conda`、`npm` 和 Hugging Face 下载配置镜像。
+- `test_mirror`：检查当前镜像配置状态。
+- `unset_mirror`：在不再需要时清除镜像配置。

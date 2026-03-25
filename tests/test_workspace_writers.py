@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from video_atlas.schemas import (
@@ -17,27 +19,46 @@ class _WriterHarness:
     def __init__(self) -> None:
         self.written: dict[str, str] = {}
 
-    def write_text(self, relative_path, content: str) -> None:
-        self.written[str(relative_path)] = content
-
-    def clip_exists(self, relative_path) -> bool:
-        return str(relative_path) in self.written
-
-    def extract_clip(self, video_path: str, start_time: float, end_time: float, relative_output_path) -> None:
-        self.written[str(relative_output_path)] = f"clip:{video_path}:{start_time:.1f}-{end_time:.1f}"
-
 
 class WorkspaceWritersTest(unittest.TestCase):
+    def test_copy_to_copies_file_into_destination_directory(self) -> None:
+        from video_atlas.persistence.writers import copy_to
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            src_file = root / "source.txt"
+            src_file.write_text("hello", encoding="utf-8")
+            destination = root / "dest"
+            destination.mkdir()
+
+            copied = copy_to(src_file, destination)
+
+            self.assertEqual(copied, destination / src_file.name)
+            self.assertTrue(copied.is_file())
+            self.assertEqual(copied.read_text(encoding="utf-8"), "hello")
+
+    def test_copy_to_copies_directory_into_destination_directory(self) -> None:
+        from video_atlas.persistence.writers import copy_to
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            src_dir = root / "source_dir"
+            src_dir.mkdir()
+            (src_dir / "nested.txt").write_text("nested", encoding="utf-8")
+            destination = root / "dest"
+            destination.mkdir()
+
+            copied_dir = copy_to(src_dir, destination)
+
+            self.assertEqual(copied_dir, destination / src_dir.name)
+            self.assertTrue(copied_dir.is_dir())
+            self.assertEqual((copied_dir / "nested.txt").read_text(encoding="utf-8"), "nested")
+
     def test_canonical_workspace_writer_persists_root_and_segment_files(self) -> None:
-        from video_atlas.persistence import CanonicalWorkspaceWriter
+        from video_atlas.persistence import CanonicalAtlasWriter
 
         harness = _WriterHarness()
-        writer = CanonicalWorkspaceWriter(
-            write_text=harness.write_text,
-            extract_clip=harness.extract_clip,
-            clip_exists=harness.clip_exists,
-            caption_with_subtitles=True,
-        )
+        writer = CanonicalAtlasWriter(caption_with_subtitles=True)
         atlas = CanonicalAtlas(
             title="Match Overview",
             abstract="A concise abstract.",
@@ -55,14 +76,29 @@ class WorkspaceWritersTest(unittest.TestCase):
             root_path=Path("/tmp/canonical"),
         )
 
-        writer.write(
-            atlas=atlas,
-            source_video_path="video.mp4",
-            segment_artifacts={
-                "seg_0001": {
-                    "subtitles_text": "segment subtitles",
-                }
-            },
+        with patch("video_atlas.persistence.writers.write_text_to") as mock_write:
+            with patch("video_atlas.persistence.writers.clip_exists", return_value=False):
+                with patch("video_atlas.persistence.writers.extract_clip") as mock_extract:
+                    writer.write(
+                        atlas=atlas,
+                        source_video_path="video.mp4",
+                        workspace_root=Path("/tmp/out"),
+                        segment_artifacts={
+                            "seg_0001": {
+                                "subtitles_text": "segment subtitles",
+                            }
+                        },
+                    )
+
+        for call in mock_write.call_args_list:
+            harness.written[str(call.args[1])] = call.args[2]
+        harness.written["segments/seg0001-opening-0.00-20.00s/video_clip.mp4"] = "clip"
+        mock_extract.assert_called_once_with(
+            Path("/tmp/out"),
+            "video.mp4",
+            0.0,
+            20.0,
+            Path("segments/seg0001-opening-0.00-20.00s/video_clip.mp4"),
         )
 
         self.assertIn("README.md", harness.written)
@@ -73,14 +109,10 @@ class WorkspaceWritersTest(unittest.TestCase):
         self.assertIn("Opening", harness.written["segments/seg0001-opening-0.00-20.00s/README.md"])
 
     def test_derived_workspace_writer_persists_metadata_and_segments(self) -> None:
-        from video_atlas.persistence import DerivedWorkspaceWriter
+        from video_atlas.persistence import DerivedAtlasWriter
 
         harness = _WriterHarness()
-        writer = DerivedWorkspaceWriter(
-            write_text=harness.write_text,
-            extract_clip=harness.extract_clip,
-            caption_with_subtitles=True,
-        )
+        writer = DerivedAtlasWriter(caption_with_subtitles=True)
         derived_atlas = DerivedAtlas(
             global_summary="Derived 1 segment.",
             detailed_breakdown="- derived_seg_0001: summary",
@@ -110,16 +142,30 @@ class WorkspaceWritersTest(unittest.TestCase):
             derivation_source={"derived_seg_0001": "seg_0001"},
         )
 
-        writer.write(
-            derived_atlas=derived_atlas,
-            result_info=result_info,
-            task_request="find the key task moment",
-            source_video_path="video.mp4",
-            segment_artifacts={
-                "derived_seg_0001": {
-                    "subtitles_text": "pruned subtitles",
-                }
-            },
+        with patch("video_atlas.persistence.writers.write_text_to") as mock_write:
+            with patch("video_atlas.persistence.writers.extract_clip") as mock_extract:
+                writer.write(
+                    derived_atlas=derived_atlas,
+                    result_info=result_info,
+                    task_request="find the key task moment",
+                    source_video_path="video.mp4",
+                    workspace_root=Path("/tmp/out"),
+                    segment_artifacts={
+                        "derived_seg_0001": {
+                            "subtitles_text": "pruned subtitles",
+                        }
+                    },
+                )
+
+        for call in mock_write.call_args_list:
+            harness.written[str(call.args[1])] = call.args[2]
+        harness.written["segments/derived-seg-0001-task-segment-5.00-15.00s/video_clip.mp4"] = "clip"
+        mock_extract.assert_called_once_with(
+            Path("/tmp/out"),
+            "video.mp4",
+            5.0,
+            15.0,
+            Path("segments/derived-seg-0001-task-segment-5.00-15.00s/video_clip.mp4"),
         )
 
         self.assertIn("README.md", harness.written)
