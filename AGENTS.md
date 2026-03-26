@@ -11,6 +11,67 @@
 
 该仓库同时承载实现、规范、文档和工作流约定，因此所有开发活动都应以“结构清晰、契约稳定、可持续演进”为目标。
 
+## 架构和模块设计
+
+当前项目可以粗略分成四类内容：
+
+- 核心流程模块：
+  `canonical_atlas_workflow` 与 `derived_atlas_workflow` 负责系统的两条主流程。
+- 共享基础模块：
+  `generators`、`message_builder`、`parsing`、`prompts`、`transcription`、`utils` 等模块为核心流程提供可复用能力。
+- 数据与外部表示：
+  `schemas` 定义共享数据模式，`persistence` 负责将 atlas 结果写成稳定目录形式，`review` 负责结果查看与人工检查。
+- 文档与规范：
+  `docs/project-spec/` 存放顶层规范，`docs/design-docs/` 存放架构、模块、数据模式、目录格式和配置设计文档。
+
+如需了解系统全局设计，优先阅读：
+
+- [docs/design-docs/architecture.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/architecture.md)
+- [docs/index.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/index.md)
+
+## 文档撰写约定
+
+- 新增架构设计、模块设计、数据模式、目录格式或配置设计文档时，应优先参考 `docs/doc-templates/` 下对应模板。
+- 新增或修改文档后，应同步更新相关联文档，避免术语、接口或契约描述漂移。
+- 新增正式文档后，应在 [docs/index.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/index.md) 中补充入口索引。
+
+## 当前目录结构
+
+当前仓库的主要目录结构如下：
+
+```text
+development/
+├── AGENTS.md
+├── configs/
+│   ├── canonical/
+│   └── task_derivation/
+├── docs/
+│   ├── design-docs/
+│   ├── doc-templates/
+│   ├── exec-plans/
+│   ├── project-spec/
+│   ├── references/
+│   └── index.md
+├── local/
+│   └── inputs/
+├── scripts/
+├── src/
+│   └── video_atlas/
+│       ├── cli/
+│       ├── config/
+│       ├── generators/
+│       ├── message_builder/
+│       ├── parsing/
+│       ├── persistence/
+│       ├── prompts/
+│       ├── review/
+│       ├── schemas/
+│       ├── transcription/
+│       ├── utils/
+│       └── workflows/
+└── tests/
+```
+
 ## 规范索引
 
 本文件只提供一层轻量索引。各类详细规范请直接查阅 `docs/project-spec/` 下的对应文档：
