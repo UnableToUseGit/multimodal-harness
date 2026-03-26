@@ -67,6 +67,7 @@ class CanonicalAtlasWorkflow(
         video_path: str,
         start_time: float,
         end_time: float,
+        video_sampling=None,
     ):
         return build_video_messages_from_path(
             system_prompt=system_prompt,
@@ -74,6 +75,7 @@ class CanonicalAtlasWorkflow(
             video_path=video_path,
             start_time=start_time,
             end_time=end_time,
+            video_sampling=video_sampling,
         )
 
     def parse_response(self, generated_text: str) -> dict | list:

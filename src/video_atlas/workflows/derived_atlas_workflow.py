@@ -9,14 +9,12 @@ from ..parsing import parse_json_response
 from .derived_atlas.aggregation import AggregationMixin
 from .derived_atlas.candidate_generation import CandidateGenerationMixin
 from .derived_atlas.derivation import DerivationMixin
-from .derived_atlas.pipeline import DerivedPipelineMixin
 
 
 class DerivedAtlasWorkflow(
     AggregationMixin,
     DerivationMixin,
     CandidateGenerationMixin,
-    DerivedPipelineMixin,
 ):
     def __init__(
         self,
@@ -54,3 +52,37 @@ class DerivedAtlasWorkflow(
 
     def parse_response(self, generated_text: str) -> dict | list:
         return parse_json_response(generated_text)
+
+    def create(self, task_request, canonical_atlas, output_dir: Path, verbose: bool = False):
+        del verbose
+        work_items = self._build_candidate_work_items(task_request, canonical_atlas)
+
+        video_path = canonical_atlas.atlas_dir / canonical_atlas.relative_video_path
+        if self.num_workers > 1 and len(work_items) > 1:
+            from concurrent.futures import ThreadPoolExecutor
+
+            with ThreadPoolExecutor(max_workers=self.num_workers) as executor:
+                raw_results = list(
+                    executor.map(
+                        lambda item: self._derive_one_segment(item, task_request, video_path),
+                        work_items,
+                    )
+                )
+        else:
+            raw_results = [
+                self._derive_one_segment(item, task_request, video_path)
+                for item in work_items
+            ]
+
+        derived_segment_drafts = [result for result in raw_results if result is not None]
+        derived_atlas = self._aggregate_derived_atlas(
+            task_request=task_request,
+            canonical_atlas=canonical_atlas,
+            derived_segment_drafts=derived_segment_drafts,
+            output_dir=output_dir,
+        )
+
+        from ..persistence import DerivedAtlasWriter
+
+        DerivedAtlasWriter(caption_with_subtitles=True).write(derived_atlas=derived_atlas)
+        return derived_atlas

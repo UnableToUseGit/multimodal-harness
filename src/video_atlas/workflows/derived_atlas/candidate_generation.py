@@ -13,15 +13,16 @@ class CandidateGenerationMixin:
                 for segment in canonical_atlas.segments
             ]
         )
-        return DERIVED_CANDIDATE_PROMPT["USER"].format(
+        return DERIVED_CANDIDATE_PROMPT.render_user(
             task_request=task_request,
             canonical_segments=canonical_segments,
         )
 
     def _build_candidate_work_items(self, task_request: str, canonical_atlas) -> list[tuple[int, AtlasSegment, DerivationPolicy]]:
+        system_prompt = DERIVED_CANDIDATE_PROMPT.render_system()
         planner_output = self.planner.generate_single(
             messages=self._prepare_messages(
-                system_prompt=DERIVED_CANDIDATE_PROMPT["SYSTEM"],
+                system_prompt=system_prompt,
                 user_prompt=self._candidate_prompt(task_request, canonical_atlas),
             )
         )

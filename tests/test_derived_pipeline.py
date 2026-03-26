@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from video_atlas.prompts.specs import PromptSpec
 from video_atlas.schemas import AtlasSegment, CanonicalAtlas, CanonicalExecutionPlan
 from video_atlas.workflows.derived_atlas_workflow import DerivedAtlasWorkflow
 
@@ -154,8 +155,8 @@ class DerivedPipelineTest(unittest.TestCase):
                 )
 
             root = Path(tmpdir)
-            self.assertTrue(result.success)
-            self.assertEqual(result.derived_segment_count, 1)
+            self.assertEqual(len(result.segments), 1)
+            self.assertEqual(result.task_request, "Find the opening setup needed for my edit")
             self.assertTrue((root / "README.md").exists())
             self.assertTrue((root / "derivation.json").exists())
             self.assertTrue((root / ".agentignore" / "DERIVATION_RESULT.json").exists())
@@ -191,6 +192,67 @@ class DerivedPipelineTest(unittest.TestCase):
         self.assertIn("keep this", workflow.video_message_calls[0]["user_prompt"])
         self.assertEqual(workflow.video_message_calls[1]["start_time"], 5.0)
         self.assertEqual(workflow.video_message_calls[1]["end_time"], 15.0)
+
+    def test_workflow_uses_prompt_spec_rendering(self) -> None:
+        canonical = CanonicalAtlas(
+            title="Canonical Title",
+            duration=60.0,
+            abstract="Canonical abstract",
+            segments=[
+                AtlasSegment(
+                    segment_id="seg_0001",
+                    title="Opening",
+                    start_time=0.0,
+                    end_time=30.0,
+                    summary="Opening summary",
+                    caption="Opening detail",
+                    subtitles_text="Start Time: 6.0 --> End Time: 7.0 Subtitle: keep this",
+                    folder_name="seg0001-opening-0.00-30.00s",
+                )
+            ],
+            execution_plan=CanonicalExecutionPlan(),
+            atlas_dir=Path("/tmp/canonical"),
+            relative_video_path=Path("video.mp4"),
+        )
+
+        workflow = _TestDerivedAtlasWorkflow(
+            planner=_QueueGenerator(
+                [
+                    {
+                        "candidates": [
+                            {
+                                "segment_id": "seg_0001",
+                                "intent": "Find the opening setup relevant to the task",
+                                "grounding_instruction": "Focus on the first important action within the segment",
+                            }
+                        ]
+                    }
+                ]
+            ),
+            segmentor=_QueueGenerator([{"start_time": 5.0, "end_time": 15.0}]),
+            captioner=_QueueGenerator(
+                [
+                    {
+                        "title": "Opening Setup",
+                        "summary": "The setup sequence needed for the task.",
+                        "caption": "A tighter clip showing the key setup action.",
+                    }
+                ]
+            ),
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.object(PromptSpec, "__getitem__", side_effect=AssertionError("dict-style prompt access is forbidden")):
+                with patch("video_atlas.persistence.writers.extract_clip"):
+                    result = workflow.create(
+                        task_request="Find the opening setup needed for my edit",
+                        canonical_atlas=canonical,
+                        output_dir=Path(tmpdir),
+                    )
+
+        self.assertEqual(len(result.segments), 1)
+        self.assertEqual(result.task_request, "Find the opening setup needed for my edit")
+        self.assertEqual(len(workflow.video_message_calls), 2)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from ...schemas import AtlasSegment, DerivationPolicy, DerivedSegmentDraft
 
 class DerivationMixin:
     def _grounding_prompt(self, segment: AtlasSegment, policy: DerivationPolicy, subtitles_text: str) -> str:
-        return DERIVED_GROUNDING_PROMPT["USER"].format(
+        return DERIVED_GROUNDING_PROMPT.render_user(
             segment_id=segment.segment_id,
             segment_start_time=segment.start_time,
             segment_end_time=segment.end_time,
@@ -28,7 +28,7 @@ class DerivationMixin:
         end_time: float,
         subtitles_text: str,
     ) -> str:
-        return DERIVED_CAPTION_PROMPT["USER"].format(
+        return DERIVED_CAPTION_PROMPT.render_user(
             task_request=task_request,
             segment_id=segment.segment_id,
             start_time=start_time,
@@ -89,9 +89,10 @@ class DerivationMixin:
     ) -> DerivedSegmentDraft | None:
         index, segment, policy = item
         source_subtitles = segment.subtitles_text or ""
+        grounding_system_prompt = DERIVED_GROUNDING_PROMPT.render_system()
         grounding_output = self.segmentor.generate_single(
             messages=self._build_video_messages_from_path(
-                system_prompt=DERIVED_GROUNDING_PROMPT["SYSTEM"],
+                system_prompt=grounding_system_prompt,
                 user_prompt=self._grounding_prompt(segment, policy, source_subtitles),
                 video_path=video_path,
                 start_time=segment.start_time,
@@ -105,9 +106,10 @@ class DerivationMixin:
         start_time, end_time = resolved
 
         pruned_subtitles = self._prune_subtitles_text(source_subtitles, start_time, end_time)
+        caption_system_prompt = DERIVED_CAPTION_PROMPT.render_system()
         caption_output = self.captioner.generate_single(
             messages=self._build_video_messages_from_path(
-                system_prompt=DERIVED_CAPTION_PROMPT["SYSTEM"],
+                system_prompt=caption_system_prompt,
                 user_prompt=self._caption_prompt(task_request, segment, policy, start_time, end_time, pruned_subtitles),
                 video_path=video_path,
                 start_time=start_time,

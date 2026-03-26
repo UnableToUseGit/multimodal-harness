@@ -30,9 +30,10 @@ class AtlasAssemblyMixin:
                 for seg in parsed_segments
             ]
         )
-        user_prompt = VIDEO_GLOBAL_PROMPT["USER"].format(segments_description=segments_description)
+        system_prompt = VIDEO_GLOBAL_PROMPT.render_system()
+        user_prompt = VIDEO_GLOBAL_PROMPT.render_user(segments_description=segments_description)
         output = self.captioner.generate_single(
-            messages=self._prepare_messages(system_prompt=VIDEO_GLOBAL_PROMPT["SYSTEM"], user_prompt=user_prompt)
+            messages=self._prepare_messages(system_prompt=system_prompt, user_prompt=user_prompt)
         )
         global_context = self.parse_response(output["text"])
 

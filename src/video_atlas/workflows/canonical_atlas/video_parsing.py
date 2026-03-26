@@ -117,7 +117,8 @@ class VideoParsingMixin:
             else:
                 subtitles_str_in_seg = ""
 
-            user_prompt = CAPTION_GENERATION_PROMPT["USER"].format(
+            system_prompt = CAPTION_GENERATION_PROMPT.render_system()
+            user_prompt = CAPTION_GENERATION_PROMPT.render_user(
                 genre_str=self._genre_distribution_str(execution_plan.genre_distribution),
                 segmentation_profile=execution_plan.segmentation_specification.profile_name,
                 signal_priority=execution_plan.segmentation_specification.profile.signal_priority,
@@ -128,7 +129,7 @@ class VideoParsingMixin:
             
             output = self.captioner.generate_single(
                 messages=self._build_video_messages_from_path(
-                    system_prompt=CAPTION_GENERATION_PROMPT["SYSTEM"],
+                    system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     video_path=video_path,
                     start_time=segment.start_time,
@@ -257,7 +258,8 @@ class VideoParsingMixin:
     ) -> list[CandidateBoundary]:
         _, subtitles_str_in_seg = get_subtitle_in_segment(subtitle_items, window_start_time, window_end_time)
         segmentation_profile = execution_plan.segmentation_specification.profile
-        user_prompt = BOUNDARY_DETECTION_PROMPT["USER"].format(
+        system_prompt = BOUNDARY_DETECTION_PROMPT.render_system()
+        user_prompt = BOUNDARY_DETECTION_PROMPT.render_user(
             t_start=window_start_time,
             t_end=window_end_time,
             core_start=core_start_time,
@@ -271,7 +273,7 @@ class VideoParsingMixin:
         
         output = self.segmentor.generate_single(
             messages=self._build_video_messages_from_path(
-                system_prompt=BOUNDARY_DETECTION_PROMPT["SYSTEM"],
+                system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 video_path=video_path,
                 start_time=window_start_time,

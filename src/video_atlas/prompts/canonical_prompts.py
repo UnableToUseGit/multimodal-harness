@@ -6,6 +6,7 @@ from .canonical_prompt_parts import (
     render_sampling_profile_options,
     render_segmentation_profile_options,
 )
+from .specs import PromptSpec
 
 
 PLANNER_SEGMENTATION_PROFILE_OPTIONS = render_segmentation_profile_options()
@@ -47,12 +48,12 @@ GENRE OPTIONS
 __GENRE_OPTIONS__
 
 STRICT OUTPUT JSON SCHEMA (MUST FOLLOW EXACTLY)
-{
+{{
   "planner_confidence": 0.0,
-  "genre_distribution": { "<genre>": 0.0, "<genre>": 0.0 },
+  "genre_distribution": {{ "<genre>": 0.0, "<genre>": 0.0 }},
   "segmentation_profile": "<profile_name>",
   "sampling_profile": "<sampling_profile>"
-}
+}}
 
 YOU WILL RECEIVE THE DATA IN THIS FORMAT
 [GLOBAL_STATS]
@@ -80,17 +81,24 @@ NOW produce JSON that strictly matches the schema. Output JSON ONLY.
 ).replace("__GENRE_OPTIONS__", PLANNER_GENRE_OPTIONS)
 
 
-PLANNER_PROMPT = {
-    "SYSTEM": """You are a planner for a canonical video atlas. Given a few probes from a video, your goal is to produce the key decisions needed to construct an execution plan that will drive the SAME multimodal LLM to do:
+PLANNER_PROMPT = PromptSpec(
+    name="PLANNER_PROMPT",
+    purpose="Plan canonical atlas segmentation and shared sampling decisions from probe inputs.",
+    system_template="""You are a planner for a canonical video atlas. Given a few probes from a video, your goal is to produce the key decisions needed to construct an execution plan that will drive the SAME multimodal LLM to do:
 1) full-video segmentation
 2) downstream segment captioning
 You MUST output strict JSON only. Do not output any extra text.""",
-    "USER": PLANNER_PROMPT_USER,
-}
+    user_template=PLANNER_PROMPT_USER,
+    input_fields=(),
+    output_contract="strict JSON object with planner_confidence, genre_distribution, segmentation_profile, and sampling_profile",
+    tags=("canonical", "planner"),
+)
 
 
-BOUNDARY_DETECTION_PROMPT = {
-    "SYSTEM": r"""
+BOUNDARY_DETECTION_PROMPT = PromptSpec(
+    name="BOUNDARY_DETECTION_PROMPT",
+    purpose="Detect semantic boundaries inside a long video chunk using local context.",
+    system_template=r"""
 Role:
 You are a semantic boundary detector for long videos.
 
@@ -118,14 +126,14 @@ Guidelines:
 
 Output format:
 Return ONLY a strict JSON array. Each item represents a boundary candidate:
-{
+{{
   "timestamp": <number in seconds>,
   "boundary_rationale": "<brief evidence-based reason for the cut>",
   "confidence": <0..1>
-}
+}}
 Do not output any extra text.
 """.strip(),
-    "USER": r"""
+    user_template=r"""
 Given the above frames from [T_start:{t_start}, T_end:{t_end}) and the following:
 
 Subtitles:
@@ -144,11 +152,25 @@ Last detection point: {last_detection_point}
 Now output the JSON list of boundaries within the detection window.
 Only include boundaries whose timestamps fall inside [Core_start, Core_end).
 """.strip(),
-}
+    input_fields=(
+        "t_start",
+        "t_end",
+        "subtitles",
+        "core_start",
+        "core_end",
+        "segmentation_profile",
+        "segmentation_policy",
+        "last_detection_point",
+    ),
+    output_contract="strict JSON array of boundary candidates",
+    tags=("canonical", "boundary-detection"),
+)
 
 
-CAPTION_GENERATION_PROMPT = {
-    "SYSTEM": r"""
+CAPTION_GENERATION_PROMPT = PromptSpec(
+    name="CAPTION_GENERATION_PROMPT",
+    purpose="Generate segment-level canonical captions from frames and subtitles.",
+    system_template=r"""
 Role:
 You are a video segment caption writer.
 
@@ -178,13 +200,13 @@ Guidelines:
 
 Output format:
 Return ONLY a strict JSON object with exactly these keys:
-{
+{{
   "summary": "<1 sentence summary>",
   "caption": "<4-8 sentence paragraph>",
   "confidence": <number between 0 and 1>
-}
+}}
 """.strip(),
-    "USER": r"""
+    user_template=r"""
 Given the above frames and the following:
 
 Captioning priors:
@@ -198,11 +220,16 @@ Segment subtitles (if provided; may be noisy/incomplete):
 
 Now generate the JSON output.
 """.strip(),
-}
+    input_fields=("genre_str", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
+    output_contract="strict JSON object with summary, caption, and confidence",
+    tags=("canonical", "caption"),
+)
 
 
-VIDEO_GLOBAL_PROMPT = {
-    "SYSTEM": r"""
+VIDEO_GLOBAL_PROMPT = PromptSpec(
+    name="VIDEO_GLOBAL_PROMPT",
+    purpose="Write global metadata and stable segment titles for a canonical atlas.",
+    system_template=r"""
 Role:
 You are a global atlas writer for a canonical video atlas.
 
@@ -227,18 +254,18 @@ Guidelines:
 
 Output format:
 Return ONLY a strict JSON object with exactly these keys:
-{
+{{
   "title": "<string>",
   "abstract": "<string>",
   "segment_titles": [
-    {
+    {{
       "seg_id": "<segment id>",
       "title": "<canonical segment title>"
-    }
+    }}
   ]
-}
+}}
 """.strip(),
-    "USER": r"""
+    user_template=r"""
 Given the following video segments description:
 
 **video segments description**
@@ -248,4 +275,7 @@ Given the following video segments description:
 
 Now generate the global video title, abstract, and segment titles.
 """,
-}
+    input_fields=("segments_description",),
+    output_contract="strict JSON object with title, abstract, and segment_titles",
+    tags=("canonical", "global"),
+)

@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 """Prompt templates used by the derived atlas pipeline."""
 
-DERIVED_CANDIDATE_PROMPT = {
-    "SYSTEM": (
+from .specs import PromptSpec
+
+DERIVED_CANDIDATE_PROMPT = PromptSpec(
+    name="DERIVED_CANDIDATE_PROMPT",
+    purpose="Select canonical segments relevant to a task-aware derived atlas request.",
+    system_template=(
         "You select source segments for task-aware derivation. "
         "Return strict JSON only with a `candidates` array."
     ),
-    "USER": """
+    user_template="""
 You will receive:
 - a task request
 - canonical atlas segments with ids, titles, time ranges, and detailed captions
@@ -32,15 +36,20 @@ Task Request:
 Canonical Segments:
 {canonical_segments}
 """.strip(),
-}
+    input_fields=("task_request", "canonical_segments"),
+    output_contract="strict JSON object with candidates array",
+    tags=("derived", "candidate"),
+)
 
 
-DERIVED_GROUNDING_PROMPT = {
-    "SYSTEM": (
+DERIVED_GROUNDING_PROMPT = PromptSpec(
+    name="DERIVED_GROUNDING_PROMPT",
+    purpose="Refine task-aware clip boundaries inside a source canonical segment.",
+    system_template=(
         "You refine task-aware clip boundaries inside a source canonical segment. "
         "Return strict JSON only with `start_time` and `end_time`."
     ),
-    "USER": """
+    user_template="""
 You will receive:
 - one source canonical segment
 - the task intent for this segment
@@ -66,15 +75,29 @@ Detail: {detail}
 Subtitles:
 {subtitles}
 """.strip(),
-}
+    input_fields=(
+        "segment_id",
+        "segment_start_time",
+        "segment_end_time",
+        "intent",
+        "grounding_instruction",
+        "summary",
+        "detail",
+        "subtitles",
+    ),
+    output_contract="strict JSON object with start_time and end_time",
+    tags=("derived", "grounding"),
+)
 
 
-DERIVED_CAPTION_PROMPT = {
-    "SYSTEM": (
+DERIVED_CAPTION_PROMPT = PromptSpec(
+    name="DERIVED_CAPTION_PROMPT",
+    purpose="Write metadata for a task-aware derived atlas segment.",
+    system_template=(
         "You write metadata for a derived atlas segment. "
         "Return strict JSON only with `title`, `summary`, and `caption`."
     ),
-    "USER": """
+    user_template="""
 You will receive:
 - the task request
 - the source canonical segment id
@@ -104,4 +127,17 @@ Source Detail: {detail}
 Subtitles:
 {subtitles}
 """.strip(),
-}
+    input_fields=(
+        "task_request",
+        "segment_id",
+        "start_time",
+        "end_time",
+        "intent",
+        "grounding_instruction",
+        "summary",
+        "detail",
+        "subtitles",
+    ),
+    output_contract="strict JSON object with title, summary, and caption",
+    tags=("derived", "caption"),
+)

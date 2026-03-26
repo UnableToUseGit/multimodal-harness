@@ -47,8 +47,9 @@ class PlanMixin:
 
     def _run_plan_planner(self, prepared_probe_inputs, duration: float, subtitle_items: list | None = None):
         subtitle_items = subtitle_items or []
+        system_prompt, user_prompt = PLANNER_PROMPT.render()
         user_content = [
-            {"type": "text", "text": PLANNER_PROMPT["USER"]},
+            {"type": "text", "text": user_prompt},
             {"type": "text", "text": "[GLOBAL_STATS]"},
             {
                 "type": "text",
@@ -76,7 +77,7 @@ class PlanMixin:
             user_content.append({"type": "text", "text": f"Subtitles: \n{subtitles_str_in_seg}"})
 
         messages = [
-            {"role": "system", "content": PLANNER_PROMPT["SYSTEM"]},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content},
         ]
 
