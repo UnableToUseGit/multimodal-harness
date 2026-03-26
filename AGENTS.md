@@ -11,6 +11,25 @@
 
 该仓库同时承载实现、规范、文档和工作流约定，因此所有开发活动都应以“结构清晰、契约稳定、可持续演进”为目标。
 
+## 最高规范索引
+
+本文件只提供一层轻量索引。各类详细规范请直接查阅 `docs/project-spec/` 下的对应文档：
+
+- 基础编码规范：
+  [docs/project-spec/basic-coding.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/basic-coding.md)
+- 架构与设计规范：
+  [docs/project-spec/architecture-and-design.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/architecture-and-design.md)
+- 工程化与运维规范：
+  [docs/project-spec/engineering-and-operations.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/engineering-and-operations.md)
+- 测试规范：
+  [docs/project-spec/testing.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/testing.md)
+- 质量保障规范：
+  [docs/project-spec/quality-assurance.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/quality-assurance.md)
+- 协作与交付规范：
+  [docs/project-spec/collaboration-and-delivery.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/collaboration-and-delivery.md)
+
+如后续新增领域特定规范，应继续放在 `docs/project-spec/` 下，并在本文件中补充入口索引。
+
 ## 架构和模块设计
 
 当前项目可以粗略分成四类内容：
@@ -72,24 +91,6 @@ development/
 └── tests/
 ```
 
-## 规范索引
-
-本文件只提供一层轻量索引。各类详细规范请直接查阅 `docs/project-spec/` 下的对应文档：
-
-- 基础编码规范：
-  [docs/project-spec/basic-coding.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/basic-coding.md)
-- 架构与设计规范：
-  [docs/project-spec/architecture-and-design.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/architecture-and-design.md)
-- 工程化与运维规范：
-  [docs/project-spec/engineering-and-operations.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/engineering-and-operations.md)
-- 测试规范：
-  [docs/project-spec/testing.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/testing.md)
-- 质量保障规范：
-  [docs/project-spec/quality-assurance.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/quality-assurance.md)
-- 协作与交付规范：
-  [docs/project-spec/collaboration-and-delivery.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/project-spec/collaboration-and-delivery.md)
-
-如后续新增领域特定规范，应继续放在 `docs/project-spec/` 下，并在本文件中补充入口索引。
 
 ## 开发工作方式
 
