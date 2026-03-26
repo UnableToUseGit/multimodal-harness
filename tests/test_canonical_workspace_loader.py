@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from video_atlas.agents.task_derivation.loader import load_canonical_workspace
+from video_atlas.workflows.derived_atlas.loader import load_canonical_workspace
 
 
 class CanonicalWorkspaceLoaderTest(unittest.TestCase):
@@ -38,17 +38,17 @@ class CanonicalWorkspaceLoaderTest(unittest.TestCase):
 
             atlas = load_canonical_workspace(root)
 
-        self.assertEqual(atlas.root_path, root.resolve())
-        self.assertEqual(atlas.source_video_path, (root / "video.mp4").resolve())
+        self.assertEqual(atlas.atlas_dir, root.resolve())
+        self.assertEqual(atlas.relative_video_path, Path("video.mp4"))
         self.assertEqual(len(atlas.segments), 1)
         segment = atlas.segments[0]
         self.assertEqual(segment.segment_id, "seg_0001")
         self.assertEqual(segment.title, "Opening")
         self.assertEqual(segment.summary, "Setup summary.")
         self.assertEqual(segment.caption, "Setup detail.")
-        self.assertEqual(segment.readme_path, (segment_dir / "README.md").resolve())
-        self.assertEqual(segment.clip_path, (segment_dir / "video_clip.mp4").resolve())
-        self.assertEqual(segment.subtitles_path, (segment_dir / "SUBTITLES.md").resolve())
+        self.assertEqual(segment.subtitles_text, "segment subtitles")
+        self.assertEqual(segment.relative_clip_path, Path("segments") / segment_dir.name / "video_clip.mp4")
+        self.assertEqual(segment.relative_subtitles_path, Path("segments") / segment_dir.name / "SUBTITLES.md")
 
 
 if __name__ == "__main__":

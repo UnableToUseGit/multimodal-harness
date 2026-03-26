@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ...review.workspace_loader import _first_existing, _parse_markdown_fields, _parse_timestamp
-from ...schemas import AtlasSegment, CanonicalAtlas
+from ...schemas import AtlasSegment, CanonicalAtlas, CanonicalExecutionPlan
 
 
 def load_canonical_workspace(root_path: str | Path) -> CanonicalAtlas:
@@ -39,20 +39,28 @@ def load_canonical_workspace(root_path: str | Path) -> CanonicalAtlas:
                 end_time=end_time,
                 summary=fields.get("Summary", ""),
                 caption=fields.get("Detail Description", ""),
+                subtitles_text=subtitles_path.read_text(encoding="utf-8") if subtitles_path.exists() else "",
                 folder_name=segment_dir.name,
-                readme_path=readme.resolve(),
-                clip_path=clip_path.resolve() if clip_path.exists() else None,
-                subtitles_path=subtitles_path.resolve() if subtitles_path.exists() else None,
+                relative_clip_path=(Path("segments") / segment_dir.name / "video_clip.mp4") if clip_path.exists() else None,
+                relative_subtitles_path=(Path("segments") / segment_dir.name / "SUBTITLES.md") if subtitles_path.exists() else None,
             )
         )
 
     root_readme = readme_path.read_text(encoding="utf-8")
     source_video = _first_existing(root, ["*.mp4"])
+    if source_video is None:
+        raise FileNotFoundError(f"Canonical atlas source video not found under: {root}")
+    srt_file = _first_existing(root, ["*.srt"])
+    atlas_subtitles = root / "SUBTITLES.md"
+    duration = max((segment.end_time for segment in segments), default=0.0)
     return CanonicalAtlas(
         title=root.name,
+        duration=duration,
         abstract=root_readme,
         segments=segments,
-        root_path=root,
-        readme_text=root_readme,
-        source_video_path=source_video.resolve() if source_video is not None else None,
+        execution_plan=CanonicalExecutionPlan(),
+        atlas_dir=root,
+        relative_video_path=Path(source_video.name),
+        relative_subtitles_path=Path("SUBTITLES.md") if atlas_subtitles.exists() else None,
+        relative_srt_file_path=Path(srt_file.name) if srt_file is not None else None,
     )

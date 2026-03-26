@@ -33,7 +33,7 @@
     "vad_filter": true,
     "min_silence_duration_ms": 500,
     "use_batched_inference": true,
-    "batch_size": 24
+    "batch_size": 32
   },
   "runtime": {
     "caption_with_subtitles": true,

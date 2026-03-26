@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from ..generators.base import BaseGenerator
@@ -55,6 +56,16 @@ class CanonicalAtlasWorkflow(
         self.chunk_size_sec = chunk_size_sec
         self.chunk_overlap_sec = chunk_overlap_sec
         self.caption_with_subtitles = caption_with_subtitles
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def _log_info(self, message: str, *args) -> None:
+        self.logger.info(message, *args)
+
+    def _log_warning(self, message: str, *args) -> None:
+        self.logger.warning(message, *args)
+
+    def _log_error(self, message: str, *args) -> None:
+        self.logger.error(message, *args)
 
 
     def _prepare_messages(self, system_prompt: str, user_prompt: str):
