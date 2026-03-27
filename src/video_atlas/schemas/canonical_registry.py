@@ -49,9 +49,9 @@ SEGMENTATION_PROFILE_DESCRIPTIONS: dict[str, str] = {
         "Use for professional esports match broadcasts with casters, overlays, replay blocks, draft or ban phases, "
         "and chronological match progression."
     ),
-    "sports_replay": (
-        "Use for sports replay videos, post-match review cuts, and highlight-style match recaps where complete replay "
-        "units and event-level review blocks matter more than every local camera change."
+    "sports_broadcast": (
+        "Use for sports match broadcasts and replay-inclusive event coverage where stable match phases, replay blocks, "
+        "analysis inserts, and live-to-replay transitions are the preferred navigation units."
     ),
     "narrative_film": (
         "Use for narrative films and dramatic fiction where scene-complete or dramatic-beat-complete segments are the "
@@ -90,13 +90,13 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
             "change or semantically complete block, not on every kill, skirmish, or camera pan."
         ),
     ),
-    "sports_replay": SegmentationProfile(
+    "sports_broadcast": SegmentationProfile(
         signal_priority="balanced",
-        target_segment_length_sec=(30, 120),
+        target_segment_length_sec=(60, 240),
         default_sampling_profile="balanced",
         boundary_evidence_primary=(
-            "time_jump_or_recap",
             "on_screen_text_title_change",
+            "time_jump_or_recap",
             "shot_style_change",
         ),
         boundary_evidence_secondary=(
@@ -105,10 +105,10 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
             "scene_location_change",
         ),
         segmentation_policy=(
-            "Prefer complete replay units and commentary-backed event review blocks over clip-level micro-cuts. "
-            "Cut when the replay shifts to a new key event, returns from replay to live context, or moves into a "
-            "clearly new analysis block. Do not cut on every camera change, slow-motion insert, or repeated angle "
-            "within the same replayed event."
+            "Prefer stable sports broadcast units such as match phases, replay-inclusive event blocks, analysis inserts, "
+            "halftime or timeout review blocks, and clear live-to-replay-to-live transitions. Cut on strong transitions "
+            "between phases, events, and commentary blocks. Do not cut on every camera change, slow-motion insert, or "
+            "local momentum swing within the same broadcast unit."
         ),
     ),
     "narrative_film": SegmentationProfile(
@@ -188,14 +188,14 @@ CAPTION_PROFILES: dict[str, CaptionProfile] = {
             "genuinely centered on one event."
         ),
     ),
-    "sports_replay": CaptionProfile(
+    "sports_broadcast": CaptionProfile(
         caption_policy=(
-            "Describe each segment as a complete replay or review unit. Prioritize the key event, how it unfolds "
-            "across replay angles, and the commentary-backed explanation of why it matters over frame-by-frame narration."
+            "Describe each segment as a stable sports broadcast block. Prioritize the match phase, the key events or "
+            "turning points under discussion, and the broadcast context such as replay review, live action, or studio-style analysis."
         ),
         title_policy=(
-            "Prefer event-level titles such as First Goal Replay, Penalty Review, Counterattack Breakdown, Red Card "
-            "Incident Replay, or Match Summary And Final Chances. Avoid titles that only name camera moves or replay speed."
+            "Prefer broadcast-oriented titles such as First Half Midfield Control, Goal And Replay Review, Penalty Incident "
+            "Analysis, Final Minutes Pressure, Halftime Summary, or Post Match Wrap Up. Avoid titles that only name camera moves."
         ),
     ),
     "narrative_film": CaptionProfile(

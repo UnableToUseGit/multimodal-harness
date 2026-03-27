@@ -77,6 +77,7 @@ class CanonicalExecutionPlan:
     caption_specification: CaptionSpecification = field(default_factory=CaptionSpecification)
     chunk_size_sec: int = 600
     chunk_overlap_sec: int = 20
+    planner_reasoning_content: str = ""
 
 
 @dataclass

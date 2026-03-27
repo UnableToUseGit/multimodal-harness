@@ -66,7 +66,7 @@ class ExecutionPlanBuilderMixin:
             rec(merged, user_plan)
         return merged
 
-    def _construct_execution_plan(self, planner_output: dict[str, Any]) -> CanonicalExecutionPlan:
+    def _construct_execution_plan(self, planner_output: dict[str, Any], planner_reasoning_content: str) -> CanonicalExecutionPlan:
         planner_confidence = self._clamp(planner_output.get("planner_confidence", 0.25), 0.0, 1.0)
         genre_distribution = self._normalize_dist(
             planner_output.get("genre_distribution", {}),
@@ -95,4 +95,5 @@ class ExecutionPlanBuilderMixin:
             ),
             chunk_size_sec=max(60, int(getattr(self, "chunk_size_sec", 600))),
             chunk_overlap_sec=max(0, int(getattr(self, "chunk_overlap_sec", 20))),
+            planner_reasoning_content=planner_reasoning_content
         )

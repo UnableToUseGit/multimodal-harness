@@ -72,7 +72,7 @@ class CanonicalSchemesTest(unittest.TestCase):
         with self.assertRaises(ImportError):
             from video_atlas.schemas import DetectionWindowSpec  # noqa: F401
 
-    def test_sports_replay_and_narrative_film_profiles_are_registered(self) -> None:
+    def test_sports_broadcast_and_narrative_film_profiles_are_registered(self) -> None:
         from video_atlas.schemas.canonical_registry import (
             CAPTION_PROFILES,
             SEGMENTATION_PROFILES,
@@ -80,19 +80,19 @@ class CanonicalSchemesTest(unittest.TestCase):
             resolve_segmentation_profile,
         )
 
-        self.assertIn("sports_replay", SEGMENTATION_PROFILES)
+        self.assertIn("sports_broadcast", SEGMENTATION_PROFILES)
         self.assertIn("narrative_film", SEGMENTATION_PROFILES)
-        self.assertIn("sports_replay", CAPTION_PROFILES)
+        self.assertIn("sports_broadcast", CAPTION_PROFILES)
         self.assertIn("narrative_film", CAPTION_PROFILES)
 
-        sports_name, sports_profile = resolve_segmentation_profile("sports_replay")
+        sports_name, sports_profile = resolve_segmentation_profile("sports_broadcast")
         film_name, film_profile = resolve_segmentation_profile("narrative_film")
-        sports_caption_name, sports_caption = resolve_caption_profile("sports_replay")
+        sports_caption_name, sports_caption = resolve_caption_profile("sports_broadcast")
         film_caption_name, film_caption = resolve_caption_profile("narrative_film")
 
-        self.assertEqual(sports_name, "sports_replay")
+        self.assertEqual(sports_name, "sports_broadcast")
         self.assertEqual(film_name, "narrative_film")
-        self.assertEqual(sports_caption_name, "sports_replay")
+        self.assertEqual(sports_caption_name, "sports_broadcast")
         self.assertEqual(film_caption_name, "narrative_film")
         self.assertTrue(sports_profile.segmentation_policy)
         self.assertTrue(film_profile.segmentation_policy)

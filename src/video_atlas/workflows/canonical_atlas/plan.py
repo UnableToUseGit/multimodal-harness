@@ -81,9 +81,13 @@ class PlanMixin:
             {"role": "user", "content": user_content},
         ]
 
-        output = self.planner.generate_single(messages=messages)        
+        output = self.planner.generate_single(messages=messages) 
+        try:
+            planner_reasoning_content = output['response']['choices'][0]['message']['reasoning']      
+        except:
+            planner_reasoning_content = ''
         planner_output = self.parse_response(output["text"])
-        return planner_output
+        return planner_output, planner_reasoning_content
 
     def _plan_video_execution(
         self,
@@ -98,9 +102,9 @@ class PlanMixin:
             subtitle_items=subtitle_items,
             frame_sampling_params=frame_sampling_params,
         )
-        planner_output = self._run_plan_planner(
+        planner_output, planner_reasoning_content = self._run_plan_planner(
             prepared_probe_inputs=prepared_probe_inputs,
             duration=duration,
             subtitle_items=subtitle_items,
         )
-        return self._construct_execution_plan(planner_output)
+        return self._construct_execution_plan(planner_output, planner_reasoning_content)
