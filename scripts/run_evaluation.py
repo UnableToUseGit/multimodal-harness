@@ -51,61 +51,72 @@ def _run_case(case_config: dict[str, Any], verbose: bool = False) -> dict[str, A
 
     canonical_output_dir = case_output_dir / "canonical_atlas"
     derived_output_dir = case_output_dir / "derived_atlas"
+    should_generate_canonical_atlas = bool(case_config.get("should_generate_canonical_atlas", True))
+    should_generate_derived_atlas = bool(case_config.get("should_generate_derived_atlas", True))
 
     result = {
         "case_name": case_name,
         "case_video_path": str(case_video_path),
         "case_srt_file_path": str(case_srt_file_path) if case_srt_file_path is not None else None,
         "case_task_request_path": str(case_task_request_path),
+        "should_generate_canonical_atlas": should_generate_canonical_atlas,
+        "should_generate_derived_atlas": should_generate_derived_atlas,
         "canonical_output_dir": str(canonical_output_dir.resolve()),
         "derived_output_dir": str(derived_output_dir.resolve()),
-        "canonical_success": False,
-        "derived_success": False,
+        "canonical_success": None,
+        "derived_success": None,
         "canonical_duration_sec": None,
         "derived_duration_sec": None,
         "error": None,
     }
 
     try:
-        canonical_config = load_canonical_pipeline_config(canonical_config_path)
-        canonical_workflow = CanonicalAtlasWorkflow(
-            planner=build_generator(canonical_config.planner),
-            segmentor=build_generator(canonical_config.segmentor),
-            captioner=build_generator(canonical_config.captioner) if canonical_config.captioner is not None else None,
-            transcriber=build_transcriber(canonical_config.transcriber),
-            generate_subtitles_if_missing=canonical_config.runtime.generate_subtitles_if_missing,
-            chunk_size_sec=canonical_config.runtime.chunk_size_sec,
-            chunk_overlap_sec=canonical_config.runtime.chunk_overlap_sec,
-            caption_with_subtitles=canonical_config.runtime.caption_with_subtitles,
-        )
-        started_at = time.perf_counter()
-        canonical_workflow.create(
-            output_dir=canonical_output_dir,
-            source_video_path=case_video_path,
-            source_srt_file_path=case_srt_file_path,
-            verbose=(canonical_config.runtime.verbose or verbose),
-        )
-        result["canonical_duration_sec"] = round(time.perf_counter() - started_at, 3)
-        result["canonical_success"] = True
+        if should_generate_canonical_atlas:
+            canonical_config = load_canonical_pipeline_config(canonical_config_path)
+            canonical_workflow = CanonicalAtlasWorkflow(
+                planner=build_generator(canonical_config.planner),
+                segmentor=build_generator(canonical_config.segmentor),
+                captioner=build_generator(canonical_config.captioner) if canonical_config.captioner is not None else None,
+                transcriber=build_transcriber(canonical_config.transcriber),
+                generate_subtitles_if_missing=canonical_config.runtime.generate_subtitles_if_missing,
+                chunk_size_sec=canonical_config.runtime.chunk_size_sec,
+                chunk_overlap_sec=canonical_config.runtime.chunk_overlap_sec,
+                caption_with_subtitles=canonical_config.runtime.caption_with_subtitles,
+            )
+            started_at = time.perf_counter()
+            canonical_workflow.create(
+                output_dir=canonical_output_dir,
+                source_video_path=case_video_path,
+                source_srt_file_path=case_srt_file_path,
+                verbose=(canonical_config.runtime.verbose or verbose),
+            )
+            result["canonical_duration_sec"] = round(time.perf_counter() - started_at, 3)
+            result["canonical_success"] = True
 
-        task_request = case_task_request_path.read_text(encoding="utf-8").strip()
-        canonical_atlas = load_canonical_workspace(canonical_output_dir)
-        derived_config = load_derived_pipeline_config(derived_config_path)
-        derived_workflow = DerivedAtlasWorkflow(
-            planner=build_generator(derived_config.planner),
-            segmentor=build_generator(derived_config.segmentor),
-            captioner=build_generator(derived_config.captioner),
-            num_workers=derived_config.runtime.num_workers,
-        )
-        started_at = time.perf_counter()
-        derived_workflow.create(
-            task_request=task_request,
-            canonical_atlas=canonical_atlas,
-            output_dir=derived_output_dir,
-            verbose=(derived_config.runtime.verbose or verbose),
-        )
-        result["derived_duration_sec"] = round(time.perf_counter() - started_at, 3)
-        result["derived_success"] = True
+        if should_generate_derived_atlas:
+            if not canonical_output_dir.exists():
+                raise FileNotFoundError(
+                    f"Canonical atlas directory does not exist for case '{case_name}': {canonical_output_dir}"
+                )
+
+            task_request = case_task_request_path.read_text(encoding="utf-8").strip()
+            canonical_atlas = load_canonical_workspace(canonical_output_dir)
+            derived_config = load_derived_pipeline_config(derived_config_path)
+            derived_workflow = DerivedAtlasWorkflow(
+                planner=build_generator(derived_config.planner),
+                segmentor=build_generator(derived_config.segmentor),
+                captioner=build_generator(derived_config.captioner),
+                num_workers=derived_config.runtime.num_workers,
+            )
+            started_at = time.perf_counter()
+            derived_workflow.create(
+                task_request=task_request,
+                canonical_atlas=canonical_atlas,
+                output_dir=derived_output_dir,
+                verbose=(derived_config.runtime.verbose or verbose),
+            )
+            result["derived_duration_sec"] = round(time.perf_counter() - started_at, 3)
+            result["derived_success"] = True
     except Exception as exc:  # noqa: BLE001
         result["error"] = f"{type(exc).__name__}: {exc}"
 

@@ -49,6 +49,14 @@ SEGMENTATION_PROFILE_DESCRIPTIONS: dict[str, str] = {
         "Use for professional esports match broadcasts with casters, overlays, replay blocks, draft or ban phases, "
         "and chronological match progression."
     ),
+    "sports_replay": (
+        "Use for sports replay videos, post-match review cuts, and highlight-style match recaps where complete replay "
+        "units and event-level review blocks matter more than every local camera change."
+    ),
+    "narrative_film": (
+        "Use for narrative films and dramatic fiction where scene-complete or dramatic-beat-complete segments are the "
+        "preferred navigation unit."
+    ),
     "podcast_topic_conversation": (
         "Use for long-form spoken conversations, podcasts, interviews, and roundtables where semantic topic shifts "
         "matter more than visuals."
@@ -80,6 +88,47 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
             "Cut on strong transitions such as desk-to-draft, draft-to-game, live-to-replay, replay-to-live, "
             "pause or reset, and post-game analysis. Within live gameplay, cut only when there is a clear phase "
             "change or semantically complete block, not on every kill, skirmish, or camera pan."
+        ),
+    ),
+    "sports_replay": SegmentationProfile(
+        signal_priority="balanced",
+        target_segment_length_sec=(30, 120),
+        default_sampling_profile="balanced",
+        boundary_evidence_primary=(
+            "time_jump_or_recap",
+            "on_screen_text_title_change",
+            "shot_style_change",
+        ),
+        boundary_evidence_secondary=(
+            "topic_shift_in_subtitles",
+            "music_or_audio_pattern_change",
+            "scene_location_change",
+        ),
+        segmentation_policy=(
+            "Prefer complete replay units and commentary-backed event review blocks over clip-level micro-cuts. "
+            "Cut when the replay shifts to a new key event, returns from replay to live context, or moves into a "
+            "clearly new analysis block. Do not cut on every camera change, slow-motion insert, or repeated angle "
+            "within the same replayed event."
+        ),
+    ),
+    "narrative_film": SegmentationProfile(
+        signal_priority="balanced",
+        target_segment_length_sec=(45, 240),
+        default_sampling_profile="balanced",
+        boundary_evidence_primary=(
+            "scene_location_change",
+            "topic_shift_in_subtitles",
+            "time_jump_or_recap",
+        ),
+        boundary_evidence_secondary=(
+            "shot_style_change",
+            "speaker_change",
+            "music_or_audio_pattern_change",
+        ),
+        segmentation_policy=(
+            "Prefer scene-complete or dramatic-beat-complete segments. Cut on clear transitions such as location "
+            "changes, time jumps, major topic or objective shifts, and completed confrontation or action units. "
+            "Do not cut on ordinary shot changes, dialogue turns, or local camera movement alone."
         ),
     ),
     "podcast_topic_conversation": SegmentationProfile(
@@ -137,6 +186,26 @@ CAPTION_PROFILES: dict[str, CaptionProfile] = {
             "Prefer phase-level navigational titles such as Draft And Ban, Early Lane Setup, Dragon Fight And Reset, "
             "Replay Of Baron Fight, or Post Game Analysis. Avoid highlight-style titles unless the whole segment is "
             "genuinely centered on one event."
+        ),
+    ),
+    "sports_replay": CaptionProfile(
+        caption_policy=(
+            "Describe each segment as a complete replay or review unit. Prioritize the key event, how it unfolds "
+            "across replay angles, and the commentary-backed explanation of why it matters over frame-by-frame narration."
+        ),
+        title_policy=(
+            "Prefer event-level titles such as First Goal Replay, Penalty Review, Counterattack Breakdown, Red Card "
+            "Incident Replay, or Match Summary And Final Chances. Avoid titles that only name camera moves or replay speed."
+        ),
+    ),
+    "narrative_film": CaptionProfile(
+        caption_policy=(
+            "Summarize each segment as a scene or dramatic unit. Emphasize the characters involved, the immediate "
+            "objective or conflict, and the narrative development, rather than shot-by-shot visual description."
+        ),
+        title_policy=(
+            "Prefer scene-level titles such as Opening Setup, Interrogation At The Station, Family Dinner Conflict, "
+            "Escape Through The Alley, or Final Confrontation. Avoid titles that only describe isolated camera actions."
         ),
     ),
     "podcast_topic_conversation": CaptionProfile(

@@ -129,6 +129,119 @@ class EvaluationScriptTest(unittest.TestCase):
             self.assertEqual(_FakeCanonicalWorkflow.calls[0]["source_srt_file_path"], srt_path)
             self.assertEqual(_FakeDerivedWorkflow.calls[0]["task_request"], "find opening")
 
+    def test_run_evaluation_can_skip_derived_generation(self) -> None:
+        from scripts.run_evaluation import run_evaluation
+
+        _FakeCanonicalWorkflow.calls = []
+        _FakeDerivedWorkflow.calls = []
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            inputs_dir = root / "inputs" / "case_001"
+            inputs_dir.mkdir(parents=True, exist_ok=True)
+            video_path = inputs_dir / "video.mp4"
+            task_path = inputs_dir / "task_request.txt"
+            video_path.write_text("video", encoding="utf-8")
+            task_path.write_text("find opening", encoding="utf-8")
+
+            results_dir = root / "outputs"
+            config_path = root / "evaluation.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "results_save_dir": str(results_dir),
+                        "evaluation_cases": [
+                            {
+                                "case_name": "case_001",
+                                "case_video_path": str(video_path),
+                                "case_str_file_path": None,
+                                "case_task_request_path": str(task_path),
+                                "canonical_atlas_workflow_config": "configs/canonical/default.json",
+                                "derived_atlas_workflow_config": "configs/derivation/default.json",
+                                "should_generate_canonical_atlas": True,
+                                "should_generate_derived_atlas": False,
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            fake_times = iter([10.0, 13.0])
+            with patch("scripts.run_evaluation.load_canonical_pipeline_config", return_value=type("Cfg", (), {"planner": object(), "segmentor": object(), "captioner": object(), "transcriber": object(), "runtime": type("Runtime", (), {"generate_subtitles_if_missing": True, "chunk_size_sec": 600, "chunk_overlap_sec": 20, "caption_with_subtitles": True, "verbose": False})()})()), \
+                patch("scripts.run_evaluation.build_generator", side_effect=lambda config: config), \
+                patch("scripts.run_evaluation.build_transcriber", side_effect=lambda config: config), \
+                patch("scripts.run_evaluation.CanonicalAtlasWorkflow", _FakeCanonicalWorkflow), \
+                patch("scripts.run_evaluation.time.perf_counter", side_effect=lambda: next(fake_times)):
+                summary = run_evaluation(config_path)
+
+            case_summary = summary["cases"][0]
+            self.assertTrue(case_summary["canonical_success"])
+            self.assertIsNone(case_summary["derived_success"])
+            self.assertIsNone(case_summary["derived_duration_sec"])
+            self.assertEqual(len(_FakeCanonicalWorkflow.calls), 1)
+            self.assertEqual(len(_FakeDerivedWorkflow.calls), 0)
+
+    def test_run_evaluation_can_reuse_existing_canonical_atlas(self) -> None:
+        from scripts.run_evaluation import run_evaluation
+
+        _FakeCanonicalWorkflow.calls = []
+        _FakeDerivedWorkflow.calls = []
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            inputs_dir = root / "inputs" / "case_001"
+            inputs_dir.mkdir(parents=True, exist_ok=True)
+            video_path = inputs_dir / "video.mp4"
+            task_path = inputs_dir / "task_request.txt"
+            video_path.write_text("video", encoding="utf-8")
+            task_path.write_text("find opening", encoding="utf-8")
+
+            results_dir = root / "outputs"
+            canonical_dir = results_dir / "case_001" / "canonical_atlas"
+            canonical_dir.mkdir(parents=True, exist_ok=True)
+            (canonical_dir / "README.md").write_text("canonical", encoding="utf-8")
+
+            config_path = root / "evaluation.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "results_save_dir": str(results_dir),
+                        "evaluation_cases": [
+                            {
+                                "case_name": "case_001",
+                                "case_video_path": str(video_path),
+                                "case_str_file_path": None,
+                                "case_task_request_path": str(task_path),
+                                "canonical_atlas_workflow_config": "configs/canonical/default.json",
+                                "derived_atlas_workflow_config": "configs/derivation/default.json",
+                                "should_generate_canonical_atlas": False,
+                                "should_generate_derived_atlas": True,
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            fake_times = iter([20.0, 27.0])
+            with patch("scripts.run_evaluation.load_derived_pipeline_config", return_value=type("Cfg", (), {"planner": object(), "segmentor": object(), "captioner": object(), "runtime": type("Runtime", (), {"num_workers": 2, "verbose": False})()})()), \
+                patch("scripts.run_evaluation.build_generator", side_effect=lambda config: config), \
+                patch("scripts.run_evaluation.load_canonical_workspace", side_effect=lambda path: type("LoadedCanonicalAtlas", (), {"atlas_dir": Path(path), "relative_video_path": Path(video_path.name)})()), \
+                patch("scripts.run_evaluation.DerivedAtlasWorkflow", _FakeDerivedWorkflow), \
+                patch("scripts.run_evaluation.time.perf_counter", side_effect=lambda: next(fake_times)):
+                summary = run_evaluation(config_path)
+
+            case_summary = summary["cases"][0]
+            self.assertIsNone(case_summary["canonical_success"])
+            self.assertIsNone(case_summary["canonical_duration_sec"])
+            self.assertTrue(case_summary["derived_success"])
+            self.assertAlmostEqual(case_summary["derived_duration_sec"], 7.0)
+            self.assertEqual(len(_FakeCanonicalWorkflow.calls), 0)
+            self.assertEqual(len(_FakeDerivedWorkflow.calls), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,7 +6,9 @@
             "case_video_path": "local/inputs/case_001_match_ufc/video.mp4",
             "case_str_file_path": "local/inputs/case_001_match_ufc/subtitles.srt",
             "case_task_request_path": "local/inputs/case_001_match_ufc/task_request.txt",
+            "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
+            "should_generate_derived_atlas": true,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -14,7 +16,9 @@
             "case_video_path": "local/inputs/case_002_match_lol/lol.mp4",
             "case_str_file_path": "local/inputs/case_002_match_lol/subtitles.srt",
             "case_task_request_path": "local/inputs/case_002_match_lol/task_request.txt",
+            "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
+            "should_generate_derived_atlas": true,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -22,7 +26,9 @@
             "case_video_path": "local/inputs/case_003_podcast/鲁豫对话许知远：人生是一场持续的写作陈鲁豫·慢谈EP13【视频播客】.mp4",
             "case_str_file_path": "local/inputs/case_003_podcast/subtitles.srt",
             "case_task_request_path": "local/inputs/case_003_podcast/task_request.txt",
+            "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
+            "should_generate_derived_atlas": true,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -30,7 +36,9 @@
             "case_video_path": "local/inputs/case_005_movie_1/东北警察故事3.mp4",
             "case_str_file_path": "local/inputs/case_005_movie_1/subtitles.srt",
             "case_task_request_path": "local/inputs/case_005_movie_1/task_request.txt",
+            "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
+            "should_generate_derived_atlas": true,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -38,7 +46,9 @@
             "case_video_path": "local/inputs/case_007_movie_2/Interstellar.mp4",
             "case_str_file_path": "local/inputs/case_007_movie_2/subtitles.srt",
             "case_task_request_path": "local/inputs/case_007_movie_2/task_request.txt",
+            "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
+            "should_generate_derived_atlas": true,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         }
     ]

@@ -45,7 +45,7 @@ def clip_exists(destination: str | Path, relative_path: str | Path) -> bool:
 
 def extract_clip(
     destination: str | Path,
-    video_path: str,
+    video_path: str | Path,
     seg_start_time: float,
     seg_end_time: float,
     relative_output_path: str | Path,
@@ -56,7 +56,7 @@ def extract_clip(
     command = (
         "ffmpeg -y -loglevel quiet "
         f"-ss {seg_start_time} -to {seg_end_time} "
-        f"-i {shlex.quote(Path(video_path).name)} "
+        f"-i {shlex.quote(str(video_path))} "
         f"-c copy {shlex.quote(str(output_path.relative_to(root_path)))}"
     )
     result = subprocess.run(
@@ -247,7 +247,7 @@ class DerivedAtlasWriter:
 
             extract_clip(
                 atlas_dir,
-                str(derived_atlas.source_video_path),
+                derived_atlas.source_video_path,
                 segment.start_time,
                 segment.end_time,
                 segment_dir / "video_clip.mp4",
