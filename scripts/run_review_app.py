@@ -7,15 +7,15 @@ from video_atlas.review import run_review_app
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Run a local review app for canonical and task VideoAtlas workspaces.",
+        description="Run a local review app for canonical and derived atlas directories.",
     )
     parser.add_argument(
-        "--canonical-workspace",
-        help="Path to a canonical workspace to inspect.",
+        "--canonical-atlas-dir",
+        help="Path to a canonical atlas directory to inspect.",
     )
     parser.add_argument(
-        "--task-workspace",
-        help="Path to a task-derived workspace to inspect.",
+        "--derived-atlas-dir",
+        help="Path to a derived atlas directory to inspect.",
     )
     parser.add_argument(
         "--host",
@@ -35,8 +35,8 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     server = run_review_app(
-        canonical_workspace=args.canonical_workspace,
-        task_workspace=args.task_workspace,
+        canonical_atlas_dir=args.canonical_atlas_dir,
+        derived_atlas_dir=args.derived_atlas_dir,
         host=args.host,
         port=args.port,
     )

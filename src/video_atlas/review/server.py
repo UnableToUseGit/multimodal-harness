@@ -197,18 +197,22 @@ def _build_handler(workspaces: dict[str, ReviewWorkspace]):
 
 
 def run_review_app(
-    canonical_workspace: str | Path | None = None,
-    task_workspace: str | Path | None = None,
+    canonical_atlas_dir: str | Path | None = None,
+    derived_atlas_dir: str | Path | None = None,
     host: str = "127.0.0.1",
     port: int = 8765,
 ) -> ReviewAppServer:
     loaded_workspaces: list[ReviewWorkspace] = []
-    if canonical_workspace is not None:
-        loaded_workspaces.append(load_review_workspace(canonical_workspace, workspace_id="canonical", label="Canonical Workspace"))
-    if task_workspace is not None:
-        loaded_workspaces.append(load_review_workspace(task_workspace, workspace_id="task", label="Task Workspace"))
+    if canonical_atlas_dir is not None:
+        loaded_workspaces.append(
+            load_review_workspace(canonical_atlas_dir, workspace_id="canonical", label="Canonical Atlas")
+        )
+    if derived_atlas_dir is not None:
+        loaded_workspaces.append(
+            load_review_workspace(derived_atlas_dir, workspace_id="derived", label="Derived Atlas")
+        )
     if not loaded_workspaces:
-        raise ValueError("At least one workspace path must be provided.")
+        raise ValueError("At least one atlas directory path must be provided.")
 
     handler = _build_handler({workspace.workspace_id: workspace for workspace in loaded_workspaces})
     server = ThreadingHTTPServer((host, port), handler)
