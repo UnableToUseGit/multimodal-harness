@@ -63,8 +63,10 @@ development/
 ├── AGENTS.md
 ├── configs/
 │   ├── canonical/
-│   └── task_derivation/
+│   ├── derivation/
+│   └── evaluation/
 ├── docs/
+│   ├── decision-making/
 │   ├── design-docs/
 │   ├── doc-templates/
 │   ├── exec-plans/

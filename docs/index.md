@@ -88,6 +88,13 @@
   - [active](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active)
   - [completed](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/completed)
 
+## 决策记录
+
+- 目录：
+  [docs/decision-making](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making)
+- 用途：
+  保存关键设计取舍、命名调整、边界变化和其他需要长期追踪的决策记录。
+
 ## 参考资料
 
 - 目录：
