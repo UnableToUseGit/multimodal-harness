@@ -105,11 +105,11 @@ function render(state) {
           </div>
           <div class="panel section">
             <h2>${sourceSegment ? "Source Comparison" : "Workspace Context"}</h2>
-            ${sourceSegment?.clip_url
-              ? `<video controls preload="metadata" src="${sourceSegment.clip_url}"></video>`
-              : workspace.source_video_url
-                ? `<video controls preload="metadata" src="${workspace.source_video_url}"></video>`
-                : `<p class="empty">No comparison video available.</p>`}
+            <pre class="code-block">${escapeHtml(
+              sourceSegment
+                ? sourceSegment.readme_text
+                : (workspace.task_text || workspace.root_readme_text || "No comparison context available.")
+            )}</pre>
             ${workspace.normalized_audio_url
               ? `<div class="toolbar"><a href="${workspace.normalized_audio_url}" target="_blank" rel="noreferrer">Open normalized audio</a></div>`
               : ""}
