@@ -20,6 +20,8 @@ class ModelRuntimeConfig:
 class TranscriberRuntimeConfig:
     enabled: bool = True
     backend: str = "faster_whisper"
+    sample_rate: int = 16000
+    channels: int = 1
     model_size_or_path: str = "small"
     device: str = "cpu"
     compute_type: str = "int8"
@@ -28,6 +30,20 @@ class TranscriberRuntimeConfig:
     min_silence_duration_ms: int = 500
     use_batched_inference: bool = False
     batch_size: int = 8
+    aliyun_api_base: str = "https://dashscope.aliyuncs.com/api/v1"
+    aliyun_model: str = "fun-asr"
+    aliyun_language_hints: list[str] = field(default_factory=list)
+    aliyun_diarization_enabled: bool = True
+    aliyun_oss_endpoint: str | None = None
+    aliyun_oss_bucket_name: str | None = None
+    aliyun_oss_access_key_id_env: str = "OSS_ACCESS_KEY_ID"
+    aliyun_oss_access_key_secret_env: str = "OSS_ACCESS_KEY_SECRET"
+    aliyun_api_key_env: str = "ALIYUN_API_KEY"
+    aliyun_oss_prefix: str = "audios/"
+    aliyun_signed_url_expires_sec: int = 3600
+    aliyun_poll_interval_sec: float = 2.0
+    aliyun_poll_timeout_sec: float = 900.0
+    retain_remote_artifacts: bool = False
 
 
 @dataclass

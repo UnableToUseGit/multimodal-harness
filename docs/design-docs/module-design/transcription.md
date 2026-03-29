@@ -8,7 +8,7 @@
 
 - 名称：`transcription`
 - 路径：`src/video_atlas/transcription`
-- 主要职责：提供音频抽取、音频转写和字幕文件生成能力
+- 主要职责：提供音频抽取、音频转写和字幕文件生成能力，并通过统一抽象接入不同转写后端
 
 ## 职责与边界
 
@@ -17,6 +17,7 @@
 - 负责从视频中抽取音频。
 - 负责定义统一的转写抽象接口与具体实现。
 - 负责将转写结果写出为标准字幕文件。
+- 负责屏蔽本地转写与云端转写之间的 provider 差异。
 
 ### 不负责的内容
 
@@ -79,6 +80,27 @@
   - 该实现类依赖具体转写引擎与运行环境。
   - 它实现 `BaseTranscriber` 定义的统一转写协议。
 
+### 具体实现类接口：`AliyunAsrTranscriber`
+
+- 类型：`concrete class`
+- 作用：提供基于阿里云 OSS 与 DashScope ASR 的云端转写实现。
+- 初始化输入：
+  - 阿里云相关配置对象
+    - 或等价 `dict`
+  - 包括 OSS、ASR、轮询和结果处理所需参数
+- 对外暴露的方法：
+  - `transcribe_audio(...)`：上传音频、发起异步转写、轮询结果并返回统一转写片段集合。
+- 关键方法的输入与输出：
+  - `transcribe_audio(...)`
+    - 输入：
+      - 音频路径
+    - 输出：
+      - 统一的转写片段集合
+- 说明：
+  - 该实现类是 `BaseTranscriber` 的规划中正式并列实现。
+  - 它对上层暴露与 `FasterWhisperTranscriber` 相同的调用协议，但内部依赖云端服务与 OSS 临时对象。
+  - 详细设计见 [2026-0329-aliyun-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0329-aliyun-transcription-route.md)。
+
 ### `extract_audio_ffmpeg`
 
 - 类型：`function`
@@ -113,6 +135,7 @@
 
 - 音频抽取工具
 - 具体转写引擎
+- 云端 ASR provider 与对象存储服务
 - 字幕格式写出逻辑
 
 ## 内部组成
@@ -154,6 +177,31 @@
   - 转写片段集合
   - 字幕文件路径
 
+### provider 适配部分
+
+- 角色：屏蔽不同转写后端在调用方式、结果结构和失败模式上的差异。
+- 边界：
+  - 负责将本地或云端 provider 归一化为统一的 `BaseTranscriber` 行为
+  - 不负责上层 workflow 的字幕使用语义
+- 输入：
+  - 转写器配置
+  - 本地音频路径
+- 输出：
+  - 统一的转写片段集合
+
+### 云端转写支持部分
+
+- 角色：为云端转写路线提供 OSS 上传、异步任务轮询和结果下载能力。
+- 边界：
+  - 负责云端 provider 接入细节
+  - 不负责字幕写出和上层业务编排
+- 输入：
+  - 本地音频路径
+  - 云端凭证与 provider 配置
+- 输出：
+  - 云端原始转写结果
+  - 归一化后的转写片段集合
+
 ### 字幕写出部分
 
 - 角色：将转写结果转换为 SRT。
@@ -177,6 +225,7 @@
 - 该模块应通过统一转写抽象接入具体引擎。
 - 字幕生成流程应与主 workflow 解耦。
 - 该模块只负责转写与字幕生成，不负责字幕在上层的使用语义。
+- 若引入云端转写实现，provider 特有的 OSS、轮询和结果解析逻辑应收敛在 `transcription` 模块内部，不向上层泄漏。
 
 ## 当前实现
 
@@ -187,3 +236,11 @@
 - [srt_writer.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/srt_writer.py)：实现 SRT 文本生成逻辑。
 - [types.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/types.py)：定义转写结果片段类型。
 - [faster_whisper.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/faster_whisper.py)：提供当前的 Faster Whisper 转写实现。
+- [aliyun_types.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/aliyun_types.py)：定义阿里云转写路线的配置对象。
+- [aliyun_oss.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/aliyun_oss.py)：封装阿里云 OSS 上传与签名下载 URL 能力。
+- [aliyun_asr.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/aliyun_asr.py)：封装 DashScope ASR 调用与结果归一化逻辑。
+- [aliyun_transcriber.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/aliyun_transcriber.py)：提供当前的阿里云 ASR 转写实现。
+
+## 相关设计记录
+
+- [2026-0329-aliyun-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0329-aliyun-transcription-route.md)：记录阿里云 ASR + OSS 正式接入 `transcription` 模块的设计方案。

@@ -16,7 +16,9 @@
 | 配置项 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `enabled` | `bool` | 否 | `True` | 是否启用转写器 |
-| `backend` | `str` | 否 | `"faster_whisper"` | 转写后端 |
+| `backend` | `str` | 否 | `"faster_whisper"` | 转写后端，当前支持 `faster_whisper` 与 `aliyun_asr` |
+| `sample_rate` | `int` | 否 | `16000` | 音频抽取采样率 |
+| `channels` | `int` | 否 | `1` | 音频抽取声道数 |
 | `model_size_or_path` | `str` | 否 | `"small"` | Faster Whisper 模型标识或路径 |
 | `device` | `str` | 否 | `"cpu"` | 运行设备 |
 | `compute_type` | `str` | 否 | `"int8"` | 推理精度类型 |
@@ -25,6 +27,20 @@
 | `min_silence_duration_ms` | `int` | 否 | `500` | 最小静音时长 |
 | `use_batched_inference` | `bool` | 否 | `False` | 是否启用 batched inference |
 | `batch_size` | `int` | 否 | `8` | batched inference 的 batch 大小 |
+| `aliyun_api_base` | `str` | 否 | `"https://dashscope.aliyuncs.com/api/v1"` | 阿里云 DashScope API 基础地址 |
+| `aliyun_model` | `str` | 否 | `"fun-asr"` | 阿里云 ASR 模型标识 |
+| `aliyun_language_hints` | `list[str]` | 否 | `[]` | 阿里云语言提示 |
+| `aliyun_diarization_enabled` | `bool` | 否 | `True` | 是否启用说话人分离 |
+| `aliyun_oss_endpoint` | `str \| None` | 否 | `None` | 阿里云 OSS endpoint |
+| `aliyun_oss_bucket_name` | `str \| None` | 否 | `None` | 阿里云 OSS bucket 名称 |
+| `aliyun_oss_access_key_id_env` | `str` | 否 | `"OSS_ACCESS_KEY_ID"` | OSS Access Key ID 环境变量名 |
+| `aliyun_oss_access_key_secret_env` | `str` | 否 | `"OSS_ACCESS_KEY_SECRET"` | OSS Access Key Secret 环境变量名 |
+| `aliyun_api_key_env` | `str` | 否 | `"ALIYUN_API_KEY"` | DashScope API Key 环境变量名 |
+| `aliyun_oss_prefix` | `str` | 否 | `"audios/"` | OSS 对象前缀 |
+| `aliyun_signed_url_expires_sec` | `int` | 否 | `3600` | 签名下载 URL 过期时间 |
+| `aliyun_poll_interval_sec` | `float` | 否 | `2.0` | 轮询间隔 |
+| `aliyun_poll_timeout_sec` | `float` | 否 | `900.0` | 轮询超时时间 |
+| `retain_remote_artifacts` | `bool` | 否 | `False` | 是否保留远端 OSS 临时对象 |
 
 ## 配置项说明
 
@@ -37,8 +53,20 @@
 ### `backend`
 
 - 语义：标识转写后端类型。
-- 约束：当前仅支持 `faster_whisper`。
+- 约束：当前支持 `faster_whisper` 和 `aliyun_asr`。
 - 对行为的影响：决定使用哪一种具体转写实现。
+
+### `sample_rate`
+
+- 语义：控制音频抽取阶段的采样率。
+- 约束：应为正整数。
+- 对行为的影响：在音频抽取阶段传递给 `extract_audio_ffmpeg(...)`。
+
+### `channels`
+
+- 语义：控制音频抽取阶段的声道数。
+- 约束：应为正整数。
+- 对行为的影响：在音频抽取阶段传递给 `extract_audio_ffmpeg(...)`。
 
 ### `model_size_or_path`
 
@@ -88,18 +116,31 @@
 - 约束：应为正整数。
 - 对行为的影响：只在 `use_batched_inference=True` 时生效。
 
+### `aliyun_api_base` ~ `retain_remote_artifacts`
+
+- 语义：控制阿里云 OSS 与 DashScope ASR 路线的 provider 配置、凭证来源、轮询行为和远端对象管理。
+- 约束：
+  - 这些字段只在 `backend="aliyun_asr"` 时生效。
+  - `aliyun_oss_endpoint` 和 `aliyun_oss_bucket_name` 在阿里云路线下应显式提供。
+  - `aliyun_api_key_env`、`aliyun_oss_access_key_id_env` 和 `aliyun_oss_access_key_secret_env` 应指向有效环境变量。
+- 对行为的影响：
+  - 决定阿里云转写请求的提交方式、OSS 临时对象组织方式与结果轮询行为。
+
 ## 默认值与必填项
 
 ### 默认值策略
 
 - 若未显式提供配置，系统会使用 `TranscriberRuntimeConfig` 的默认值
-- `build_transcriber(...)` 会将该配置映射到 `FasterWhisperTranscriber`
-- `FasterWhisperTranscriber` 在未提供 config 时，也会回退到自身默认 `FasterWhisperConfig`
+- `build_transcriber(...)` 会将该配置映射到：
+  - `FasterWhisperTranscriber`
+  - `AliyunAsrTranscriber`
+- 具体实现类在未显式提供 config 时，也会回退到各自默认配置
 
 ### 必填项
 
 - 当前没有绝对必填字段
 - 但若启用转写能力，运行环境必须已安装 `faster-whisper` 及其依赖
+- 若 `backend="aliyun_asr"`，还必须提供可用的阿里云 OSS 与 DashScope 凭证
 
 ## 配置来源
 
@@ -113,10 +154,11 @@
 
 ## 校验规则与约束
 
-- `backend` 当前只能为 `faster_whisper`
+- `backend` 当前只能为 `faster_whisper` 或 `aliyun_asr`
 - `batch_size` 必须为正整数
 - `min_silence_duration_ms` 不应为负数
 - 若 `enabled=False`，下游不应假定转写器实例存在
+- 若 `backend="aliyun_asr"`，`aliyun_oss_endpoint` 与 `aliyun_oss_bucket_name` 不应为空
 
 ## 使用位置
 
@@ -138,5 +180,20 @@ TranscriberRuntimeConfig(
     min_silence_duration_ms=500,
     use_batched_inference=True,
     batch_size=24,
+)
+```
+
+```python
+TranscriberRuntimeConfig(
+    enabled=True,
+    backend="aliyun_asr",
+    sample_rate=16000,
+    channels=1,
+    aliyun_model="fun-asr",
+    aliyun_language_hints=["zh", "en"],
+    aliyun_diarization_enabled=True,
+    aliyun_oss_endpoint="https://oss-cn-beijing.aliyuncs.com",
+    aliyun_oss_bucket_name="videoatlas-audio",
+    aliyun_api_key_env="ALIYUN_API_KEY",
 )
 ```

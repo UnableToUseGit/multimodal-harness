@@ -28,14 +28,14 @@ def build_video_messages(
         user_content.extend(
             [
                 {
+                    "type": "text",
+                    "text": f"<{timestamp:.1f} seconds>",
+                },
+                {
                     "type": "image_url",
                     "image_url": {
                         "url": f"data:image/jpeg;base64,{frame_base64}",
                     },
-                },
-                {
-                    "type": "text",
-                    "text": f"<{timestamp:.1f} seconds>",
                 },
             ]
         )
