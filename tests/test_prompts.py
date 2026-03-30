@@ -257,6 +257,7 @@ class PromptExportsTest(unittest.TestCase):
                     "subtitles": "subtitles",
                     "core_start": 5.0,
                     "core_end": 25.0,
+                    "concise_description": "A lecture-style explainer about a technical topic.",
                     "segmentation_profile": "profile",
                     "segmentation_policy": "policy",
                     "last_detection_point": 0.0,
@@ -265,7 +266,8 @@ class PromptExportsTest(unittest.TestCase):
             (
                 CAPTION_GENERATION_PROMPT,
                 {
-                    "genre_str": "genre",
+                    "genres": "lecture_talk, tutorial_howto",
+                    "concise_description": "A technical explainer video that introduces a concept and then walks through examples.",
                     "segmentation_profile": "profile",
                     "signal_priority": "visual",
                     "caption_policy": "policy",
@@ -346,7 +348,8 @@ class WorkflowPromptUsageTest(unittest.TestCase):
             ),
         )
         execution_plan = SimpleNamespace(
-            genre_distribution={"lecture": 1.0},
+            genres=["lecture_talk"],
+            concise_description="A lecture-style explainer with one speaker and supporting examples.",
             segmentation_specification=SimpleNamespace(
                 profile_name="balanced",
                 profile=SimpleNamespace(
@@ -363,7 +366,7 @@ class WorkflowPromptUsageTest(unittest.TestCase):
         )
 
         with patch.object(RawPromptSpec, "__getitem__", side_effect=AssertionError("dict-style prompt access is forbidden")):
-            planner_output = workflow._run_plan_planner(
+            planner_output, planner_reasoning = workflow._run_plan_planner(
                 prepared_probe_inputs=[],
                 duration=90.0,
                 subtitle_items=[{"text": "hello world"}],
@@ -406,6 +409,7 @@ class WorkflowPromptUsageTest(unittest.TestCase):
             )
 
         self.assertEqual(planner_output, {"plan": "ok"})
+        self.assertEqual(planner_reasoning, "")
         self.assertEqual(len(candidate_boundaries), 1)
         self.assertEqual(candidate_boundaries[0].timestamp, 12.0)
         self.assertEqual(caption.summary, "Local summary")
@@ -423,6 +427,7 @@ class WorkflowPromptUsageTest(unittest.TestCase):
                 "subtitles",
                 "core_start",
                 "core_end",
+                "concise_description",
                 "segmentation_profile",
                 "segmentation_policy",
                 "last_detection_point",
@@ -430,7 +435,7 @@ class WorkflowPromptUsageTest(unittest.TestCase):
         )
         self.assertEqual(
             CAPTION_GENERATION_PROMPT.input_fields,
-            ("genre_str", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
+            ("genres", "concise_description", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
         )
         self.assertEqual(
             DERIVED_CANDIDATE_PROMPT.input_fields,

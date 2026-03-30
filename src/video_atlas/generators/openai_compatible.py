@@ -80,6 +80,7 @@ class OpenAICompatibleGenerator(BaseGenerator):
         extra_body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         payload = self._build_payload(prompt=prompt, messages=messages, schema=schema, extra_body=extra_body)
+        
         request = urllib.request.Request(
             self._chat_completions_url(),
             data=json.dumps(payload).encode("utf-8"),

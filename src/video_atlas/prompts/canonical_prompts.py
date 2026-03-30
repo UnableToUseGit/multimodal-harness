@@ -16,7 +16,7 @@ PLANNER_GENRE_OPTIONS = render_genre_options()
 
 PLANNER_PROMPT_USER = """
 You will receive:
-- 3 probes sampled from the video at progress 25%, 50%, and 75%. Each probe contains:
+- 4 probes sampled from the video at progress 0%, 25%, 50%, and 75%. Each probe contains:
   - a sequence of frames (in temporal order)
   - subtitle text for the same time window (may be noisy/incomplete)
 - Global statistics for the whole video: total duration, subtitle density (chars/min or tokens/min), and optionally other stats.
@@ -24,18 +24,17 @@ You will receive:
 Your task:
 Based ONLY on the provided probes and global stats, output the key planner decisions (JSON) needed to construct an execution plan for:
 1) genre understanding
-2) segmentation profile selection
-3) shared frame sampling profile selection
+2) concise description of this video
+3) segmentation profile selection
+4) shared frame sampling profile selection
 
-HARD CONSTRAINTS
+Guidelines:
 1) Use ONLY the probes + global stats. Do NOT hallucinate specific plot details. If uncertain, reflect that via lower confidence and/or conservative strategy.
-2) This plan is for a CANONICAL video atlas, not highlight clipping. Prefer stable, self-contained segments that remain useful for downstream derivation. Avoid micro-segmentation unless the probes strongly justify it.
-3) Prefer LOW-COST but ROBUST execution decisions. Unless visual detail is clearly required, prefer lower-cost frame sampling.
-4) genre_distribution MUST contain 1–2 genres and MUST sum to 1.
-5) Do NOT include weakly supported "filler" genres just to reach diversity. If one domain is dominant, keep the distribution concentrated on the most defensible genres.
-6) segmentation_profile MUST be exactly ONE value from the profile list below.
-7) sampling_profile MUST be exactly ONE value from the sampling profile list below. This single sampling profile will be shared by segmentation and captioning.
-8) Output MUST be valid JSON following the schema below. No markdown, no comments, no extra keys.
+2) The genres are provided at most 2.
+3) Provide a brief description of the video to supply necessary context for the subsequent process.
+4) segmentation_profile MUST be exactly ONE value from the profile list below.
+5) sampling_profile MUST be exactly ONE value from the sampling profile list below. This single sampling profile will be shared by segmentation and captioning.
+6) Output MUST be valid JSON following the schema below. No markdown, no comments, no extra keys.
 
 SEGMENTATION PROFILE OPTIONS
 __SEGMENTATION_PROFILE_OPTIONS__
@@ -50,7 +49,8 @@ __GENRE_OPTIONS__
 STRICT OUTPUT JSON SCHEMA (MUST FOLLOW EXACTLY)
 {{
   "planner_confidence": 0.0,
-  "genre_distribution": {{ "<genre>": 0.0, "<genre>": 0.0 }},
+  "genres": ["<genre_1>", "<genre_2>"],
+  "concise_description": "<concise_description>",
   "segmentation_profile": "<profile_name>",
   "sampling_profile": "<sampling_profile>"
 }}
@@ -90,7 +90,7 @@ PLANNER_PROMPT = PromptSpec(
 You MUST output strict JSON only. Do not output any extra text.""",
     user_template=PLANNER_PROMPT_USER,
     input_fields=(),
-    output_contract="strict JSON object with planner_confidence, genre_distribution, segmentation_profile, and sampling_profile",
+    output_contract="strict JSON object with planner_confidence, genres, concise_description, segmentation_profile, and sampling_profile",
     tags=("canonical", "planner"),
 )
 
@@ -109,9 +109,10 @@ Input:
 You will be given:
 1. A sequence of frames and subtitles from the video chunk [T_start, T_end].
 2. A core detection window [Core_start, Core_end).
-3. The video category.
-4. A segmentation policy that tells you how this video should be segmented.
-5. The last detection point produced in the previous turn.
+3. A concise description of the whole video.
+4. The video category.
+5. A segmentation policy that tells you how this video should be segmented.
+6. The last detection point produced in the previous turn.
 
 Guidelines:
 1) The current chunk is only one part of a longer video. That is why you are given a larger temporal context [T_start, T_end] together with a smaller core detection window [Core_start, Core_end): use the larger context to better understand how the local content relates to what comes before and after.
@@ -143,6 +144,8 @@ Detection window:
 - Core_start: {core_start}
 - Core_end: {core_end}
 
+Concise description: {concise_description}
+
 Video category: {segmentation_profile}
 
 Segmentation policy: {segmentation_policy}
@@ -158,6 +161,7 @@ Only include boundaries whose timestamps fall inside [Core_start, Core_end).
         "subtitles",
         "core_start",
         "core_end",
+        "concise_description",
         "segmentation_profile",
         "segmentation_policy",
         "last_detection_point",
@@ -183,13 +187,14 @@ Input:
 You will be given:
 1. A sequence of frames from one video segment.
 2. Optional subtitles for the same segment.
-3. Genre distribution for the full video.
+3. The top genres for the full video.
+4. A concise description of the whole video.
 4. The segmentation profile for the full video.
 5. Signal priority for this video type.
 6. A caption policy that tells you what kind of segment description is expected.
 
 Guidelines:
-1) Use genre_distribution and segmentation_profile to understand what kind of segment this is and what kind of description is most appropriate.
+1) Use genres, concise_description, and segmentation_profile to understand what kind of segment this is and what kind of description is most appropriate.
 2) Use signal_priority to decide which modality is more trustworthy when visual evidence and subtitle evidence do not fully align.
 3) Use caption_policy as the main stylistic guide for what to emphasize.
 4) Describe the segment at the segment level, not frame by frame.
@@ -210,7 +215,8 @@ Return ONLY a strict JSON object with exactly these keys:
 Given the above frames and the following:
 
 Captioning priors:
-- genre_distribution: {genre_str}
+- genres: {genres}
+- concise_description: {concise_description}
 - segmentation_profile: {segmentation_profile}
 - signal_priority: {signal_priority}
 - caption_policy: {caption_policy}
@@ -220,7 +226,7 @@ Segment subtitles (if provided; may be noisy/incomplete):
 
 Now generate the JSON output.
 """.strip(),
-    input_fields=("genre_str", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
+    input_fields=("genres", "concise_description", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
     output_contract="strict JSON object with summary, caption, and confidence",
     tags=("canonical", "caption"),
 )

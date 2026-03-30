@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...persistence import slugify_segment_title
+from ...persistence import format_hms_time_range, slugify_segment_title
 from ...schemas import AtlasSegment, DerivedAtlas, DerivedSegmentDraft, DerivationResultInfo
 
 
@@ -50,7 +50,7 @@ class AggregationMixin:
                 subtitles_text=draft.subtitles_text,
                 folder_name=(
                     f"{draft.derived_segment_id.replace('_', '-')}-"
-                    f"{slugify_segment_title(draft.title)}-{draft.start_time:.2f}-{draft.end_time:.2f}s"
+                    f"{slugify_segment_title(draft.title)}-{format_hms_time_range(draft.start_time, draft.end_time)}"
                 ),
             )
             for draft in derived_segment_drafts

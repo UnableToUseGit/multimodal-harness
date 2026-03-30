@@ -2,7 +2,7 @@
 
 from .frames import get_frame_indices, prepare_video_input, process_one_frame
 from .subtitles import get_subtitle_in_segment, parse_srt
-from .video_metadata import get_video_property, read_json
+from .video_metadata import get_video_property, read_json, seconds_to_hms
 
 __all__ = [
     "get_frame_indices",
@@ -12,4 +12,5 @@ __all__ = [
     "prepare_video_input",
     "process_one_frame",
     "read_json",
+    "seconds_to_hms"
 ]

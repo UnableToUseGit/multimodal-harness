@@ -1,7 +1,9 @@
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-from video_atlas.agents.canonical_atlas.atlas_assembly import AtlasAssemblyMixin
+from video_atlas.schemas import CanonicalExecutionPlan
+from video_atlas.workflows.canonical_atlas.atlas_assembly import AtlasAssemblyMixin
 
 
 class _GlobalAtlasHarness(AtlasAssemblyMixin):
@@ -49,7 +51,7 @@ class _GlobalAtlasHarness(AtlasAssemblyMixin):
 
 
 class GlobalAtlasGenerationTest(unittest.TestCase):
-    def test_assemble_canonical_atlas_writes_root_and_segment_artifacts(self):
+    def test_assemble_canonical_atlas_builds_titles_and_hms_folder_names(self):
         harness = _GlobalAtlasHarness()
         parsed_segments = [
             {
@@ -70,29 +72,23 @@ class GlobalAtlasGenerationTest(unittest.TestCase):
             },
         ]
 
-        with patch("video_atlas.persistence.writers.write_text_to") as mock_write:
-            with patch("video_atlas.persistence.writers.clip_exists", return_value=False):
-                with patch("video_atlas.persistence.writers.extract_clip") as mock_extract:
-                    harness._assemble_canonical_atlas(
-                        parsed_segments=parsed_segments,
-                        video_path="video.mp4",
-                        duration=60,
-                        verbose=False,
-                    )
+        atlas = harness._assemble_canonical_atlas(
+            atlas_dir=Path("/tmp/canonical"),
+            execution_plan=CanonicalExecutionPlan(),
+            parsed_segments=parsed_segments,
+            video_path=Path("/tmp/canonical/video.mp4"),
+            audio_path=None,
+            subtitles_path=None,
+            srt_file_path=None,
+            duration=60,
+            verbose=False,
+        )
 
-        for call in mock_write.call_args_list:
-            harness._written[str(call.args[1])] = call.args[2]
-        for call in mock_extract.call_args_list:
-            harness._written[str(call.args[4])] = f"clip:{call.args[2]:.1f}-{call.args[3]:.1f}"
-
-        self.assertIn("README.md", harness._written)
-        self.assertIn("segments/seg0001-draft-and-ban-0.00-30.00s/README.md", harness._written)
-        self.assertIn("segments/seg0002-early-lane-setup-30.00-60.00s/README.md", harness._written)
-        self.assertIn("segments/seg0001-draft-and-ban-0.00-30.00s/SUBTITLES.md", harness._written)
-        self.assertIn("segments/seg0001-draft-and-ban-0.00-30.00s/video_clip.mp4", harness._written)
-        self.assertIn("Full Match Overview", harness._written["README.md"])
-        self.assertIn("Draft And Ban", harness._written["segments/seg0001-draft-and-ban-0.00-30.00s/README.md"])
-        self.assertIn("Early Lane Setup", harness._written["segments/seg0002-early-lane-setup-30.00-60.00s/README.md"])
+        self.assertEqual(atlas.title, "Full Match Overview")
+        self.assertEqual(atlas.segments[0].title, "Draft And Ban")
+        self.assertEqual(atlas.segments[1].title, "Early Lane Setup")
+        self.assertEqual(atlas.segments[0].folder_name, "seg_0001-draft-and-ban-00:00:00-00:00:30")
+        self.assertEqual(atlas.segments[1].folder_name, "seg_0002-early-lane-setup-00:00:30-00:01:00")
         self.assertIn("detail 1", harness._messages["user"])
         self.assertIn("detail 2", harness._messages["user"])
 

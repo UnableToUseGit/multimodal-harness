@@ -12,6 +12,14 @@ try:
 except ImportError:
     cv2 = None
     logging.getLogger(__name__).warning("OpenCV not found")
+    
+    
+def seconds_to_hms(timestamp_seconds: float) -> str:
+    total_seconds = int(timestamp_seconds)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
 def get_video_property(video_path):

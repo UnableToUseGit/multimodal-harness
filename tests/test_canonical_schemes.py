@@ -39,7 +39,8 @@ class CanonicalSchemesTest(unittest.TestCase):
 
         plan = CanonicalExecutionPlan()
 
-        self.assertEqual(plan.genre_distribution, {"other": 1.0})
+        self.assertEqual(plan.genres, ["other"])
+        self.assertEqual(plan.concise_description, "")
         self.assertEqual(plan.planner_confidence, 0.25)
         self.assertEqual(
             plan.segmentation_specification.profile,
@@ -66,7 +67,7 @@ class CanonicalSchemesTest(unittest.TestCase):
 
         plan = CanonicalExecutionPlan()
 
-        self.assertEqual(plan.genre_distribution, {"other": 1.0})
+        self.assertEqual(plan.genres, ["other"])
 
     def test_runtime_only_window_types_are_not_exposed_from_schemas(self) -> None:
         with self.assertRaises(ImportError):
@@ -98,6 +99,26 @@ class CanonicalSchemesTest(unittest.TestCase):
         self.assertTrue(film_profile.segmentation_policy)
         self.assertTrue(sports_caption.caption_policy)
         self.assertTrue(film_caption.caption_policy)
+
+    def test_vlog_documentary_and_explanatory_commentary_profiles_are_registered(self) -> None:
+        from video_atlas.schemas.canonical_registry import (
+            CAPTION_PROFILES,
+            SEGMENTATION_PROFILES,
+            resolve_caption_profile,
+            resolve_segmentation_profile,
+        )
+
+        for profile_name in ("vlog_lifestyle", "documentary", "explanatory_commentary"):
+            self.assertIn(profile_name, SEGMENTATION_PROFILES)
+            self.assertIn(profile_name, CAPTION_PROFILES)
+
+            resolved_name, segmentation_profile = resolve_segmentation_profile(profile_name)
+            caption_name, caption_profile = resolve_caption_profile(profile_name)
+
+            self.assertEqual(resolved_name, profile_name)
+            self.assertEqual(caption_name, profile_name)
+            self.assertTrue(segmentation_profile.segmentation_policy)
+            self.assertTrue(caption_profile.caption_policy)
 
 
 if __name__ == "__main__":

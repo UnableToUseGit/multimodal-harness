@@ -162,6 +162,7 @@ segments/<segment-folder>/
   - `Intent`
 - 说明：
   - 该文件同时表达片段自身信息和任务导向信息。
+  - 当前 `Start Time`、`End Time` 和 `Duration` 统一使用 `HH:MM:SS` 格式。
 
 ### 片段目录 `SOURCE_MAP.json`
 
@@ -189,12 +190,12 @@ derived-atlas/
 ├── .agentignore/
 │   └── DERIVATION_RESULT.json
 └── segments/
-    ├── derived-seg-0001-opening-5.00-15.00s/
+    ├── derived-seg-0001-opening-00:00:05-00:00:15/
     │   ├── README.md
     │   ├── video_clip.mp4
     │   ├── SUBTITLES.md
     │   └── SOURCE_MAP.json
-    └── derived-seg-0002-transition-61.20-72.50s/
+    └── derived-seg-0002-transition-00:01:01-00:01:12/
         ├── README.md
         ├── video_clip.mp4
         └── SOURCE_MAP.json

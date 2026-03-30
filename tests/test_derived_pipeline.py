@@ -85,7 +85,7 @@ class DerivedPipelineTest(unittest.TestCase):
                             "Start Time: 16.0 --> End Time: 17.0 Subtitle: after",
                         ]
                     ),
-                    folder_name="seg0001-opening-0.00-30.00s",
+                    folder_name="seg0001-opening-00:00:00-00:00:30",
                 ),
                 AtlasSegment(
                     segment_id="seg_0002",
@@ -95,7 +95,7 @@ class DerivedPipelineTest(unittest.TestCase):
                     summary="Middle summary",
                     caption="Middle detail",
                     subtitles_text="",
-                    folder_name="seg0002-middle-30.00-60.00s",
+                    folder_name="seg0002-middle-00:00:30-00:01:00",
                 ),
             ],
             execution_plan=CanonicalExecutionPlan(),
@@ -207,7 +207,7 @@ class DerivedPipelineTest(unittest.TestCase):
                     summary="Opening summary",
                     caption="Opening detail",
                     subtitles_text="Start Time: 6.0 --> End Time: 7.0 Subtitle: keep this",
-                    folder_name="seg0001-opening-0.00-30.00s",
+                    folder_name="seg0001-opening-00:00:00-00:00:30",
                 )
             ],
             execution_plan=CanonicalExecutionPlan(),

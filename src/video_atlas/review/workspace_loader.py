@@ -11,6 +11,7 @@ FIELD_RE = re.compile(r"\*\*(?P<key>[^*]+)\*\*:\s*(?P<value>.*)")
 HUMAN_TIME_RE = re.compile(
     r"^\s*(?:(?P<hours>\d+)h\s*)?(?:(?P<minutes>\d+)min\s*)?(?:(?P<seconds>\d+)s)?\s*$"
 )
+HMS_TIME_RE = re.compile(r"^\s*(?P<hours>\d{2,}):(?P<minutes>\d{2}):(?P<seconds>\d{2})\s*$")
 
 
 def _parse_markdown_fields(text: str) -> dict[str, str]:
@@ -40,6 +41,12 @@ def _parse_timestamp(value: str | None, default: float = 0.0) -> float:
     try:
         return float(value)
     except ValueError:
+        hms_match = HMS_TIME_RE.match(value.strip())
+        if hms_match:
+            hours = int(hms_match.group("hours") or 0)
+            minutes = int(hms_match.group("minutes") or 0)
+            seconds = int(hms_match.group("seconds") or 0)
+            return float(hours * 3600 + minutes * 60 + seconds)
         match = HUMAN_TIME_RE.match(value.strip())
         if not match:
             return default

@@ -72,7 +72,8 @@ class CaptionSpecification:
 @dataclass
 class CanonicalExecutionPlan:
     planner_confidence: float = 0.25
-    genre_distribution: dict[str, float] = field(default_factory=lambda: {"other": 1.0})
+    genres: list[str] = field(default_factory=lambda: ["other"])
+    concise_description: str = ""
     segmentation_specification: SegmentationSpecification = field(default_factory=SegmentationSpecification)
     caption_specification: CaptionSpecification = field(default_factory=CaptionSpecification)
     chunk_size_sec: int = 600

@@ -73,7 +73,7 @@ class WorkspaceWritersTest(unittest.TestCase):
                     summary="Opening summary",
                     caption="Opening detail",
                     subtitles_text="segment subtitles",
-                    folder_name="seg0001-opening-0.00-20.00s",
+                    folder_name="seg0001-opening-00:00:00-00:00:20",
                 )
             ],
             execution_plan=CanonicalExecutionPlan(),
@@ -88,21 +88,24 @@ class WorkspaceWritersTest(unittest.TestCase):
 
         for call in mock_write.call_args_list:
             harness.written[str(call.args[1])] = call.args[2]
-        harness.written["segments/seg0001-opening-0.00-20.00s/video_clip.mp4"] = "clip"
+        harness.written["segments/seg0001-opening-00:00:00-00:00:20/video_clip.mp4"] = "clip"
         mock_extract.assert_called_once_with(
             Path("/tmp/canonical"),
             Path("/tmp/canonical/video.mp4"),
             0.0,
             20.0,
-            Path("segments/seg0001-opening-0.00-20.00s/video_clip.mp4"),
+            Path("segments/seg0001-opening-00:00:00-00:00:20/video_clip.mp4"),
         )
 
         self.assertIn("README.md", harness.written)
-        self.assertIn("segments/seg0001-opening-0.00-20.00s/README.md", harness.written)
-        self.assertIn("segments/seg0001-opening-0.00-20.00s/SUBTITLES.md", harness.written)
-        self.assertIn("segments/seg0001-opening-0.00-20.00s/video_clip.mp4", harness.written)
+        self.assertIn("segments/seg0001-opening-00:00:00-00:00:20/README.md", harness.written)
+        self.assertIn("segments/seg0001-opening-00:00:00-00:00:20/SUBTITLES.md", harness.written)
+        self.assertIn("segments/seg0001-opening-00:00:00-00:00:20/video_clip.mp4", harness.written)
         self.assertIn("Match Overview", harness.written["README.md"])
-        self.assertIn("Opening", harness.written["segments/seg0001-opening-0.00-20.00s/README.md"])
+        self.assertIn("**Start Time**: 00:00:00", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
+        self.assertIn("**End Time**: 00:00:20", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
+        self.assertIn("**Duration**: 00:00:20", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
+        self.assertIn("**Duration**: 00:00:20", harness.written["README.md"])
 
     def test_derived_workspace_writer_persists_metadata_and_segments(self) -> None:
         from video_atlas.persistence import DerivedAtlasWriter
@@ -122,7 +125,7 @@ class WorkspaceWritersTest(unittest.TestCase):
                     summary="Task summary",
                     caption="Task detail",
                     subtitles_text="pruned subtitles",
-                    folder_name="derived-seg-0001-task-segment-5.00-15.00s",
+                    folder_name="derived-seg-0001-task-segment-00:00:05-00:00:15",
                 )
             ],
             derivation_result_info=DerivationResultInfo(
@@ -146,27 +149,39 @@ class WorkspaceWritersTest(unittest.TestCase):
 
         for call in mock_write.call_args_list:
             harness.written[str(call.args[1])] = call.args[2]
-        harness.written["segments/derived-seg-0001-task-segment-5.00-15.00s/video_clip.mp4"] = "clip"
+        harness.written["segments/derived-seg-0001-task-segment-00:00:05-00:00:15/video_clip.mp4"] = "clip"
         mock_extract.assert_called_once_with(
             Path("/tmp/out"),
-            "/tmp/canonical/video.mp4",
+            Path("/tmp/canonical/video.mp4"),
             5.0,
             15.0,
-            Path("segments/derived-seg-0001-task-segment-5.00-15.00s/video_clip.mp4"),
+            Path("segments/derived-seg-0001-task-segment-00:00:05-00:00:15/video_clip.mp4"),
         )
 
         self.assertIn("README.md", harness.written)
         self.assertIn("TASK.md", harness.written)
         self.assertIn("derivation.json", harness.written)
         self.assertIn(".agentignore/DERIVATION_RESULT.json", harness.written)
-        self.assertIn("segments/derived-seg-0001-task-segment-5.00-15.00s/README.md", harness.written)
-        self.assertIn("segments/derived-seg-0001-task-segment-5.00-15.00s/video_clip.mp4", harness.written)
-        self.assertIn("segments/derived-seg-0001-task-segment-5.00-15.00s/SUBTITLES.md", harness.written)
+        self.assertIn("segments/derived-seg-0001-task-segment-00:00:05-00:00:15/README.md", harness.written)
+        self.assertIn("segments/derived-seg-0001-task-segment-00:00:05-00:00:15/video_clip.mp4", harness.written)
+        self.assertIn("segments/derived-seg-0001-task-segment-00:00:05-00:00:15/SUBTITLES.md", harness.written)
+        self.assertIn(
+            "**Start Time**: 00:00:05",
+            harness.written["segments/derived-seg-0001-task-segment-00:00:05-00:00:15/README.md"],
+        )
+        self.assertIn(
+            "**End Time**: 00:00:15",
+            harness.written["segments/derived-seg-0001-task-segment-00:00:05-00:00:15/README.md"],
+        )
+        self.assertIn(
+            "**Duration**: 00:00:10",
+            harness.written["segments/derived-seg-0001-task-segment-00:00:05-00:00:15/README.md"],
+        )
         derivation = json.loads(harness.written["derivation.json"])
         self.assertEqual(derivation["derived_segment_count"], 1)
         self.assertEqual(derivation["task_request"], "find the key task moment")
         source_map = json.loads(
-            harness.written["segments/derived-seg-0001-task-segment-5.00-15.00s/SOURCE_MAP.json"]
+            harness.written["segments/derived-seg-0001-task-segment-00:00:05-00:00:15/SOURCE_MAP.json"]
         )
         self.assertEqual(source_map["source_segment_id"], "seg_0001")
 

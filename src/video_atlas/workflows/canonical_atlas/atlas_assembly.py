@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import List
 
-from ...persistence import CanonicalAtlasWriter, slugify_segment_title
+from ...persistence import CanonicalAtlasWriter, format_hms_time_range, slugify_segment_title
 from ...prompts import VIDEO_GLOBAL_PROMPT
 from ...schemas import AtlasSegment, CanonicalAtlas, CanonicalExecutionPlan
 
@@ -57,7 +57,7 @@ class AtlasAssemblyMixin:
             seg_title = title_map.get(seg["seg_id"], seg.get("seg_title") or seg["seg_id"])
             save_name = (
                 f"{seg['seg_id']}-{slugify_segment_title(seg_title)}-"
-                f"{seg['start_time']:.2f}-{seg['end_time']:.2f}s"
+                f"{format_hms_time_range(seg['start_time'], seg['end_time'])}"
             )
             atlas_segments.append(
                 AtlasSegment(

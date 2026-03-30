@@ -30,20 +30,26 @@ class MultimodalMessagesTest(unittest.TestCase):
 
         self.assertEqual(messages[0], {"role": "system", "content": "system"})
         self.assertEqual(messages[1]["role"], "user")
-        self.assertEqual(messages[1]["content"][0]["type"], "image_url")
-        self.assertEqual(messages[1]["content"][1]["text"], "<0.1 seconds>")
-        self.assertEqual(messages[1]["content"][3]["text"], "<0.2 seconds>")
+        self.assertEqual(messages[1]["content"][0]["type"], "text")
+        self.assertEqual(messages[1]["content"][0]["text"], "<0.1 seconds>")
+        self.assertEqual(messages[1]["content"][1]["type"], "image_url")
+        self.assertEqual(messages[1]["content"][2]["text"], "<0.2 seconds>")
         self.assertEqual(messages[1]["content"][-1], {"type": "text", "text": "user"})
 
     def test_build_video_messages_from_path_uses_sampling_but_only_returns_messages(self) -> None:
         from video_atlas.message_builder.messages import build_video_messages_from_path
 
         sampling = FrameSamplingProfile(fps=0.5, max_resolution=360)
+        helper_calls = []
+
+        def _fake_get_frame_indices(*args, **kwargs):
+            helper_calls.append(kwargs)
+            return [1, 2]
 
         with patch(
             "video_atlas.message_builder.messages._load_video_helpers",
             return_value=(
-                lambda *args, **kwargs: [1, 2],
+                _fake_get_frame_indices,
                 lambda *args, **kwargs: (["frame1", "frame2"], [0.1, 0.2]),
             ),
         ) as mock_helpers:
@@ -62,6 +68,7 @@ class MultimodalMessagesTest(unittest.TestCase):
                 )
 
         mock_helpers.assert_called_once()
+        self.assertEqual(helper_calls[0]["max_frames"], 48)
         mock_build_video_messages.assert_called_once_with(
             system_prompt="system",
             user_prompt="user",

@@ -2,9 +2,8 @@ import tempfile
 import threading
 import time
 import unittest
-import json
 
-from video_atlas.agents.canonical_atlas.video_parsing import VideoParsingMixin
+from video_atlas.workflows.canonical_atlas.video_parsing import VideoParsingMixin
 from video_atlas.schemas.canonical_atlas import (
     CandidateBoundary,
     CaptionedSegment,
@@ -85,7 +84,8 @@ class SegmentationStreamingTest(unittest.TestCase):
         )
         return CanonicalExecutionPlan(
             planner_confidence=0.9,
-            genre_distribution={"other": 1.0},
+            genres=["other"],
+            concise_description="A test video.",
             segmentation_specification=SegmentationSpecification(
                 profile_name="test_profile",
                 profile=profile,
@@ -161,7 +161,7 @@ class SegmentationStreamingTest(unittest.TestCase):
     def test_parse_video_into_segments_pipelines_caption_with_boundary_detection(self):
         harness = _StreamingSegmentationHarness()
         plan = self._make_plan()
-        contexts = harness._parse_video_into_segments(
+        contexts, boundary_records = harness._parse_video_into_segments(
             video_path="video.mp4",
             duration=100,
             subtitle_items=[],
@@ -172,6 +172,7 @@ class SegmentationStreamingTest(unittest.TestCase):
         self.assertEqual([item["start_time"] for item in contexts], [0, 40, 70])
         self.assertFalse(harness.detect_calls[0][2])
         self.assertTrue(harness.detect_calls[1][2])
+        self.assertEqual(len(boundary_records), 2)
 
     def test_parse_video_into_segments_does_not_reprocess_partial_final_chunk(self):
         harness = _StreamingSegmentationHarness()
@@ -191,7 +192,7 @@ class SegmentationStreamingTest(unittest.TestCase):
         harness = _StreamingSegmentationHarness()
         plan = self._make_plan()
 
-        harness._parse_video_into_segments(
+        _, boundary_records = harness._parse_video_into_segments(
             video_path="video.mp4",
             duration=100,
             subtitle_items=[],
@@ -199,16 +200,37 @@ class SegmentationStreamingTest(unittest.TestCase):
             verbose=False,
         )
 
-        first_chunk = ".agentignore/boundary_debug/chunk_0000_core_0.00_60.00.json"
-        second_chunk = ".agentignore/boundary_debug/chunk_0001_core_40.00_100.00.json"
-        self.assertIn(first_chunk, harness._written)
-        self.assertIn(second_chunk, harness._written)
-
-        first_payload = json.loads(harness._written[first_chunk])
+        self.assertEqual(len(boundary_records), 2)
+        first_payload = {
+            "core_start": boundary_records[0]["core_start_time"],
+            "core_end": boundary_records[0]["core_end_time"],
+            "last_detection_point": boundary_records[0]["last_detection_point"],
+            "candidate_boundaries": [
+                {
+                    "boundary_rationale": item.boundary_rationale,
+                }
+                for item in boundary_records[0]["candidate_boundaries"]
+            ],
+        }
         self.assertEqual(first_payload["core_start"], 0.0)
         self.assertEqual(first_payload["core_end"], 60.0)
         self.assertEqual(first_payload["last_detection_point"], 0.0)
         self.assertEqual(first_payload["candidate_boundaries"][0]["boundary_rationale"], "topic shift")
+
+    def test_truncate_prompt_subtitles_keeps_budget(self):
+        harness = _StreamingSegmentationHarness()
+        source = "A" * 5000
+
+        truncated = harness._truncate_prompt_subtitles(source, max_chars=1000)
+
+        self.assertLessEqual(len(truncated), 1000)
+        self.assertIn("[TRUNCATED]", truncated)
+
+    def test_truncate_prompt_subtitles_returns_original_when_short(self):
+        harness = _StreamingSegmentationHarness()
+        source = "short subtitles"
+
+        self.assertEqual(harness._truncate_prompt_subtitles(source, max_chars=1000), source)
 
 
 if __name__ == "__main__":

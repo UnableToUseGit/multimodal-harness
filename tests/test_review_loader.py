@@ -74,6 +74,35 @@ class ReviewWorkspaceLoaderTest(unittest.TestCase):
         self.assertEqual(workspace.segments[0].end_time, 212.0)
         self.assertEqual(workspace.segments[0].duration, 63.0)
 
+    def test_loads_iso_hms_times(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "README.md").write_text("# Canonical\n", encoding="utf-8")
+            segment_dir = root / "segments" / "seg0004-example"
+            segment_dir.mkdir(parents=True)
+            (segment_dir / "README.md").write_text(
+                "\n".join(
+                    [
+                        "# Segment Context",
+                        "",
+                        "**SegID**: seg0004",
+                        "**Start Time**: 00:02:29",
+                        "**End Time**: 00:03:32",
+                        "**Duration**: 00:01:03",
+                        "**Title**: Example",
+                        "**Summary**: Summary.",
+                        "**Detail Description**: Detail.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            workspace = load_review_workspace(root, workspace_id="canonical")
+
+        self.assertEqual(workspace.segments[0].start_time, 149.0)
+        self.assertEqual(workspace.segments[0].end_time, 212.0)
+        self.assertEqual(workspace.segments[0].duration, 63.0)
+
     def test_loads_derived_workspace_source_map(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

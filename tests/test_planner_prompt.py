@@ -8,7 +8,8 @@ class PlannerPromptTest(unittest.TestCase):
         user_prompt = PLANNER_PROMPT["USER"]
 
         self.assertIn('"planner_confidence": 0.0', user_prompt)
-        self.assertIn('"genre_distribution"', user_prompt)
+        self.assertIn('"genres"', user_prompt)
+        self.assertIn('"concise_description"', user_prompt)
         self.assertIn('"segmentation_profile"', user_prompt)
         self.assertIn('"sampling_profile"', user_prompt)
         self.assertNotIn('"use_subtitles"', user_prompt)
@@ -21,12 +22,15 @@ class PlannerPromptTest(unittest.TestCase):
 
         self.assertIn("last detection point", BOUNDARY_DETECTION_PROMPT["SYSTEM"].lower())
         self.assertIn("Video category:", BOUNDARY_DETECTION_PROMPT["USER"])
+        self.assertIn("Concise description:", BOUNDARY_DETECTION_PROMPT["USER"])
+        self.assertIn("{concise_description}", BOUNDARY_DETECTION_PROMPT["USER"])
         self.assertIn("{last_detection_point}", BOUNDARY_DETECTION_PROMPT["USER"])
 
     def test_caption_generation_prompt_uses_summary_caption_confidence_contract(self) -> None:
         from video_atlas.prompts import CAPTION_GENERATION_PROMPT
 
         system_prompt = CAPTION_GENERATION_PROMPT["SYSTEM"]
+        user_prompt = CAPTION_GENERATION_PROMPT["USER"]
 
         self.assertIn("Role:", system_prompt)
         self.assertIn("Goal:", system_prompt)
@@ -35,6 +39,8 @@ class PlannerPromptTest(unittest.TestCase):
         self.assertIn("Output format:", system_prompt)
         self.assertIn('"summary": "<1 sentence summary>"', system_prompt)
         self.assertIn('"caption": "<4-8 sentence paragraph>"', system_prompt)
+        self.assertIn("{genres}", user_prompt)
+        self.assertIn("{concise_description}", user_prompt)
         self.assertNotIn('"slots"', system_prompt)
         self.assertNotIn("final_caption", system_prompt)
         self.assertNotIn("slots_weight", system_prompt)

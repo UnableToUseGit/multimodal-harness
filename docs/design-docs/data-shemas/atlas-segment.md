@@ -65,9 +65,9 @@
 
 ### `folder_name`
 
-- 语义：片段在 workspace 中的目录名。
+- 语义：片段在 atlas 目录中的目录名。
 - 约束：应适合作为稳定目录名使用。
-- 注意事项：通常由 `segment_id`、标题和时间范围组合生成。
+- 注意事项：通常由 `segment_id`、标题和 `HH:MM:SS-HH:MM:SS` 形式的时间范围组合生成。
 
 ### `relative_clip_path`
 
@@ -85,7 +85,7 @@
 
 - `segment_id` 应唯一。
 - `start_time` 必须小于 `end_time`。
-- `folder_name` 应与 workspace 目录约定兼容。
+- `folder_name` 应与 atlas 目录约定兼容。
 
 ## 示例
 
@@ -98,6 +98,6 @@ AtlasSegment(
     summary="Opening summary",
     caption="Opening detail",
     subtitles_text="...",
-    folder_name="seg0001-opening-0.00-30.00s",
+    folder_name="seg0001-opening-00:00:00-00:00:30",
 )
 ```

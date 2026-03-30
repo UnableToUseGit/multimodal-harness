@@ -138,7 +138,8 @@ segments/<segment-folder>/
 - 内容类型：`JSON`
 - 主要字段或内容：
   - `planner_confidence`
-  - `genre_distribution`
+  - `genres`
+  - `concise_description`
   - `segmentation_specification`
   - `caption_specification`
   - `chunk_size_sec`
@@ -159,7 +160,7 @@ segments/<segment-folder>/
   - `Detail Description`
 - 说明：
   - 片段时间字段当前由 persistence 层写出。
-  - 若未来引入统一时间格式约定，应由 persistence 层统一完成转换。
+  - 当前 `Start Time`、`End Time` 和 `Duration` 统一使用 `HH:MM:SS` 格式。
 
 ## 稳定契约
 
@@ -178,11 +179,11 @@ canonical-atlas/
 ├── subtitles.srt
 ├── SUBTITLES.md
 └── segments/
-    ├── seg-0001-opening-0.00-24.50s/
+    ├── seg-0001-opening-00:00:00-00:00:24/
     │   ├── README.md
     │   ├── video_clip.mp4
     │   └── SUBTITLES.md
-    └── seg-0002-transition-24.50-61.20s/
+    └── seg-0002-transition-00:00:24-00:01:01/
         ├── README.md
         ├── video_clip.mp4
         └── SUBTITLES.md

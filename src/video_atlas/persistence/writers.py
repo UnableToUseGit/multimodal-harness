@@ -8,7 +8,46 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from ..schemas import CanonicalAtlas, DerivedAtlas
+from ..schemas import CanonicalAtlas, DerivedAtlas, CandidateBoundary
+from ..utils.video_metadata import seconds_to_hms
+
+
+def format_hms_time_range(start_time: float, end_time: float) -> str:
+    return f"{seconds_to_hms(start_time)}-{seconds_to_hms(end_time)}"
+
+def write_candidate_boundaries_for_debug(
+    atlas_dir: str,
+    chunk_index: int,
+    core_start_time: float,
+    core_end_time: float,
+    window_start_time: float,
+    window_end_time: float,
+    last_detection_point: float | None,
+    candidate_boundaries: list[CandidateBoundary],
+) -> None:
+    payload = {
+        "chunk_index": chunk_index,
+        "core_start": core_start_time,
+        "core_end": core_end_time,
+        "window_start": window_start_time,
+        "window_end": window_end_time,
+        "last_detection_point": last_detection_point,
+        "candidate_boundaries": [
+            {
+                "timestamp": item.timestamp,
+                "boundary_rationale": item.boundary_rationale,
+                "evidence": list(item.evidence),
+                "confidence": item.confidence,
+            }
+            for item in candidate_boundaries
+        ],
+    }
+    relative_path = (
+        f"./boundary_for_debug/"
+        f"chunk_{chunk_index:04d}_core_{core_start_time:.2f}_{core_end_time:.2f}.json"
+    )
+    write_text_to(atlas_dir, relative_path, json.dumps(payload, indent=2, ensure_ascii=False))
+
 
 def copy_to(src_path: Path, destination: Path) -> Path:
     """Copy a file/directory to destination dir."""
@@ -84,9 +123,9 @@ class CanonicalAtlasWriter:
                 "# Segment",
                 "",
                 f"**SegID**: {segment.segment_id}",
-                f"**Start Time**: {segment.start_time:.1f}",
-                f"**End Time**: {segment.end_time:.1f}",
-                f"**Duration**: {segment.duration:.1f}",
+                f"**Start Time**: {seconds_to_hms(segment.start_time)}",
+                f"**End Time**: {seconds_to_hms(segment.end_time)}",
+                f"**Duration**: {seconds_to_hms(segment.duration)}",
                 f"**Title**: {segment.title}",
                 f"**Summary**: {segment.summary}",
                 f"**Detail Description**: {segment.caption}",
@@ -103,7 +142,7 @@ class CanonicalAtlasWriter:
                 "# Canonical Atlas",
                 "",
                 f"**Title**: {atlas.title}",
-                f"**Duration**: {max_end_time:.1f}",
+                f"**Duration**: {seconds_to_hms(max_end_time)}",
                 f"**Abstract**: {atlas.abstract}",
                 "",
                 "# Segmentation Context",
@@ -142,7 +181,7 @@ class CanonicalAtlasWriter:
                 extract_clip(atlas_dir, video_path, segment.start_time, segment.end_time, clip_relative_path)
 
             segments_quickview_items.append(
-                f"- {segment.segment_id} ({segment.title}): {segment.start_time:.1f} - {segment.end_time:.1f} seconds: {segment.summary}"
+                f"- {segment.segment_id} ({segment.title}): {seconds_to_hms(segment.start_time)} - {seconds_to_hms(segment.end_time)}: {segment.summary}"
             )
 
         markdown_text = self._global_readme_text(atlas, atlas.duration)
@@ -180,9 +219,9 @@ class DerivedAtlasWriter:
                 "",
                 f"**DerivedSegID**: {segment.segment_id}",
                 f"**SourceSegID**: {source_segment_id}",
-                f"**Start Time**: {segment.start_time:.1f}",
-                f"**End Time**: {segment.end_time:.1f}",
-                f"**Duration**: {segment.duration:.1f}",
+                f"**Start Time**: {seconds_to_hms(segment.start_time)}",
+                f"**End Time**: {seconds_to_hms(segment.end_time)}",
+                f"**Duration**: {seconds_to_hms(segment.duration)}",
                 f"**Title**: {segment.title}",
                 f"**Summary**: {segment.summary}",
                 f"**Detail Description**: {segment.caption}",

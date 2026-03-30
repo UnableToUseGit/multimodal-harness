@@ -18,9 +18,9 @@ ALLOWED_GENRES = {
     "tutorial_howto",
     "news_report",
     "documentary",
-    "gameplay",
+    "esports_broadcast",
     "compilation_montage",
-    "sports_event",
+    "sports_broadcast",
     "other",
 }
 
@@ -45,6 +45,18 @@ SAMPLING_PROFILE_DESCRIPTIONS: dict[str, str] = {
 ALLOWED_SAMPLING_PROFILES = set(SAMPLING_PROFILE_DESCRIPTIONS)
 
 SEGMENTATION_PROFILE_DESCRIPTIONS: dict[str, str] = {
+    "vlog_lifestyle": (
+        "Use for personal vlogs and lifestyle travel videos where coherent experience blocks, location-based episodes, "
+        "and self-contained narrative moments are the preferred navigation unit."
+    ),
+    "documentary": (
+        "Use for documentaries and observational nonfiction where semantically complete story units, character arcs, "
+        "or explanatory sections are the preferred navigation unit."
+    ),
+    "explanatory_commentary": (
+        "Use for explanatory commentary videos where a narrator develops one topic through coherent explanation blocks, "
+        "argument steps, and example clusters rather than turn-by-turn dialogue."
+    ),
     "esports_match_broadcast": (
         "Use for professional esports match broadcasts with casters, overlays, replay blocks, draft or ban phases, "
         "and chronological match progression."
@@ -69,6 +81,61 @@ SEGMENTATION_PROFILE_DESCRIPTIONS: dict[str, str] = {
 }
 
 SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
+    "vlog_lifestyle": SegmentationProfile(
+        signal_priority="balanced",
+        target_segment_length_sec=(60, 240),
+        default_sampling_profile="balanced",
+        boundary_evidence_primary=(
+            "scene_location_change",
+            "topic_shift_in_subtitles",
+            "time_jump_or_recap",
+        ),
+        boundary_evidence_secondary=(
+            "shot_style_change",
+            "music_or_audio_pattern_change",
+            "on_screen_text_title_change",
+        ),
+        segmentation_policy=(
+            "Prefer semantically complete experience blocks rather than short visual snippets or moment-by-moment cuts."
+            " Keep together footage that belongs to the same outing, location visit, reflective thread, or self-contained episode in the creator's journey."
+            " Cut when the vlog clearly moves into a new place, activity, narrative purpose, or time period."
+            " Do not cut on ordinary camera changes, brief scenic inserts, or short remarks alone."
+        ),
+    ),
+    "documentary": SegmentationProfile(
+        signal_priority="balanced",
+        target_segment_length_sec=(90, 300),
+        default_sampling_profile="balanced",
+        boundary_evidence_primary=(
+            "topic_shift_in_subtitles",
+            "scene_location_change",
+            "time_jump_or_recap",
+        ),
+        boundary_evidence_secondary=(
+            "on_screen_text_title_change",
+            "shot_style_change",
+            "music_or_audio_pattern_change",
+        ),
+        segmentation_policy=(
+            "Prefer semantically complete documentary story units rather than isolated shots or small informational fragments."
+            " Keep together footage that is still developing the same character thread, place-based sequence, historical episode, or explanatory section."
+            " Cut when a story unit clearly completes, or when the documentary moves into a new location, subject, time period, or self-contained line of explanation."
+            " Do not cut on ordinary shot changes, local reaction shots, or brief illustrative inserts alone."
+        ),
+    ),
+    "explanatory_commentary": SegmentationProfile(
+        signal_priority="language",
+        target_segment_length_sec=(120, 360),
+        default_sampling_profile="language_lean",
+        boundary_evidence_primary=("topic_shift_in_subtitles", "on_screen_text_title_change"),
+        boundary_evidence_secondary=("scene_location_change", "time_jump_or_recap", "speaker_change"),
+        segmentation_policy=(
+            "Prefer semantically complete explanation blocks rather than sentence-level or example-level segmentation."
+            " Keep together stretches that are still developing the same major concept, argument step, analytical theme, or explanatory thread."
+            " Cut only when the narration clearly moves into a new major question, a new self-contained explanatory block, or a substantially different analytical direction."
+            " Do not cut on ordinary rhetorical transitions, brief examples, local elaborations, or short topical detours that still serve the same broader explanation."
+        ),
+    ),
     "esports_match_broadcast": SegmentationProfile(
         signal_priority="balanced",
         target_segment_length_sec=(90, 240),
@@ -84,10 +151,10 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
             "scene_location_change",
         ),
         segmentation_policy=(
-            "Prefer stable broadcast blocks and match phases over local action spikes. "
-            "Cut on strong transitions such as desk-to-draft, draft-to-game, live-to-replay, replay-to-live, "
-            "pause or reset, and post-game analysis. Within live gameplay, cut only when there is a clear phase "
-            "change or semantically complete block, not on every kill, skirmish, or camera pan."
+            "Prioritize structurally complete match phases and pre/post-game content over isolated, short-term action spikes."
+            "Ensure cuts respect the natural narrative flow of the esports broadcast.",
+            "Cut only on clear phase transitions or after a semantically complete block is complete."
+            "Do not cut in the middle of a crucial game event or other ongoing high-stakes sequence."
         ),
     ),
     "sports_broadcast": SegmentationProfile(
@@ -105,10 +172,10 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
             "scene_location_change",
         ),
         segmentation_policy=(
-            "Prefer stable sports broadcast units such as match phases, replay-inclusive event blocks, analysis inserts, "
-            "halftime or timeout review blocks, and clear live-to-replay-to-live transitions. Cut on strong transitions "
-            "between phases, events, and commentary blocks. Do not cut on every camera change, slow-motion insert, or "
-            "local momentum swing within the same broadcast unit."
+            "Prioritize structurally complete match phases and pre/post-game content over isolated, short-term action spikes."
+            "Ensure cuts respect the natural narrative flow of the sports broadcast.",
+            "Cut only on clear phase transitions or after a semantically complete block is complete."
+            "Do not cut in the middle of a crucial match event or other ongoing high-stakes sequence."
         ),
     ),
     "narrative_film": SegmentationProfile(
@@ -126,8 +193,9 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
             "music_or_audio_pattern_change",
         ),
         segmentation_policy=(
-            "Prefer scene-complete or dramatic-beat-complete segments. Cut on clear transitions such as location "
-            "changes, time jumps, major topic or objective shifts, and completed confrontation or action units. "
+            "Prefer plot-complete or dramatic-unit-complete segments rather than shot-level cuts."
+            "Segment the video according to coherent plot units, where characters are typically engaged in a shared dramatic theme, objective, conflict, or emotional progression."
+            "Cut when a plot unit has clearly completed, or when there is a clear transition such as a time jump, location shift, major objective change, or a new dramatic thread begins."
             "Do not cut on ordinary shot changes, dialogue turns, or local camera movement alone."
         ),
     ),
@@ -138,9 +206,10 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
         boundary_evidence_primary=("topic_shift_in_subtitles", "speaker_change"),
         boundary_evidence_secondary=("on_screen_text_title_change", "music_or_audio_pattern_change"),
         segmentation_policy=(
-            "Prefer topic-complete blocks rather than turn-by-turn segmentation. Cut when the conversation moves to a "
-            "new question, argument, or subtopic with clear semantic separation. Do not cut on ordinary speaker "
-            "alternation, acknowledgements, laughter, filler words, or short digressions alone."
+            "Prefer semantically complete discussion arcs rather than turn-by-turn or subtopic-level segmentation."
+            "Keep together conversation stretches that are still developing the same broader theme, life stage, experience cluster, or narrative thread"
+            "Cut only when the dialogue clearly shifts into a new major theme or a new self-contained discussion arc."
+            "Do not cut on ordinary speaker alternation, acknowledgements, laughter, filler words, brief follow-up examples, or small subtopics that still belong to the same broader theme."
         ),
     ),
     "lecture_slide_driven": SegmentationProfile(
@@ -171,12 +240,42 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
 ALLOWED_SEGMENTATION_PROFILES = set(SEGMENTATION_PROFILES)
 
 SAMPLING_PROFILE_CONFIGS: dict[str, FrameSamplingProfile] = {
-    "language_lean": FrameSamplingProfile(fps=0.25, max_resolution=360),
-    "balanced": FrameSamplingProfile(fps=0.5, max_resolution=480),
-    "visual_detail": FrameSamplingProfile(fps=1.0, max_resolution=720),
+    "language_lean": FrameSamplingProfile(fps=0.1, max_resolution=480),
+    "balanced": FrameSamplingProfile(fps=0.25, max_resolution=480),
+    "visual_detail": FrameSamplingProfile(fps=0.5, max_resolution=720),
 }
 
 CAPTION_PROFILES: dict[str, CaptionProfile] = {
+    "vlog_lifestyle": CaptionProfile(
+        caption_policy=(
+            "Summarize each segment as a coherent vlog episode or experience block. Emphasize where the creator is, "
+            "what they are doing, the mood or reflective thread, and how the segment fits into the broader journey."
+        ),
+        title_policy=(
+            "Prefer experience-oriented titles such as Arrival In Paris, Street Walk And Reflection, Café Break In Shanghai, "
+            "Museum Visit, Evening City Impressions, or Travel Transition. Avoid titles that only describe isolated shots."
+        ),
+    ),
+    "documentary": CaptionProfile(
+        caption_policy=(
+            "Summarize each segment as a documentary story unit or explanatory block. Emphasize the main subject, "
+            "character thread, place, event, or argument being developed."
+        ),
+        title_policy=(
+            "Prefer documentary-style navigation titles such as Early Life In Beijing, Entering The Underground Scene, "
+            "How The Drug Trade Expanded, Industry Backdrop, or Turning Point In The Story. Avoid titles that only describe visuals."
+        ),
+    ),
+    "explanatory_commentary": CaptionProfile(
+        caption_policy=(
+            "Summarize each segment as a coherent explanation block. Emphasize the major concept, argument, historical episode, "
+            "case analysis, or interpretive claim being developed, rather than sentence-level detail."
+        ),
+        title_policy=(
+            "Prefer explanation-oriented titles such as What World Models Are, Why The System Failed, Historical Background, "
+            "How The Character Was Constructed, or The Core Technical Challenge. Avoid titles that only restate isolated examples."
+        ),
+    ),
     "esports_match_broadcast": CaptionProfile(
         caption_policy=(
             "Describe each segment as a stable match-phase summary. Prioritize objective setups, teamfights, "

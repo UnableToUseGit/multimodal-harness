@@ -15,7 +15,8 @@
 | 字段名 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `planner_confidence` | `float` | 否 | `0.25` | 规划阶段置信度 |
-| `genre_distribution` | `dict[str, float]` | 否 | `{"other": 1.0}` | 内容类型分布 |
+| `genres` | `list[str]` | 否 | `["other"]` | planner 输出的原始有序视频类型列表 |
+| `concise_description` | `str` | 否 | `""` | 对整个视频的简要介绍 |
 | `segmentation_specification` | `SegmentationSpecification` | 否 | 工厂默认值 | 切分规范 |
 | `caption_specification` | `CaptionSpecification` | 否 | 工厂默认值 | caption 规范 |
 | `chunk_size_sec` | `int` | 否 | `600` | chunk 长度 |
@@ -29,11 +30,17 @@
 - 约束：通常应在 `0.0` 到 `1.0` 之间。
 - 注意事项：该值反映规划可靠性，不是单段边界置信度。
 
-### `genre_distribution`
+### `genres`
 
-- 语义：表达视频内容类型分布。
-- 约束：键为 genre 名称，值为对应权重或概率。
-- 注意事项：主要用于指导后续切分与 caption 行为。
+- 语义：表达 planner 判断出的主要视频类型列表。
+- 约束：为按重要性排序的 genre 字符串列表。
+- 注意事项：保留 planner 原始有序列表，不再转换为权重分布。
+
+### `concise_description`
+
+- 语义：提供对整个视频的简要介绍。
+- 约束：应为简短、可读的描述性文本。
+- 注意事项：主要作为后续分割和 caption 过程的先验信息。
 
 ### `segmentation_specification`
 
@@ -70,7 +77,8 @@
 ```python
 CanonicalExecutionPlan(
     planner_confidence=0.6,
-    genre_distribution={"sports": 0.8, "other": 0.2},
+    genres=["sports_event", "other"],
+    concise_description="A sports broadcast that follows the live match, replays, and post-match analysis.",
     segmentation_specification=some_segmentation_specification,
     caption_specification=some_caption_specification,
     chunk_size_sec=600,

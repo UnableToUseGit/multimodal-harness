@@ -56,7 +56,12 @@ def build_video_messages_from_path(
 ) -> list[dict]:
     sampling = video_sampling or FrameSamplingProfile(fps=1.0, max_resolution=480)
     get_frame_indices, prepare_video_input = _load_video_helpers()
-    frame_indices = get_frame_indices(video_path, start_time, end_time, fps=sampling.fps)
+    frame_indices = get_frame_indices(
+        video_path,
+        start_time,
+        end_time,
+        fps=sampling.fps
+    )
     frame_base64_list, timestamps = prepare_video_input(
         video_path,
         frame_indices,

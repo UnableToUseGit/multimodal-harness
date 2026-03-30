@@ -70,8 +70,8 @@ class PlanMixin:
             for frame_base64, timestamp in zip(frame_base64_list, timestamps):
                 user_content.extend(
                     [
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{frame_base64}"}},
                         {"type": "text", "text": f"<{timestamp:.1f} seconds>"},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{frame_base64}"}},
                     ]
                 )
             user_content.append({"type": "text", "text": f"Subtitles: \n{subtitles_str_in_seg}"})

@@ -8,7 +8,7 @@ import math
 
 from ...transcription import generate_subtitles_for_video
 from ...utils import get_video_property, parse_srt
-from ...persistence import CanonicalAtlasWriter, copy_to, write_text_to
+from ...persistence import CanonicalAtlasWriter, copy_to, write_text_to, write_candidate_boundaries_for_debug
 from ...schemas import CanonicalAtlas
 
 class PipelineMixin:
@@ -93,7 +93,7 @@ class PipelineMixin:
             self._log_info("[Plan] Execution plan:\n%s", json.dumps(asdict(execution_plan), indent=2))
 
         write_text_to(output_dir, "EXECUTION_PLAN.json", json.dumps(asdict(execution_plan), indent=4))
-        parsed_segments = self._parse_video_into_segments(
+        parsed_segments, record_generated_boundaries = self._parse_video_into_segments(
             video_path=video_path,
             duration=duration,
             subtitle_items=subtitle_items,
@@ -112,10 +112,13 @@ class PipelineMixin:
             srt_file_path=srt_file_path,
             verbose=verbose
         )
-        
+
         CanonicalAtlasWriter(caption_with_subtitles=self.caption_with_subtitles).write(atlas=atlas)
-        
+
+        for item in record_generated_boundaries:
+            write_candidate_boundaries_for_debug(output_dir, **item)
+
         if verbose:
             self._log_info("VideoAtlas construction completed successfully")
-            
+
         return atlas

@@ -11,38 +11,6 @@ from ...utils import get_subtitle_in_segment
 
 
 class VideoParsingMixin:
-    # def _write_candidate_boundaries_debug(
-    #     self,
-    #     chunk_index: int,
-    #     core_start_time: float,
-    #     core_end_time: float,
-    #     window_start_time: float,
-    #     window_end_time: float,
-    #     last_detection_point: float | None,
-    #     candidate_boundaries: list[CandidateBoundary],
-    # ) -> None:
-    #     payload = {
-    #         "chunk_index": chunk_index,
-    #         "core_start": core_start_time,
-    #         "core_end": core_end_time,
-    #         "window_start": window_start_time,
-    #         "window_end": window_end_time,
-    #         "last_detection_point": last_detection_point,
-    #         "candidate_boundaries": [
-    #             {
-    #                 "timestamp": item.timestamp,
-    #                 "boundary_rationale": item.boundary_rationale,
-    #                 "evidence": list(item.evidence),
-    #                 "confidence": item.confidence,
-    #             }
-    #             for item in candidate_boundaries
-    #         ],
-    #     }
-    #     relative_path = (
-    #         f".agentignore/boundary_debug/"
-    #         f"chunk_{chunk_index:04d}_core_{core_start_time:.2f}_{core_end_time:.2f}.json"
-    #     )
-    #     self.write_text_to(relative_path, json.dumps(payload, indent=2, ensure_ascii=False))
 
     def _clamp_confidence(self, value: float, default: float = 0.0) -> float:
         try:
@@ -96,9 +64,9 @@ class VideoParsingMixin:
             )
         return annotated
 
-    def _genre_distribution_str(self, genre_distribution: dict[str, float]) -> str:
-        genre_top = sorted(genre_distribution.items(), key=lambda item: item[1], reverse=True)
-        return ", ".join([f"{key}:{value:.2f}" for key, value in genre_top])
+    def _genres_str(self, genres: list[str]) -> str:
+        normalized = [genre.strip() for genre in genres if isinstance(genre, str) and genre.strip()]
+        return ", ".join(normalized) if normalized else "other"
 
     def _generate_local_caption(
         self,
@@ -119,14 +87,14 @@ class VideoParsingMixin:
 
             system_prompt = CAPTION_GENERATION_PROMPT.render_system()
             user_prompt = CAPTION_GENERATION_PROMPT.render_user(
-                genre_str=self._genre_distribution_str(execution_plan.genre_distribution),
+                genres=self._genres_str(execution_plan.genres),
+                concise_description=execution_plan.concise_description,
                 segmentation_profile=execution_plan.segmentation_specification.profile_name,
                 signal_priority=execution_plan.segmentation_specification.profile.signal_priority,
                 caption_policy=caption_spec.profile.caption_policy,
                 subtitles=subtitles_str_in_seg,
             )
-            
-            
+
             output = self.captioner.generate_single(
                 messages=self._build_video_messages_from_path(
                     system_prompt=system_prompt,
@@ -257,6 +225,7 @@ class VideoParsingMixin:
         min_confidence: float = 0.35,
     ) -> list[CandidateBoundary]:
         _, subtitles_str_in_seg = get_subtitle_in_segment(subtitle_items, window_start_time, window_end_time)
+        
         segmentation_profile = execution_plan.segmentation_specification.profile
         system_prompt = BOUNDARY_DETECTION_PROMPT.render_system()
         user_prompt = BOUNDARY_DETECTION_PROMPT.render_user(
@@ -265,12 +234,12 @@ class VideoParsingMixin:
             core_start=core_start_time,
             core_end=core_end_time,
             subtitles=subtitles_str_in_seg,
+            concise_description=execution_plan.concise_description,
             segmentation_profile=execution_plan.segmentation_specification.profile_name,
             segmentation_policy=segmentation_profile.segmentation_policy,
             last_detection_point="None" if last_detection_point is None else str(last_detection_point),
         )
-        
-        
+
         output = self.segmentor.generate_single(
             messages=self._build_video_messages_from_path(
                 system_prompt=system_prompt,
@@ -362,7 +331,7 @@ class VideoParsingMixin:
             segment_end_time=committed_end,
             candidate_boundaries=candidate_boundaries,
         )
-        # NOTE: 暂时注释用于本地测试
+        # NOTE: 后处理功能还需要优化，暂时不使用
         # committed_segments = self._postprocess_segments(committed_segments, execution_plan)
         # committed_segments = self._refine_segments(
         #     video_path=video_path,
@@ -398,6 +367,7 @@ class VideoParsingMixin:
     def _parse_video_into_segments(self, video_path: str, duration: float, subtitle_items: list, execution_plan, verbose: bool = False):
         parsed_segments = []
         caption_futures = []
+        record_generated_boundaries = []
         open_segment_start = 0.0
         chunk_start_time = 0.0
         next_segment_id = 1
@@ -427,15 +397,15 @@ class VideoParsingMixin:
                     self._log_error("[Chunk %.0f-%.0f] Failed to detect candidate boundaries: %s", core_start_time, core_end_time, exc)
                     candidate_boundaries = []
 
-                # self._write_candidate_boundaries_debug(
-                #     chunk_index=chunk_index,
-                #     core_start_time=core_start_time,
-                #     core_end_time=core_end_time,
-                #     window_start_time=window_start_time,
-                #     window_end_time=window_end_time,
-                #     last_detection_point=last_detection_point,
-                #     candidate_boundaries=candidate_boundaries,
-                # )
+                record_generated_boundaries.append({
+                    'chunk_index': chunk_index,
+                    'core_start_time': core_start_time,
+                    'core_end_time': core_end_time,
+                    'window_start_time': window_start_time,
+                    'window_end_time': window_end_time,
+                    'last_detection_point': last_detection_point,
+                    'candidate_boundaries': candidate_boundaries,
+                })
 
                 committed_segments, open_segment_start = self._materialize_committed_segments(
                     video_path=video_path,
@@ -508,4 +478,4 @@ class VideoParsingMixin:
                     self._log_error("Segment processing failed: %s", exc)
 
         parsed_segments.sort(key=lambda item: item["start_time"])
-        return parsed_segments
+        return parsed_segments, record_generated_boundaries
