@@ -32,13 +32,16 @@
 - 作用：提供 canonical atlas 生成流程的统一入口，并负责协调内部各阶段。
 - 初始化输入：
   - `planner`
-  - `segmentor`
+  - `text_segmentor`
+  - `multimodal_segmentor`
   - `captioner`
   - 可选的 `transcriber`
   - 可选的流程参数
     - `generate_subtitles_if_missing`
-    - `chunk_size_sec`
-    - `chunk_overlap_sec`
+    - `text_chunk_size_sec`
+    - `text_chunk_overlap_sec`
+    - `multimodal_chunk_size_sec`
+    - `multimodal_chunk_overlap_sec`
     - `caption_with_subtitles`
 - 对外暴露的方法：
   - `create(...)`：执行 canonical atlas 生成流程。
@@ -63,7 +66,7 @@
 ### 上游依赖
 
 - 触发 canonical atlas 生成的脚本、CLI 或其他上层入口
-- 构造 `planner`、`segmentor`、`captioner`、`transcriber` 的配置与工厂逻辑
+- 构造 `planner`、`text_segmentor`、`multimodal_segmentor`、`captioner`、`transcriber` 的配置与工厂逻辑
 
 ### 下游依赖
 
@@ -117,6 +120,9 @@
   - `CanonicalExecutionPlan`
 - 输出：
   - 片段级中间结果集合
+- 说明：
+  - 该部分会先根据 `SegmentationProfile.segmentation_route` 和字幕可用性，自动选择 `text_llm` 或 `multimodal_local` 路线。
+  - `text_llm` 路线使用远程文本 LLM 与较大的 chunk 设置；`multimodal_local` 路线使用本地多模态模型与较小的 chunk 设置。
 
 ### Atlas 组装部分
 
@@ -147,15 +153,17 @@
 1. 入口接收原始视频路径、可选字幕路径和目标 atlas 目录。
 2. 流程复制输入文件，并在必要时自动补生成字幕。
 3. 流程读取视频时长、字幕内容并构建执行计划。
-4. 流程按照执行计划完成视频分段与局部 caption 生成。
-5. 流程将分段结果组装为完整 `CanonicalAtlas`。
-6. 流程调用 `CanonicalAtlasWriter` 完成结果写入。
+4. 流程根据 segmentation profile 的 route 和字幕可用性选择文本或多模态分段路线。
+5. 流程完成视频分段与局部 caption 生成。
+6. 流程将分段结果组装为完整 `CanonicalAtlas`。
+7. 流程调用 `CanonicalAtlasWriter` 完成结果写入。
 
 ## 设计约束
 
 - 该模块是核心流程模块，不应退化为底层工具集合。
 - 该模块应编排公共能力，而不应重新实现 message builder、parsing 或 persistence 逻辑。
 - 片段级中间结果与最终 atlas 结果应分离，避免在流程早期过早固定最终表示。
+- 文本叙事型视频的高效优化应通过 route 切换完成，而不应把文本分割逻辑散落到 workflow 外部。
 
 ## 当前实现
 
@@ -163,5 +171,5 @@
 - [canonical_atlas/pipeline.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/workflows/canonical_atlas/pipeline.py)：实现流程主链，包括输入准备、字幕解析、执行计划调用、atlas 组装与最终写出。
 - [canonical_atlas/plan.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/workflows/canonical_atlas/plan.py)：实现视频探测与 planner 调用。
 - [canonical_atlas/execution_plan_builder.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/workflows/canonical_atlas/execution_plan_builder.py)：将 planner 输出构造成 `CanonicalExecutionPlan`。
-- [canonical_atlas/video_parsing.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/workflows/canonical_atlas/video_parsing.py)：实现边界检测、片段整理与局部 caption 生成。
+- [canonical_atlas/video_parsing.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/workflows/canonical_atlas/video_parsing.py)：实现文本/多模态双路线边界检测、片段整理与局部 caption 生成。
 - [canonical_atlas/atlas_assembly.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/workflows/canonical_atlas/atlas_assembly.py)：实现最终 `CanonicalAtlas` 组装。

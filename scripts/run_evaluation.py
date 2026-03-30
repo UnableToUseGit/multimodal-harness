@@ -75,12 +75,17 @@ def _run_case(case_config: dict[str, Any], verbose: bool = False) -> dict[str, A
             canonical_config = load_canonical_pipeline_config(canonical_config_path)
             canonical_workflow = CanonicalAtlasWorkflow(
                 planner=build_generator(canonical_config.planner),
-                segmentor=build_generator(canonical_config.segmentor),
+                text_segmentor=build_generator(canonical_config.text_segmentor or canonical_config.segmentor),
+                multimodal_segmentor=build_generator(
+                    canonical_config.multimodal_segmentor or canonical_config.segmentor
+                ),
                 captioner=build_generator(canonical_config.captioner) if canonical_config.captioner is not None else None,
                 transcriber=build_transcriber(canonical_config.transcriber),
                 generate_subtitles_if_missing=canonical_config.runtime.generate_subtitles_if_missing,
-                chunk_size_sec=canonical_config.runtime.chunk_size_sec,
-                chunk_overlap_sec=canonical_config.runtime.chunk_overlap_sec,
+                text_chunk_size_sec=canonical_config.runtime.text_chunk_size_sec,
+                text_chunk_overlap_sec=canonical_config.runtime.text_chunk_overlap_sec,
+                multimodal_chunk_size_sec=canonical_config.runtime.multimodal_chunk_size_sec,
+                multimodal_chunk_overlap_sec=canonical_config.runtime.multimodal_chunk_overlap_sec,
                 caption_with_subtitles=canonical_config.runtime.caption_with_subtitles,
             )
             started_at = time.perf_counter()

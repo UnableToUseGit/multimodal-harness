@@ -14,6 +14,7 @@ from video_atlas.prompts import (
     PromptRegistry,
     PromptRenderError,
     PromptSpec,
+    TEXT_BOUNDARY_DETECTION_PROMPT,
     VIDEO_GLOBAL_PROMPT,
     get_prompt,
     list_prompts,
@@ -219,6 +220,7 @@ class PromptExportsTest(unittest.TestCase):
         for prompt in (
             PLANNER_PROMPT,
             BOUNDARY_DETECTION_PROMPT,
+            TEXT_BOUNDARY_DETECTION_PROMPT,
             CAPTION_GENERATION_PROMPT,
             VIDEO_GLOBAL_PROMPT,
             DERIVED_CANDIDATE_PROMPT,
@@ -235,6 +237,7 @@ class PromptExportsTest(unittest.TestCase):
             {
                 "PLANNER_PROMPT",
                 "BOUNDARY_DETECTION_PROMPT",
+                "TEXT_BOUNDARY_DETECTION_PROMPT",
                 "CAPTION_GENERATION_PROMPT",
                 "VIDEO_GLOBAL_PROMPT",
                 "DERIVED_CANDIDATE_PROMPT",
@@ -254,6 +257,18 @@ class PromptExportsTest(unittest.TestCase):
                 {
                     "t_start": 0.0,
                     "t_end": 30.0,
+                    "subtitles": "subtitles",
+                    "core_start": 5.0,
+                    "core_end": 25.0,
+                    "concise_description": "A lecture-style explainer about a technical topic.",
+                    "segmentation_profile": "profile",
+                    "segmentation_policy": "policy",
+                    "last_detection_point": 0.0,
+                },
+            ),
+            (
+                TEXT_BOUNDARY_DETECTION_PROMPT,
+                {
                     "subtitles": "subtitles",
                     "core_start": 5.0,
                     "core_end": 25.0,

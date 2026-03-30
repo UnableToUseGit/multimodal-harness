@@ -4,13 +4,20 @@ import concurrent.futures
 import json
 import time
 
-from ...prompts import BOUNDARY_DETECTION_PROMPT, CAPTION_GENERATION_PROMPT
+from ...prompts import BOUNDARY_DETECTION_PROMPT, CAPTION_GENERATION_PROMPT, TEXT_BOUNDARY_DETECTION_PROMPT
 from ...schemas import ALLOWED_EVIDENCE
 from ...schemas import CandidateBoundary, CaptionedSegment, FinalizedSegment
 from ...utils import get_subtitle_in_segment
 
 
 class VideoParsingMixin:
+    def _resolve_segmentation_route(self, execution_plan, subtitle_items: list | None = None) -> str:
+        subtitle_items = subtitle_items or []
+        profile = execution_plan.segmentation_specification.profile
+        route = getattr(profile, "segmentation_route", "multimodal_local")
+        if route == "text_llm" and subtitle_items:
+            return "text_llm"
+        return "multimodal_local"
 
     def _clamp_confidence(self, value: float, default: float = 0.0) -> float:
         try:
@@ -18,6 +25,38 @@ class VideoParsingMixin:
         except Exception:
             return default
         return max(0.0, min(1.0, numeric))
+
+    def _get_segmentation_chunk_settings(
+        self,
+        segmentation_route: str,
+        execution_plan=None,
+    ) -> tuple[int, int]:
+        default_chunk_size = int(
+            getattr(self, "chunk_size_sec", getattr(execution_plan, "chunk_size_sec", 600))
+        )
+        default_chunk_overlap = int(
+            getattr(self, "chunk_overlap_sec", getattr(execution_plan, "chunk_overlap_sec", 20))
+        )
+        if segmentation_route == "text_llm":
+            return (
+                int(getattr(self, "text_chunk_size_sec", default_chunk_size)),
+                int(getattr(self, "text_chunk_overlap_sec", default_chunk_overlap)),
+            )
+        return (
+            int(getattr(self, "multimodal_chunk_size_sec", default_chunk_size)),
+            int(getattr(self, "multimodal_chunk_overlap_sec", default_chunk_overlap)),
+        )
+
+    def _get_segmentation_generator(self, segmentation_route: str):
+        if segmentation_route == "text_llm":
+            generator = getattr(self, "text_segmentor", None)
+            if generator is None:
+                raise RuntimeError("text_segmentor is not configured for text_llm segmentation route")
+            return generator
+        generator = getattr(self, "multimodal_segmentor", None) or getattr(self, "segmentor", None)
+        if generator is None:
+            raise RuntimeError("multimodal_segmentor is not configured for multimodal_local segmentation route")
+        return generator
 
     def _merge_short_segments(self, segments: list[FinalizedSegment], merge_below_sec: int) -> list[FinalizedSegment]:
         if merge_below_sec <= 0:
@@ -67,6 +106,13 @@ class VideoParsingMixin:
     def _genres_str(self, genres: list[str]) -> str:
         normalized = [genre.strip() for genre in genres if isinstance(genre, str) and genre.strip()]
         return ", ".join(normalized) if normalized else "other"
+
+    def _truncate_prompt_subtitles(self, subtitles: str, max_chars: int) -> str:
+        if max_chars <= 0 or len(subtitles) <= max_chars:
+            return subtitles
+        marker = "\n[TRUNCATED]"
+        budget = max(0, max_chars - len(marker))
+        return subtitles[:budget] + marker
 
     def _generate_local_caption(
         self,
@@ -212,7 +258,7 @@ class VideoParsingMixin:
             list(execution_plan.segmentation_specification.profile.target_segment_length_sec),
         )
 
-    def _detect_candidate_boundaries_for_chunk(
+    def _detect_candidate_boundaries_for_chunk_multimodal(
         self,
         video_path: str,
         subtitle_items: list,
@@ -240,7 +286,7 @@ class VideoParsingMixin:
             last_detection_point="None" if last_detection_point is None else str(last_detection_point),
         )
 
-        output = self.segmentor.generate_single(
+        output = self._get_segmentation_generator("multimodal_local").generate_single(
             messages=self._build_video_messages_from_path(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
@@ -259,15 +305,91 @@ class VideoParsingMixin:
             min_confidence=min_confidence,
         )
 
+    def _detect_candidate_boundaries_for_chunk_text(
+        self,
+        subtitle_items: list,
+        execution_plan,
+        core_start_time: float,
+        core_end_time: float,
+        window_start_time: float,
+        window_end_time: float,
+        last_detection_point: float | None = None,
+        min_confidence: float = 0.35,
+    ) -> list[CandidateBoundary]:
+        _, subtitles_str_in_seg = get_subtitle_in_segment(subtitle_items, window_start_time, window_end_time)
+        segmentation_profile = execution_plan.segmentation_specification.profile
+        system_prompt = TEXT_BOUNDARY_DETECTION_PROMPT.render_system()
+        user_prompt = TEXT_BOUNDARY_DETECTION_PROMPT.render_user(
+            subtitles=subtitles_str_in_seg,
+            core_start=core_start_time,
+            core_end=core_end_time,
+            concise_description=execution_plan.concise_description,
+            segmentation_profile=execution_plan.segmentation_specification.profile_name,
+            segmentation_policy=segmentation_profile.segmentation_policy,
+            last_detection_point="None" if last_detection_point is None else str(last_detection_point),
+        )
+
+        output = self._get_segmentation_generator("text_llm").generate_single(
+            messages=self._prepare_messages(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+            )
+        )
+        raw_boundary_output = self.parse_response(output["text"])
+        return self._check_candidate_boundaries(
+            raw_boundary_output=raw_boundary_output,
+            chunk_start_time=core_start_time,
+            chunk_end_time=core_end_time,
+            min_confidence=min_confidence,
+        )
+
+    def _detect_candidate_boundaries_for_chunk(
+        self,
+        video_path: str,
+        subtitle_items: list,
+        execution_plan,
+        core_start_time: float,
+        core_end_time: float,
+        window_start_time: float,
+        window_end_time: float,
+        last_detection_point: float | None = None,
+        min_confidence: float = 0.35,
+        segmentation_route: str = "multimodal_local",
+    ) -> list[CandidateBoundary]:
+        if segmentation_route == "text_llm":
+            return self._detect_candidate_boundaries_for_chunk_text(
+                subtitle_items=subtitle_items,
+                execution_plan=execution_plan,
+                core_start_time=core_start_time,
+                core_end_time=core_end_time,
+                window_start_time=window_start_time,
+                window_end_time=window_end_time,
+                last_detection_point=last_detection_point,
+                min_confidence=min_confidence,
+            )
+        return self._detect_candidate_boundaries_for_chunk_multimodal(
+            video_path=video_path,
+            subtitle_items=subtitle_items,
+            execution_plan=execution_plan,
+            core_start_time=core_start_time,
+            core_end_time=core_end_time,
+            window_start_time=window_start_time,
+            window_end_time=window_end_time,
+            last_detection_point=last_detection_point,
+            min_confidence=min_confidence,
+        )
+
     def _refine_segment(
         self,
         video_path: str,
         subtitle_items: list,
         segment: FinalizedSegment,
         execution_plan,
+        segmentation_route: str | None = None,
     ) -> list[FinalizedSegment]:
         if not segment.refinement_needed:
             return [segment]
+        resolved_route = segmentation_route or self._resolve_segmentation_route(execution_plan, subtitle_items=subtitle_items)
         try:
             refined_boundaries = self._detect_candidate_boundaries_for_chunk(
                 video_path=video_path,
@@ -278,6 +400,7 @@ class VideoParsingMixin:
                 window_start_time=segment.start_time,
                 window_end_time=segment.end_time,
                 min_confidence=0.35,
+                segmentation_route=resolved_route,
             )
         except Exception as exc:
             self._log_error("Refine failed for segment %.2f-%.2f: %s", segment.start_time, segment.end_time, exc)
@@ -300,6 +423,7 @@ class VideoParsingMixin:
         subtitle_items: list,
         segments: list[FinalizedSegment],
         execution_plan,
+        segmentation_route: str | None = None,
     ) -> list[FinalizedSegment]:
         finalized_segments: list[FinalizedSegment] = []
         for segment in segments:
@@ -309,6 +433,7 @@ class VideoParsingMixin:
                     subtitle_items=subtitle_items,
                     segment=segment,
                     execution_plan=execution_plan,
+                    segmentation_route=segmentation_route,
                 )
             )
         return finalized_segments
@@ -372,13 +497,18 @@ class VideoParsingMixin:
         chunk_start_time = 0.0
         next_segment_id = 1
         chunk_index = 0
+        segmentation_route = self._resolve_segmentation_route(execution_plan, subtitle_items=subtitle_items)
+        chunk_size_sec, chunk_overlap_sec = self._get_segmentation_chunk_settings(
+            segmentation_route,
+            execution_plan=execution_plan,
+        )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
             while chunk_start_time < duration:
                 core_start_time = chunk_start_time
-                core_end_time = min(chunk_start_time + execution_plan.chunk_size_sec, duration)
-                window_start_time = max(0.0, core_start_time - execution_plan.chunk_overlap_sec)
-                window_end_time = min(float(duration), core_end_time + execution_plan.chunk_overlap_sec)
+                core_end_time = min(chunk_start_time + chunk_size_sec, duration)
+                window_start_time = max(0.0, core_start_time - chunk_overlap_sec)
+                window_end_time = min(float(duration), core_end_time + chunk_overlap_sec)
                 started_at = time.time()
                 last_detection_point = open_segment_start
 
@@ -392,6 +522,7 @@ class VideoParsingMixin:
                         window_start_time=window_start_time,
                         window_end_time=window_end_time,
                         last_detection_point=last_detection_point,
+                        segmentation_route=segmentation_route,
                     )
                 except Exception as exc:
                     self._log_error("[Chunk %.0f-%.0f] Failed to detect candidate boundaries: %s", core_start_time, core_end_time, exc)

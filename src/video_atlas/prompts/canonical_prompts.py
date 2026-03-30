@@ -171,6 +171,79 @@ Only include boundaries whose timestamps fall inside [Core_start, Core_end).
 )
 
 
+TEXT_BOUNDARY_DETECTION_PROMPT = PromptSpec(
+    name="TEXT_BOUNDARY_DETECTION_PROMPT",
+    purpose="Detect semantic boundaries inside a long video chunk using subtitles and text priors only.",
+    system_template=r"""
+Role:
+You are a semantic boundary detector for subtitle-driven long videos.
+
+Goal:
+Given subtitles from a long video chunk, a core detection window [Core_start, Core_end), and prior information about the video, detect valid semantic boundaries inside the core window.
+
+Input:
+You will be given:
+1. Subtitle text from the video chunk.
+2. A core detection window [Core_start, Core_end).
+3. A concise description of the whole video.
+4. The video category.
+5. A segmentation policy that tells you how this video should be segmented.
+6. The last detection point produced in the previous turn.
+
+Guidelines:
+1) Use the subtitles as the primary source of truth for semantic structure.
+2) The segmentation policy comes from a planner that has already analyzed the video. Follow it carefully.
+3) It is completely acceptable to detect no boundary. If the chunk belongs to a single semantic unit, return an empty list.
+4) Output hygiene:
+   - Output timestamps MUST be strictly within (Core_start, Core_end).
+   - Sort boundaries by timestamp in ascending order.
+   - Remove duplicates (timestamps within 0.5s count as duplicates; keep the higher-confidence one).
+   - If no valid boundary exists in (Core_start, Core_end), return [].
+
+Output format:
+Return ONLY a strict JSON array. Each item represents a boundary candidate:
+{{
+  "timestamp": <number in seconds>,
+  "boundary_rationale": "<brief evidence-based reason for the cut>",
+  "confidence": <0..1>
+}}
+Do not output any extra text.
+""".strip(),
+    user_template=r"""
+Given the following:
+
+Subtitles:
+{subtitles}
+
+Detection window:
+- Core_start: {core_start}
+- Core_end: {core_end}
+
+Concise description: {concise_description}
+
+Video category: {segmentation_profile}
+
+Segmentation policy: {segmentation_policy}
+
+Last detection point: {last_detection_point}
+
+Now output the JSON list of boundaries within the detection window.
+Only include boundaries whose timestamps fall inside [Core_start, Core_end).
+""".strip(),
+    input_fields=(
+        "subtitles",
+        "core_start",
+        "core_end",
+        "concise_description",
+        "segmentation_profile",
+        "segmentation_policy",
+        "last_detection_point",
+    ),
+    output_contract="strict JSON array of boundary candidates",
+    tags=("canonical", "boundary-detection", "text"),
+)
+
+
 CAPTION_GENERATION_PROMPT = PromptSpec(
     name="CAPTION_GENERATION_PROMPT",
     purpose="Generate segment-level canonical captions from frames and subtitles.",

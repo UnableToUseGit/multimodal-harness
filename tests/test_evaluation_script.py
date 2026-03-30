@@ -55,6 +55,36 @@ class _FakeDerivedWorkflow:
 
 
 class EvaluationScriptTest(unittest.TestCase):
+    @staticmethod
+    def _fake_canonical_config():
+        return type(
+            "Cfg",
+            (),
+            {
+                "planner": object(),
+                "segmentor": object(),
+                "text_segmentor": object(),
+                "multimodal_segmentor": object(),
+                "captioner": object(),
+                "transcriber": object(),
+                "runtime": type(
+                    "Runtime",
+                    (),
+                    {
+                        "generate_subtitles_if_missing": True,
+                        "text_chunk_size_sec": 1800,
+                        "text_chunk_overlap_sec": 120,
+                        "multimodal_chunk_size_sec": 600,
+                        "multimodal_chunk_overlap_sec": 20,
+                        "chunk_size_sec": 600,
+                        "chunk_overlap_sec": 20,
+                        "caption_with_subtitles": True,
+                        "verbose": False,
+                    },
+                )(),
+            },
+        )()
+
     def test_run_evaluation_writes_case_outputs_and_summary(self) -> None:
         from scripts.run_evaluation import run_evaluation
 
@@ -95,7 +125,7 @@ class EvaluationScriptTest(unittest.TestCase):
             )
 
             fake_times = iter([100.0, 112.5, 200.0, 206.0])
-            with patch("scripts.run_evaluation.load_canonical_pipeline_config", return_value=type("Cfg", (), {"planner": object(), "segmentor": object(), "captioner": object(), "transcriber": object(), "runtime": type("Runtime", (), {"generate_subtitles_if_missing": True, "chunk_size_sec": 600, "chunk_overlap_sec": 20, "caption_with_subtitles": True, "verbose": False})()})()), \
+            with patch("scripts.run_evaluation.load_canonical_pipeline_config", return_value=self._fake_canonical_config()), \
                 patch("scripts.run_evaluation.load_derived_pipeline_config", return_value=type("Cfg", (), {"planner": object(), "segmentor": object(), "captioner": object(), "runtime": type("Runtime", (), {"num_workers": 2, "verbose": False})()})()), \
                 patch("scripts.run_evaluation.build_generator", side_effect=lambda config: config), \
                 patch("scripts.run_evaluation.build_transcriber", side_effect=lambda config: config), \
@@ -169,7 +199,7 @@ class EvaluationScriptTest(unittest.TestCase):
             )
 
             fake_times = iter([10.0, 13.0])
-            with patch("scripts.run_evaluation.load_canonical_pipeline_config", return_value=type("Cfg", (), {"planner": object(), "segmentor": object(), "captioner": object(), "transcriber": object(), "runtime": type("Runtime", (), {"generate_subtitles_if_missing": True, "chunk_size_sec": 600, "chunk_overlap_sec": 20, "caption_with_subtitles": True, "verbose": False})()})()), \
+            with patch("scripts.run_evaluation.load_canonical_pipeline_config", return_value=self._fake_canonical_config()), \
                 patch("scripts.run_evaluation.build_generator", side_effect=lambda config: config), \
                 patch("scripts.run_evaluation.build_transcriber", side_effect=lambda config: config), \
                 patch("scripts.run_evaluation.CanonicalAtlasWorkflow", _FakeCanonicalWorkflow), \

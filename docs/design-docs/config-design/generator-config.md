@@ -17,6 +17,7 @@
 | --- | --- | --- | --- | --- |
 | `provider` | `str` | 否 | `"openai_compatible"` | generator 提供方 |
 | `model_name` | `str` | 是 | `""` | 模型名称 |
+| `connection` | `str` | 否 | `"default"` | 选择使用哪套 API 连接配置 |
 | `temperature` | `float` | 否 | `0.0` | 采样温度 |
 | `top_p` | `float` | 否 | `1.0` | nucleus sampling 参数 |
 | `max_tokens` | `int` | 否 | `1600` | 最大生成 token 数 |
@@ -35,6 +36,12 @@
 - 语义：底层模型服务使用的模型名称。
 - 约束：不能为空。
 - 对行为的影响：直接决定请求发送到哪个模型。
+
+### `connection`
+
+- 语义：标识当前 generator 应使用哪套环境连接配置。
+- 约束：当前支持 `default`、`local`、`remote`。
+- 对行为的影响：`OpenAICompatibleGenerator` 会据此从环境变量中选择对应的 `API_BASE` 与 `API_KEY`。
 
 ### `temperature`
 
@@ -66,6 +73,7 @@
 
 - `provider` 默认使用 `openai_compatible`
 - `temperature` 默认值为 `0.0`
+- `connection` 默认值为 `default`
 - `top_p` 默认值为 `1.0`
 - `max_tokens` 默认值为 `1600`
 - `extra_body` 默认值为空字典
@@ -74,8 +82,10 @@
 
 - `model_name` 必须显式提供
 - 对 `OpenAICompatibleGenerator` 而言，运行环境还必须提供：
-  - `VIDEO_ATLAS_API_BASE`
-  - `VIDEO_ATLAS_API_KEY`
+  - `VIDEO_ATLAS_API_BASE` / `VIDEO_ATLAS_API_KEY`
+  - 或按 `connection` 提供：
+    - `LOCAL_API_BASE` / `LOCAL_API_KEY`
+    - `REMOTE_API_BASE` / `REMOTE_API_KEY`
 
 ## 配置来源
 
@@ -92,6 +102,7 @@
 ## 校验规则与约束
 
 - `provider` 当前只能为 `openai_compatible`
+- `connection` 当前只能为 `default`、`local` 或 `remote`
 - `model_name` 必须是非空字符串
 - `max_tokens` 必须为正整数
 - `extra_body` 应能够被安全合并到最终请求体中
@@ -108,6 +119,7 @@
 ModelRuntimeConfig(
     provider="openai_compatible",
     model_name="Qwen/Qwen3.5-122B-A10B",
+    connection="remote",
     temperature=0.6,
     top_p=1.0,
     max_tokens=4800,

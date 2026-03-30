@@ -14,7 +14,7 @@ class StrategyBuilderTest(unittest.TestCase):
         plan = builder._construct_execution_plan(
             {
                 "planner_confidence": 0.9,
-                "genres": ["sports_event", "gameplay"],
+                "genres": ["esports_broadcast", "other"],
                 "concise_description": "A professional esports match broadcast with drafting, live gameplay, and replay analysis.",
                 "segmentation_profile": "esports_match_broadcast",
                 "sampling_profile": "visual_detail",
@@ -23,7 +23,7 @@ class StrategyBuilderTest(unittest.TestCase):
         )
 
         self.assertEqual(plan.planner_confidence, 0.9)
-        self.assertEqual(plan.genres, ["sports_event", "gameplay"])
+        self.assertEqual(plan.genres, ["esports_broadcast", "other"])
         self.assertEqual(
             plan.concise_description,
             "A professional esports match broadcast with drafting, live gameplay, and replay analysis.",

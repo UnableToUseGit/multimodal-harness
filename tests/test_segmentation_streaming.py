@@ -75,6 +75,7 @@ class SegmentationStreamingTest(unittest.TestCase):
     def _make_plan(self) -> CanonicalExecutionPlan:
         sampling = FrameSamplingProfile(fps=0.5, max_resolution=480)
         profile = SegmentationProfile(
+            segmentation_route="multimodal_local",
             signal_priority="balanced",
             target_segment_length_sec=(30, 120),
             default_sampling_profile="balanced",

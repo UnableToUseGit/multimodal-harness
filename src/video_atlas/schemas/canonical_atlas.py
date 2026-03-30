@@ -17,6 +17,7 @@ SamplingConfig = FrameSamplingProfile
 
 @dataclass(frozen=True)
 class SegmentationProfile:
+    segmentation_route: str
     signal_priority: str
     target_segment_length_sec: tuple[int, int]
     default_sampling_profile: str
