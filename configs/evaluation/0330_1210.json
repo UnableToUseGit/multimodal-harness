@@ -8,7 +8,7 @@
             "case_task_request_path": "local/inputs/case_001_match_ufc/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -18,7 +18,7 @@
             "case_task_request_path": "local/inputs/case_002_match_lol/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -28,7 +28,7 @@
             "case_task_request_path": "local/inputs/case_003_podcast/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -38,7 +38,7 @@
             "case_task_request_path": "local/inputs/case_005_movie_1/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -48,7 +48,7 @@
             "case_task_request_path": "local/inputs/case_006_football/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -58,7 +58,7 @@
             "case_task_request_path": "local/inputs/case_007_movie_2/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -68,7 +68,7 @@
             "case_task_request_path": "local/inputs/case_008_podcast_three_people/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -78,7 +78,7 @@
             "case_task_request_path": "local/inputs/case_009_vlog_paris/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -88,7 +88,7 @@
             "case_task_request_path": "local/inputs/case_010_vlog_shanghai/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -98,7 +98,7 @@
             "case_task_request_path": "local/inputs/case_011_explanatory_commentary_tech/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -108,7 +108,7 @@
             "case_task_request_path": "local/inputs/case_012_explanatory_commentary_figure/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         }
         ,
@@ -119,7 +119,7 @@
             "case_task_request_path": "local/inputs/case_013_explanatory_commentary_history/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         },
         {
@@ -129,7 +129,7 @@
             "case_task_request_path": "local/inputs/case_014_explanatory_commentary_movie/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         }
         ,
@@ -140,7 +140,7 @@
             "case_task_request_path": "local/inputs/case_015_doc_1/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         }
         ,
@@ -151,7 +151,7 @@
             "case_task_request_path": "local/inputs/case_016_doc_2/task_request.txt",
             "should_generate_canonical_atlas": true,
             "canonical_atlas_workflow_config": "configs/canonical/default.json",
-            "should_generate_derived_atlas": true,
+            "should_generate_derived_atlas": false,
             "derived_atlas_workflow_config": "configs/derivation/default.json"
         }
     ]

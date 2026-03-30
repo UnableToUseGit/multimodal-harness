@@ -87,6 +87,8 @@
 - 子目录：
   - [active](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active)
   - [completed](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/completed)
+- 当前 active plan：
+  - [2026-03-30-canonical-high-efficiency-implementation.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active/2026-03-30-canonical-high-efficiency-implementation.md)
 
 ## 决策记录
 
@@ -94,6 +96,10 @@
   [docs/decision-making](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making)
 - 用途：
   保存关键设计取舍、命名调整、边界变化和其他需要长期追踪的决策记录。
+- 当前文档：
+  - [2026-0327-1751.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0327-1751.md)
+  - [2026-0329-aliyun-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0329-aliyun-transcription-route.md)
+  - [2026-0330-0609-canonical-high-efficiency.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0330-0609-canonical-high-efficiency.md)
 
 ## 参考资料
 
