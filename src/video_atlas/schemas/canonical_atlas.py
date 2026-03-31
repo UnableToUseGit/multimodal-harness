@@ -86,6 +86,7 @@ class CanonicalExecutionPlan:
 class CandidateBoundary:
     timestamp: float
     boundary_rationale: str = ""
+    segment_title: str = ""
     evidence: list[str] = field(default_factory=list)
     confidence: float = 0.0
 
@@ -95,6 +96,7 @@ class FinalizedSegment:
     start_time: float
     end_time: float
     boundary_rationale: str = ""
+    segment_title: str = ""
     boundary_confidence: float = 0.0
     evidence: list[str] = field(default_factory=list)
     refinement_needed: bool = False
@@ -105,8 +107,9 @@ class CaptionedSegment:
     seg_id: str
     start_time: float
     end_time: float
-    summary: str
-    detail: str
+    title: str = ""
+    summary: str = ""
+    detail: str = ""
     subtitles_text: str = ""
     token_usage: int = 0
 

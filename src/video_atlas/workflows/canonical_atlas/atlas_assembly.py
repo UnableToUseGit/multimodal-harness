@@ -54,7 +54,8 @@ class AtlasAssemblyMixin:
 
         atlas_segments: list[AtlasSegment] = []
         for seg in parsed_segments:
-            seg_title = title_map.get(seg["seg_id"], seg.get("seg_title") or seg["seg_id"])
+            # seg_title = title_map.get(seg["seg_id"], seg.get("seg_title") or seg["seg_id"])
+            seg_title = seg.get("title") if seg.get("title") else title_map.get(seg["seg_id"])
             save_name = (
                 f"{seg['seg_id']}-{slugify_segment_title(seg_title)}-"
                 f"{format_hms_time_range(seg['start_time'], seg['end_time'])}"

@@ -160,6 +160,7 @@ class VideoParsingMixin:
                 seg_id=f"seg_{seg_id:04d}",
                 start_time=segment.start_time,
                 end_time=segment.end_time,
+                title=segment.segment_title,
                 summary=summary,
                 detail=detail,
                 subtitles_text=subtitles_str_in_seg,
@@ -171,6 +172,7 @@ class VideoParsingMixin:
                 seg_id=f"seg_{seg_id:04d}",
                 start_time=segment.start_time,
                 end_time=segment.end_time,
+                title=segment.segment_title,
                 summary=f"Error: {exc}",
                 detail=f"Error: {exc}",
                 subtitles_text="",
@@ -208,11 +210,14 @@ class VideoParsingMixin:
             boundary_rationale = raw_item.get("boundary_rationale", "")
             if not isinstance(boundary_rationale, str):
                 boundary_rationale = ""
+                
+            segment_title = raw_item.get("segment_title", "")
 
             candidate_boundaries.append(
                 CandidateBoundary(
                     timestamp=boundary_time,
                     boundary_rationale=boundary_rationale.strip(),
+                    segment_title=segment_title,
                     evidence=evidence,
                     confidence=confidence,
                 )
@@ -235,6 +240,7 @@ class VideoParsingMixin:
                 FinalizedSegment(
                     start_time=current_start,
                     end_time=boundary.timestamp,
+                    segment_title=boundary.segment_title,
                     boundary_rationale=boundary.boundary_rationale,
                     boundary_confidence=boundary.confidence,
                     evidence=list(boundary.evidence),
@@ -335,6 +341,7 @@ class VideoParsingMixin:
                 user_prompt=user_prompt,
             )
         )
+
         raw_boundary_output = self.parse_response(output["text"])
         return self._check_candidate_boundaries(
             raw_boundary_output=raw_boundary_output,
@@ -599,6 +606,7 @@ class VideoParsingMixin:
                             "seg_id": caption_object.seg_id,
                             "start_time": caption_object.start_time,
                             "end_time": caption_object.end_time,
+                            "title": caption_object.title,
                             "summary": caption_object.summary,
                             "detail": caption_object.detail,
                             "subtitles_text": caption_object.subtitles_text,

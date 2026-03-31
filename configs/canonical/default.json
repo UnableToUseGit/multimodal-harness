@@ -6,16 +6,16 @@
     "temperature": 0.6,
     "top_p": 0.95,
     "max_tokens": 8192,
-    "extra_body": {"chat_template_kwargs": {"enable_thinking": true}}
+    "extra_body": {"chat_template_kwargs": {"enable_thinking": false}}
   },
   "text_segmentor": {
     "provider": "openai_compatible",
-    "model_name": "gpt-5",
+    "model_name": "gpt-5.1",
     "connection": "remote",
     "temperature": 0.3,
     "top_p": 0.95,
-    "max_tokens": 1600,
-    "extra_body": {}
+    "max_tokens": 4096,
+    "extra_body": {"reasoning_effort": "none"}
   },
   "multimodal_segmentor": {
     "provider": "openai_compatible",

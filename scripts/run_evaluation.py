@@ -89,13 +89,13 @@ def _run_case(case_config: dict[str, Any], verbose: bool = False) -> dict[str, A
                 caption_with_subtitles=canonical_config.runtime.caption_with_subtitles,
             )
             started_at = time.perf_counter()
-            canonical_workflow.create(
+            _, cost_time_info = canonical_workflow.create(
                 output_dir=canonical_output_dir,
                 source_video_path=case_video_path,
                 source_srt_file_path=case_srt_file_path,
                 verbose=(canonical_config.runtime.verbose or verbose),
             )
-            result["canonical_duration_sec"] = round(time.perf_counter() - started_at, 3)
+            result["canonical_duration_sec"] = {"total_cost_time": round(time.perf_counter() - started_at, 3), **cost_time_info}
             result["canonical_success"] = True
 
         if should_generate_derived_atlas:

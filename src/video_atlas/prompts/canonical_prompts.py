@@ -16,7 +16,7 @@ PLANNER_GENRE_OPTIONS = render_genre_options()
 
 PLANNER_PROMPT_USER = """
 You will receive:
-- 4 probes sampled from the video at progress 0%, 25%, 50%, and 75%. Each probe contains:
+- 4 probes sampled from the video at progress 0%, 50%, and 100%. Each probe contains:
   - a sequence of frames (in temporal order)
   - subtitle text for the same time window (may be noisy/incomplete)
 - Global statistics for the whole video: total duration, subtitle density (chars/min or tokens/min), and optionally other stats.
@@ -63,15 +63,11 @@ YOU WILL RECEIVE THE DATA IN THIS FORMAT
 Frames: ...
 Subtitles: ...
 
-[PROBE_25%]
-Frames: ...
-Subtitles: ...
-
 [PROBE_50%]
 Frames: ...
 Subtitles: ...
 
-[PROBE_75%]
+[PROBE_100%]
 Frames: ...
 Subtitles: ...
 
@@ -194,7 +190,8 @@ Guidelines:
 1) Use the subtitles as the primary source of truth for semantic structure.
 2) The segmentation policy comes from a planner that has already analyzed the video. Follow it carefully.
 3) It is completely acceptable to detect no boundary. If the chunk belongs to a single semantic unit, return an empty list.
-4) Output hygiene:
+4) Every time you detect a boundary point, you should simultaneously generate a title for the segment ending at that point. The title should be stable, descriptive, and useful for navigation.
+5) Output hygiene:
    - Output timestamps MUST be strictly within (Core_start, Core_end).
    - Sort boundaries by timestamp in ascending order.
    - Remove duplicates (timestamps within 0.5s count as duplicates; keep the higher-confidence one).
@@ -204,10 +201,11 @@ Output format:
 Return ONLY a strict JSON array. Each item represents a boundary candidate:
 {{
   "timestamp": <number in seconds>,
-  "boundary_rationale": "<brief evidence-based reason for the cut>",
+  "boundary_rationale": "<brief evidence-based reason for the cut in Chinese>",
+  "segment_title": "<concise title for the current segment that ends with the boundary>"
   "confidence": <0..1>
 }}
-Do not output any extra text.
+Do not output any extra text. The field "boundary_rationale" and "segment_title" should be filled with Chinese.
 """.strip(),
     user_template=r"""
 Given the following:
@@ -229,6 +227,7 @@ Last detection point: {last_detection_point}
 
 Now output the JSON list of boundaries within the detection window.
 Only include boundaries whose timestamps fall inside [Core_start, Core_end).
+The field "boundary_rationale" and "segment_title" should be filled with Chinese.
 """.strip(),
     input_fields=(
         "subtitles",

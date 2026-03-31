@@ -85,14 +85,16 @@ class PipelineMixin:
             video_path,
             duration,
             subtitle_items,
-            {"fps": 1, "max_resolution": 480},
+            {"fps": 0.5, "max_resolution": 480},
         )
-
+        plan_cost_time = time.time() - started_at
         if verbose:
             self._log_info("[Plan] Video planning completed in %.2fs", time.time() - started_at)
             self._log_info("[Plan] Execution plan:\n%s", json.dumps(asdict(execution_plan), indent=2))
 
         write_text_to(output_dir, "EXECUTION_PLAN.json", json.dumps(asdict(execution_plan), indent=4))
+        
+        started_at = time.time()
         parsed_segments, record_generated_boundaries = self._parse_video_into_segments(
             video_path=video_path,
             duration=duration,
@@ -100,7 +102,9 @@ class PipelineMixin:
             verbose=verbose,
             execution_plan=execution_plan,
         )
+        parsing_cost_time = time.time() - started_at
         
+        started_at = time.time()
         atlas = self._assemble_canonical_atlas(
             atlas_dir=output_dir,
             duration=duration,
@@ -112,8 +116,11 @@ class PipelineMixin:
             srt_file_path=srt_file_path,
             verbose=verbose
         )
+        assemble_cost_time = time.time() - started_at
 
+        started_at = time.time()
         CanonicalAtlasWriter(caption_with_subtitles=self.caption_with_subtitles).write(atlas=atlas)
+        persistence_cost_time = time.time() - started_at
 
         for item in record_generated_boundaries:
             write_candidate_boundaries_for_debug(output_dir, **item)
@@ -121,4 +128,6 @@ class PipelineMixin:
         if verbose:
             self._log_info("VideoAtlas construction completed successfully")
 
-        return atlas
+        cost_time_info = {"plan_cost_time": plan_cost_time, "parsing_cost_time": parsing_cost_time, "assemble_cost_time":assemble_cost_time, "persistence_cost_time": persistence_cost_time}
+        
+        return atlas, cost_time_info

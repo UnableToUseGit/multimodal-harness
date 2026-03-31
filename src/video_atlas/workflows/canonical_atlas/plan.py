@@ -16,7 +16,7 @@ class PlanMixin:
         if duration <= clip_duration:
             segments.append((0, 0, duration))
         else:
-            for ratio in [0.0, 0.25, 0.50, 0.75]:
+            for ratio in [0.0, 0.50, 1]:
                 start = int(duration * ratio)
                 if start + clip_duration > duration:
                     start = duration - clip_duration
