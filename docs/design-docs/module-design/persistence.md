@@ -17,6 +17,7 @@
 - 负责结果对象到目录结构的外部化写入。
 - 负责文本文件写入、文件复制、clip 提取等持久化辅助操作。
 - 为 canonical 与 derived 两类结果提供专门 writer。
+- 在 canonical atlas 包含来源信息时，负责将 source metadata 写为稳定根级 JSON 文件。
 
 ### 不负责的内容
 
@@ -87,6 +88,19 @@
 - 说明：
   - 适用于 README、字幕文本和 metadata 文件写出。
 
+### `write_json_to`
+
+- 类型：`function`
+- 作用：将 JSON payload 写入目标目录下的指定相对路径。
+- 输入：
+  - 目标目录
+  - 相对路径
+  - JSON 对象
+- 输出：
+  - 写入后的目标路径
+- 说明：
+  - 适用于 `SOURCE_INFO.json`、`SOURCE_METADATA.json` 等结构化 metadata 写出。
+
 ### `extract_clip`
 
 - 类型：`function`
@@ -133,6 +147,7 @@
 - 边界：
   - 负责 canonical 结果到目录表示的转换
   - 负责实验期 `units/` 与 `segments/` 的双层写出
+  - 负责根目录 source metadata 文件写出
   - 不负责 canonical 结果对象的生成
 - 输入：
   - `CanonicalAtlas`
@@ -167,6 +182,7 @@
 - 内部时间字段使用数值时间范围表达。
 - 当这些信息被写入 atlas 目录中的 README 或 metadata 时，应由持久化层统一转换为 ISO 8601 格式
 - canonical 两阶段实验期允许存在冗余目录与媒体复制，以换取更高的可验证性和可解释性。
+- 对 YouTube URL 等外部来源输入，应优先通过根级 `SOURCE_INFO.json` 和 `SOURCE_METADATA.json` 暴露来源信息，而不是要求下游从 README 推断。
 
 ## 当前实现
 

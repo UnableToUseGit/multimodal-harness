@@ -61,6 +61,13 @@ class CanonicalRuntimeConfig:
 
 
 @dataclass
+class AcquisitionRuntimeConfig:
+    enabled: bool = True
+    prefer_youtube_subtitles: bool = True
+    youtube_output_template: str = "%(id)s.%(ext)s"
+
+
+@dataclass
 class CanonicalPipelineConfig:
     planner: ModelRuntimeConfig
     segmentor: ModelRuntimeConfig | None = None
@@ -70,6 +77,7 @@ class CanonicalPipelineConfig:
     captioner: ModelRuntimeConfig | None = None
     transcriber: TranscriberRuntimeConfig = field(default_factory=TranscriberRuntimeConfig)
     runtime: CanonicalRuntimeConfig = field(default_factory=CanonicalRuntimeConfig)
+    acquisition: AcquisitionRuntimeConfig = field(default_factory=AcquisitionRuntimeConfig)
 
 
 @dataclass
@@ -114,6 +122,10 @@ def _build_canonical_runtime_config(raw: dict[str, Any]) -> CanonicalRuntimeConf
     )
 
 
+def _build_acquisition_runtime_config(raw: dict[str, Any]) -> AcquisitionRuntimeConfig:
+    return AcquisitionRuntimeConfig(**raw)
+
+
 def load_canonical_pipeline_config(path: str | Path) -> CanonicalPipelineConfig:
     raw = _read_json(path)
     legacy_segmentor = raw.get("segmentor")
@@ -130,6 +142,7 @@ def load_canonical_pipeline_config(path: str | Path) -> CanonicalPipelineConfig:
         captioner=_build_model_runtime_config(raw["captioner"]) if raw.get("captioner") else None,
         transcriber=TranscriberRuntimeConfig(**raw.get("transcriber", {})),
         runtime=_build_canonical_runtime_config(raw.get("runtime", {})),
+        acquisition=_build_acquisition_runtime_config(raw.get("acquisition", {})),
     )
 
 

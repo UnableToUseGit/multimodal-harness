@@ -18,6 +18,7 @@
 - 负责将结果组织为便于检查和展示的结构。
 - 负责提供本地 review 服务与静态页面支撑。
 - 在 canonical 两阶段实验期，负责同时暴露顶层 `units/` 与 composed `segments/` 的检查信息。
+- 在来源 metadata 存在时，负责读取根目录 `SOURCE_INFO.json` 与 `SOURCE_METADATA.json`。
 
 ### 不负责的内容
 
@@ -38,6 +39,7 @@
 - 说明：
   - 该接口建立在稳定的外部目录契约之上。
   - 在 canonical 两阶段实验期，该接口需要同时识别顶层 `units/` 与 `segments/` 下复制的 unit 视图。
+  - 当根目录存在 source metadata 文件时，该接口也应将其读入结构化 review 数据。
 
 ### 具体实现类接口：`ReviewAppServer`
 
@@ -133,6 +135,7 @@
 - 该模块只消费结果目录，不参与结果生成。
 - review 逻辑应建立在稳定外部契约之上，而不是依赖内部 workflow 细节。
 - 前端展示层与目录解析层应保持职责分离。
+- 对来源信息的读取应优先依赖根级结构化 JSON 文件，而不是解析 README 中的自由文本。
 
 ## 当前实现
 

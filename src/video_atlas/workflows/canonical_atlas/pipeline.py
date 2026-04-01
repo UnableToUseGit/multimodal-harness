@@ -70,7 +70,9 @@ class PipelineMixin:
         source_video_path: Path,
         source_srt_file_path: Path | None = None,
         structure_request: str | None = None,
-        verbose: bool = False
+        verbose: bool = False,
+        source_info=None,
+        source_metadata: dict[str, object] | None = None,
     ) -> CanonicalAtlas:
         
         if not source_video_path.exists():
@@ -153,6 +155,8 @@ class PipelineMixin:
             relative_audio_path=audio_path.relative_to(output_dir) if audio_path is not None else None,
             relative_subtitles_path=subtitles_path.relative_to(output_dir) if subtitles_path is not None else None,
             relative_srt_file_path=srt_file_path.relative_to(output_dir) if srt_file_path is not None else None,
+            source_info=source_info,
+            source_metadata=dict(source_metadata or {}),
         )
         assemble_cost_time = time.time() - started_at
 

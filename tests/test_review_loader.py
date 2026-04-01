@@ -13,6 +13,24 @@ class ReviewWorkspaceLoaderTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             (root / "README.md").write_text("# Canonical\n", encoding="utf-8")
+            (root / "SOURCE_INFO.json").write_text(
+                json.dumps(
+                    {
+                        "source_type": "youtube",
+                        "source_url": "https://www.youtube.com/watch?v=abc123",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (root / "SOURCE_METADATA.json").write_text(
+                json.dumps(
+                    {
+                        "title": "Canonical Title",
+                        "channel": "Example Channel",
+                    }
+                ),
+                encoding="utf-8",
+            )
             (root / "video.mp4").write_bytes(b"mp4")
             (root / "SUBTITLES.md").write_text("full subtitles", encoding="utf-8")
             unit_dir = root / "units" / "unit0001-opening"
@@ -62,6 +80,8 @@ class ReviewWorkspaceLoaderTest(unittest.TestCase):
             workspace = load_review_workspace(root, workspace_id="canonical")
 
         self.assertEqual(workspace.kind, "canonical")
+        self.assertEqual(workspace.source_info["source_type"], "youtube")
+        self.assertEqual(workspace.source_metadata["title"], "Canonical Title")
         self.assertEqual(len(workspace.units), 1)
         self.assertEqual(workspace.units[0].unit_id, "unit0001")
         self.assertEqual(workspace.segments[0].segment_id, "seg0001")

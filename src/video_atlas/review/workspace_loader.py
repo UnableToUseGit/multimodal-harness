@@ -119,6 +119,8 @@ class ReviewWorkspace:
     task_text: str = ""
     execution_plan: dict[str, Any] | None = None
     derivation: dict[str, Any] | None = None
+    source_info: dict[str, Any] = field(default_factory=dict)
+    source_metadata: dict[str, Any] = field(default_factory=dict)
     source_video_relative_path: str | None = None
     normalized_audio_relative_path: str | None = None
     units: list[ReviewUnit] = field(default_factory=list)
@@ -267,6 +269,8 @@ def load_review_workspace(root_path: str | Path, workspace_id: str, label: str |
         task_text=_read_text_if_exists((root / "TASK.md") if (root / "TASK.md").exists() else None),
         execution_plan=_read_json_if_exists(execution_plan_path),
         derivation=_read_json_if_exists((root / "derivation.json") if (root / "derivation.json").exists() else None),
+        source_info=_read_json_if_exists((root / "SOURCE_INFO.json") if (root / "SOURCE_INFO.json").exists() else None) or {},
+        source_metadata=_read_json_if_exists((root / "SOURCE_METADATA.json") if (root / "SOURCE_METADATA.json").exists() else None) or {},
         source_video_relative_path=str(source_video.relative_to(root)) if source_video is not None else None,
         normalized_audio_relative_path=str(normalized_audio.relative_to(root)) if normalized_audio is not None else None,
         units=units,

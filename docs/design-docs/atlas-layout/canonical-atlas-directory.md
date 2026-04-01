@@ -16,6 +16,8 @@
 <canonical-atlas-root>/
 ├── README.md
 ├── EXECUTION_PLAN.json
+├── SOURCE_INFO.json            # 可选
+├── SOURCE_METADATA.json        # 可选
 ├── video.mp4
 ├── subtitles.srt                # 可选
 ├── SUBTITLES.md                 # 可选
@@ -74,6 +76,24 @@
 - 是否必需：`是`
 - 说明：
   - 后续 clip 提取与 review 都可能依赖该文件。
+
+### `SOURCE_INFO.json`
+
+- 类型：`file`
+- 作用：记录本次 canonical atlas 的输入来源信息。
+- 是否必需：`否`
+- 说明：
+  - 当输入来自 YouTube URL 等外部来源时，应写出该文件。
+  - 典型字段包括 `source_type`、`source_url`、`canonical_source_url`、`subtitle_source` 和 `subtitle_fallback_required`。
+
+### `SOURCE_METADATA.json`
+
+- 类型：`file`
+- 作用：保存输入来源的较完整元数据。
+- 是否必需：`否`
+- 说明：
+  - 当输入来自 YouTube URL 等外部来源时，应写出该文件。
+  - 该文件用于保留标题、频道、发布时间、描述、字幕轨道等 source metadata，供 review 和后续 agent 消费。
 
 ### `subtitles.srt`
 
@@ -166,6 +186,8 @@ segments/<segment-folder>/
 
 ### 可选项
 
+- 根目录 `SOURCE_INFO.json`
+- 根目录 `SOURCE_METADATA.json`
 - 根目录 `subtitles.srt`
 - 根目录 `SUBTITLES.md`
 - unit 目录中的 `SUBTITLES.md`
@@ -199,6 +221,26 @@ segments/<segment-folder>/
 - 说明：
   - 其内容应与 `CanonicalExecutionPlan` 对齐。
 
+### 根目录 `SOURCE_INFO.json`
+
+- 内容类型：`JSON`
+- 主要字段或内容：
+  - `source_type`
+  - `source_url`
+  - `canonical_source_url`
+  - `subtitle_source`
+  - `subtitle_fallback_required`
+  - `acquisition_timestamp`
+
+### 根目录 `SOURCE_METADATA.json`
+
+- 内容类型：`JSON`
+- 主要字段或内容：
+  - 输入来源相关的扩展 metadata
+  - 例如视频标题、频道、描述、发布时间、字幕信息等
+- 说明：
+  - 该文件的字段集合可以随着来源能力扩展，但其“保存完整 source metadata”这一角色应保持稳定。
+
 ### unit 目录 `README.md`
 
 - 内容类型：`Markdown`
@@ -231,6 +273,7 @@ segments/<segment-folder>/
 - `units/` 与 `segments/` 目录及其子目录的存在方式应被视为实验期稳定契约。
 - 根级与片段级 `README.md` 的关键字段命名不应静默变更。
 - `EXECUTION_PLAN.json` 的整体角色与主要字段语义应保持稳定。
+- `SOURCE_INFO.json` 与 `SOURCE_METADATA.json` 一旦写出，应被视为根目录稳定外部契约的一部分。
 - 可选项可以在保持兼容的前提下增减，但不应影响必需项的解释方式。
 
 ## 示例目录树

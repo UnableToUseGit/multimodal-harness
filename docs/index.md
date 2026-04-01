@@ -29,6 +29,7 @@
 - 目录：
   [docs/design-docs/module-design](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design)
 - 当前主要模块文档：
+  - [cli.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/cli.md)
   - [canonical-atlas-workflow.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/canonical-atlas-workflow.md)
   - [derived-atlas-workflow.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/derived-atlas-workflow.md)
   - [generators.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/generators.md)
@@ -36,6 +37,7 @@
   - [parsing.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/parsing.md)
   - [persistence.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/persistence.md)
   - [review.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/review.md)
+  - [source-acquisition.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/source-acquisition.md)
   - [transcription.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/transcription.md)
   - [utils.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/utils.md)
   - [prompts](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/prompts.md)

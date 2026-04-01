@@ -15,6 +15,7 @@ from video_atlas.schemas import (
     DerivationPolicy,
     DerivationResultInfo,
     DerivedAtlas,
+    SourceInfoRecord,
 )
 
 
@@ -93,6 +94,14 @@ class WorkspaceWritersTest(unittest.TestCase):
             execution_plan=CanonicalExecutionPlan(),
             atlas_dir=Path("/tmp/canonical"),
             relative_video_path=Path("video.mp4"),
+            source_info=SourceInfoRecord(
+                source_type="youtube",
+                source_url="https://www.youtube.com/watch?v=abc123xyz89",
+                canonical_source_url="https://www.youtube.com/watch?v=abc123xyz89",
+                subtitle_source="youtube_caption",
+                subtitle_fallback_required=False,
+            ),
+            source_metadata={"title": "Match Overview", "channel": "Example Channel"},
         )
 
         with patch("video_atlas.persistence.writers.write_text_to") as mock_write:
@@ -121,6 +130,8 @@ class WorkspaceWritersTest(unittest.TestCase):
         )
 
         self.assertIn("README.md", harness.written)
+        self.assertIn("SOURCE_INFO.json", harness.written)
+        self.assertIn("SOURCE_METADATA.json", harness.written)
         self.assertIn("units/unit0001-opening-unit-00:00:00-00:00:20/README.md", harness.written)
         self.assertIn("units/unit0001-opening-unit-00:00:00-00:00:20/SUBTITLES.md", harness.written)
         self.assertIn("segments/seg0001-opening-00:00:00-00:00:20/README.md", harness.written)
@@ -138,6 +149,14 @@ class WorkspaceWritersTest(unittest.TestCase):
             harness.written,
         )
         self.assertIn("Match Overview", harness.written["README.md"])
+        self.assertEqual(
+            json.loads(harness.written["SOURCE_INFO.json"])["source_type"],
+            "youtube",
+        )
+        self.assertEqual(
+            json.loads(harness.written["SOURCE_METADATA.json"])["channel"],
+            "Example Channel",
+        )
         self.assertIn("There are 1 units extracted from the raw video.", harness.written["README.md"])
         self.assertIn("**Start Time**: 00:00:00", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
         self.assertIn("**End Time**: 00:00:20", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])

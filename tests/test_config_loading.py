@@ -7,6 +7,24 @@ from video_atlas.config import load_canonical_pipeline_config, load_derived_pipe
 
 
 class ConfigLoadingTest(unittest.TestCase):
+    def test_load_canonical_pipeline_config_reads_acquisition_config(self) -> None:
+        payload = {
+            "planner": {"provider": "openai_compatible", "model_name": "planner-model"},
+            "acquisition": {
+                "enabled": True,
+                "prefer_youtube_subtitles": True,
+                "youtube_output_template": "%(id)s.%(ext)s",
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "canonical-acquisition.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            config = load_canonical_pipeline_config(path)
+
+        self.assertTrue(config.acquisition.enabled)
+        self.assertTrue(config.acquisition.prefer_youtube_subtitles)
+        self.assertEqual(config.acquisition.youtube_output_template, "%(id)s.%(ext)s")
+
     def test_load_canonical_pipeline_config_supports_new_structure(self) -> None:
         payload = {
             "planner": {

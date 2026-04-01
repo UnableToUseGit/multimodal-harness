@@ -74,6 +74,10 @@ def write_text_to(destination: str | Path, relative_path: str | Path, content: s
     target_path.write_text(content, encoding="utf-8")
     return target_path
 
+
+def write_json_to(destination: str | Path, relative_path: str | Path, payload: dict[str, object]) -> Path:
+    return write_text_to(destination, relative_path, json.dumps(payload, indent=2, ensure_ascii=False))
+
 def slugify_segment_title(title: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
     return normalized or "untitled"
@@ -242,7 +246,12 @@ class CanonicalAtlasWriter:
                                  
         if not self.caption_with_subtitles:
             markdown_text = markdown_text.replace("- Full subtitles for this video: `./SUBTITLES.md`", "")
-                                 
+        
+        if atlas.source_info is not None:
+            write_json_to(atlas_dir, "SOURCE_INFO.json", asdict(atlas.source_info))
+        if atlas.source_metadata:
+            write_json_to(atlas_dir, "SOURCE_METADATA.json", atlas.source_metadata)
+
         write_text_to(atlas_dir, "README.md", markdown_text)
 
 

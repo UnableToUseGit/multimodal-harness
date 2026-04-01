@@ -32,6 +32,7 @@ from .canonical_atlas import (
     SegmentationProfile,
     SegmentationSpecification,
 )
+from .source_info import SourceInfoRecord
 from .derived_atlas import DerivationPolicy, DerivationResultInfo, DerivedAtlas, DerivedSegmentDraft
 
 __all__ = [
@@ -63,6 +64,7 @@ __all__ = [
     "SamplingConfig",
     "SegmentationProfile",
     "SegmentationSpecification",
+    "SourceInfoRecord",
     "resolve_caption_profile",
     "resolve_sampling_profile",
     "resolve_segmentation_profile",

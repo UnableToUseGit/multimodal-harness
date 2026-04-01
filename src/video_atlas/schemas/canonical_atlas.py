@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
+
+from .source_info import SourceInfoRecord
 
 
 @dataclass(frozen=True)
@@ -174,3 +177,5 @@ class CanonicalAtlas:
     relative_subtitles_path: Path | None = None
     relative_srt_file_path: Path | None = None
     units: list[AtlasUnit] = field(default_factory=list)
+    source_info: SourceInfoRecord | None = None
+    source_metadata: dict[str, Any] = field(default_factory=dict)
