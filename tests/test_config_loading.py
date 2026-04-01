@@ -24,6 +24,11 @@ class ConfigLoadingTest(unittest.TestCase):
                 "model_name": "multimodal-segmentor-model",
                 "connection": "local",
             },
+            "structure_composer": {
+                "provider": "openai_compatible",
+                "model_name": "structure-composer-model",
+                "connection": "remote",
+            },
             "captioner": {"provider": "openai_compatible", "model_name": "caption-model", "max_tokens": 3000},
             "runtime": {
                 "verbose": True,
@@ -44,6 +49,8 @@ class ConfigLoadingTest(unittest.TestCase):
         self.assertEqual(config.text_segmentor.connection, "remote")
         self.assertEqual(config.multimodal_segmentor.model_name, "multimodal-segmentor-model")
         self.assertEqual(config.multimodal_segmentor.connection, "local")
+        self.assertEqual(config.structure_composer.model_name, "structure-composer-model")
+        self.assertEqual(config.structure_composer.connection, "remote")
         self.assertEqual(config.segmentor.model_name, "text-segmentor-model")
         self.assertEqual(config.captioner.model_name, "caption-model")
         self.assertEqual(config.captioner.max_tokens, 3000)
@@ -72,6 +79,7 @@ class ConfigLoadingTest(unittest.TestCase):
         self.assertEqual(config.segmentor.model_name, "segmentor-model")
         self.assertEqual(config.text_segmentor.model_name, "segmentor-model")
         self.assertEqual(config.multimodal_segmentor.model_name, "segmentor-model")
+        self.assertEqual(config.structure_composer.model_name, "planner-model")
         self.assertEqual(config.runtime.text_chunk_size_sec, 420)
         self.assertEqual(config.runtime.text_chunk_overlap_sec, 24)
         self.assertEqual(config.runtime.multimodal_chunk_size_sec, 420)

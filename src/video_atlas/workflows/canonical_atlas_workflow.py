@@ -9,16 +9,15 @@ from ..transcription.base import BaseTranscriber
 from ..message_builder import build_text_messages, build_video_messages_from_path
 from ..parsing import parse_json_response
 
-from .canonical_atlas.atlas_assembly import AtlasAssemblyMixin
 from .canonical_atlas.execution_plan_builder import ExecutionPlanBuilderMixin
 from .canonical_atlas.plan import PlanMixin
 from .canonical_atlas.pipeline import PipelineMixin
+from .canonical_atlas.structure_composition import compose_canonical_structure
 from .canonical_atlas.video_parsing import VideoParsingMixin
 
 
 class CanonicalAtlasWorkflow(
     PipelineMixin,
-    AtlasAssemblyMixin,
     VideoParsingMixin,
     PlanMixin,
     ExecutionPlanBuilderMixin,
@@ -40,10 +39,10 @@ class CanonicalAtlasWorkflow(
     def __init__(
         self,
         planner: BaseGenerator,
-        segmentor: Optional[BaseGenerator] = None,
-        text_segmentor: Optional[BaseGenerator] = None,
-        multimodal_segmentor: Optional[BaseGenerator] = None,
-        captioner: Optional[BaseGenerator] = None,
+        text_segmentor: Optional[BaseGenerator],
+        multimodal_segmentor: Optional[BaseGenerator],
+        structure_composer: Optional[BaseGenerator],
+        captioner: Optional[BaseGenerator],
         transcriber: Optional[BaseTranscriber] = None,
         generate_subtitles_if_missing: bool = True,
         chunk_size_sec: int = 600,
@@ -55,10 +54,10 @@ class CanonicalAtlasWorkflow(
         caption_with_subtitles: bool = True,
     ):
         self.planner = planner
-        self.text_segmentor = text_segmentor or segmentor
-        self.multimodal_segmentor = multimodal_segmentor or segmentor or self.text_segmentor
-        self.segmentor = self.multimodal_segmentor
-        self.captioner = captioner or self.multimodal_segmentor or self.text_segmentor
+        self.text_segmentor = text_segmentor
+        self.multimodal_segmentor = multimodal_segmentor
+        self.structure_composer = structure_composer
+        self.captioner = captioner
         self.transcriber = transcriber
         self.generate_subtitles_if_missing = generate_subtitles_if_missing
         self.chunk_size_sec = chunk_size_sec
@@ -107,3 +106,18 @@ class CanonicalAtlasWorkflow(
 
     def parse_response(self, generated_text: str) -> dict | list:
         return parse_json_response(generated_text)
+
+    def _compose_canonical_structure(
+        self,
+        units,
+        concise_description: str = "",
+        genres: list[str] | None = None,
+        structure_request: str = "",
+    ):
+        return compose_canonical_structure(
+            self.structure_composer,
+            units=units,
+            concise_description=concise_description,
+            genres=genres,
+            structure_request=structure_request,
+        )

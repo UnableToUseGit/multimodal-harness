@@ -111,7 +111,7 @@
 
 - `build_generator(...)` 会消费该配置并实例化具体 generator
 - canonical workflow 与 derived workflow 都会消费由该配置构造出的 generator 实例
-- 配置文件中的 `planner`、`segmentor`、`captioner` 均使用这一配置结构
+- 配置文件中的 `planner`、`segmentor`、`text_segmentor`、`multimodal_segmentor`、`structure_composer`、`captioner` 均使用这一配置结构
 
 ## 示例
 

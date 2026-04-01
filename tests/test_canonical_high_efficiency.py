@@ -44,6 +44,11 @@ class CanonicalHighEfficiencyConfigTest(unittest.TestCase):
                 "model_name": "multimodal-segmentor-model",
                 "connection": "local",
             },
+            "structure_composer": {
+                "provider": "openai_compatible",
+                "model_name": "structure-composer-model",
+                "connection": "remote",
+            },
             "captioner": {"provider": "openai_compatible", "model_name": "caption-model"},
             "runtime": {
                 "text_chunk_size_sec": 1800,
@@ -62,6 +67,7 @@ class CanonicalHighEfficiencyConfigTest(unittest.TestCase):
         self.assertEqual(config.multimodal_segmentor.model_name, "multimodal-segmentor-model")
         self.assertEqual(config.text_segmentor.connection, "remote")
         self.assertEqual(config.multimodal_segmentor.connection, "local")
+        self.assertEqual(config.structure_composer.model_name, "structure-composer-model")
         self.assertEqual(config.runtime.text_chunk_size_sec, 1800)
         self.assertEqual(config.runtime.text_chunk_overlap_sec, 120)
         self.assertEqual(config.runtime.multimodal_chunk_size_sec, 600)

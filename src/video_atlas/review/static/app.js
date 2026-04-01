@@ -129,7 +129,23 @@ function render(state) {
                 <dt>Title</dt><dd>${escapeHtml(segment.title)}</dd>
                 <dt>Summary</dt><dd>${escapeHtml(segment.summary)}</dd>
                 <dt>Detail</dt><dd>${escapeHtml(segment.detail || "<empty>")}</dd>
+                <dt>Unit Count</dt><dd>${segment.units?.length || 0}</dd>
               </dl>
+              ${segment.units?.length
+                ? `<div class="nested-units">
+                    <h4>Composed Units</h4>
+                    <ul>
+                      ${segment.units.map((unit) => `
+                        <li>
+                          <strong>${escapeHtml(unit.title || unit.unit_id)}</strong>
+                          <span>${fmtTime(unit.start_time)} - ${fmtTime(unit.end_time)}</span>
+                          ${unit.clip_url ? `<a href="${unit.clip_url}" target="_blank" rel="noreferrer">clip</a>` : ""}
+                          ${unit.readme_url ? `<a href="${unit.readme_url}" target="_blank" rel="noreferrer">readme</a>` : ""}
+                        </li>
+                      `).join("")}
+                    </ul>
+                  </div>`
+                : ""}
             ` : `<p class="empty">Select a segment to inspect metadata.</p>`}
           </div>
           <div class="panel card">

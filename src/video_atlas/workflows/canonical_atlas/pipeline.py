@@ -8,10 +8,35 @@ import math
 
 from ...transcription import generate_subtitles_for_video
 from ...utils import get_video_property, parse_srt
-from ...persistence import CanonicalAtlasWriter, copy_to, write_text_to, write_candidate_boundaries_for_debug
-from ...schemas import CanonicalAtlas
+from ...persistence import CanonicalAtlasWriter, copy_to, format_hms_time_range, slugify_segment_title, write_text_to, write_candidate_boundaries_for_debug
+from ...schemas import AtlasSegment, CanonicalAtlas
 
 class PipelineMixin:
+    def _finalize_composed_segments(self, composition_result):
+        normalized_segments: list[AtlasSegment] = []
+        for segment in composition_result.segments:
+            folder_name = segment.folder_name or (
+                f"{segment.segment_id.replace('_', '-')}-{slugify_segment_title(segment.title or segment.segment_id)}-"
+                f"{format_hms_time_range(segment.start_time, segment.end_time)}"
+            )
+            normalized_segments.append(
+                AtlasSegment(
+                    segment_id=segment.segment_id,
+                    unit_ids=list(segment.unit_ids),
+                    title=segment.title,
+                    start_time=segment.start_time,
+                    end_time=segment.end_time,
+                    summary=segment.summary,
+                    composition_rationale=segment.composition_rationale,
+                    folder_name=folder_name,
+                    caption=segment.caption,
+                    subtitles_text=segment.subtitles_text,
+                    relative_clip_path=segment.relative_clip_path,
+                    relative_subtitles_path=segment.relative_subtitles_path,
+                )
+            )
+        return normalized_segments
+
     def _resolve_srt_file_path(
         self, output_dir: Path, video_path: Path, verbose: bool = False
     ) -> tuple[Path | None, Path | None]:
@@ -44,6 +69,7 @@ class PipelineMixin:
         output_dir: Path,
         source_video_path: Path,
         source_srt_file_path: Path | None = None,
+        structure_request: str | None = None,
         verbose: bool = False
     ) -> CanonicalAtlas:
         
@@ -95,7 +121,7 @@ class PipelineMixin:
         write_text_to(output_dir, "EXECUTION_PLAN.json", json.dumps(asdict(execution_plan), indent=4))
         
         started_at = time.time()
-        parsed_segments, record_generated_boundaries = self._parse_video_into_segments(
+        units, record_generated_boundaries = self._parse_video_into_segments(
             video_path=video_path,
             duration=duration,
             subtitle_items=subtitle_items,
@@ -103,18 +129,30 @@ class PipelineMixin:
             execution_plan=execution_plan,
         )
         parsing_cost_time = time.time() - started_at
+
+        started_at = time.time()
+        composition_result = self._compose_canonical_structure(
+            units=units,
+            concise_description=execution_plan.concise_description,
+            genres=execution_plan.genres,
+            structure_request=structure_request or "",
+        )
+        composition_cost_time = time.time() - started_at
         
         started_at = time.time()
-        atlas = self._assemble_canonical_atlas(
-            atlas_dir=output_dir,
+        final_segments = self._finalize_composed_segments(composition_result)
+        atlas = CanonicalAtlas(
+            title=composition_result.title,
             duration=duration,
+            abstract=composition_result.abstract,
+            units=units,
+            segments=final_segments,
             execution_plan=execution_plan,
-            parsed_segments=parsed_segments,
-            video_path=video_path,
-            audio_path=audio_path,
-            subtitles_path=subtitles_path,
-            srt_file_path=srt_file_path,
-            verbose=verbose
+            atlas_dir=output_dir,
+            relative_video_path=video_path.relative_to(output_dir),
+            relative_audio_path=audio_path.relative_to(output_dir) if audio_path is not None else None,
+            relative_subtitles_path=subtitles_path.relative_to(output_dir) if subtitles_path is not None else None,
+            relative_srt_file_path=srt_file_path.relative_to(output_dir) if srt_file_path is not None else None,
         )
         assemble_cost_time = time.time() - started_at
 
@@ -128,6 +166,12 @@ class PipelineMixin:
         if verbose:
             self._log_info("VideoAtlas construction completed successfully")
 
-        cost_time_info = {"plan_cost_time": plan_cost_time, "parsing_cost_time": parsing_cost_time, "assemble_cost_time":assemble_cost_time, "persistence_cost_time": persistence_cost_time}
+        cost_time_info = {
+            "plan_cost_time": plan_cost_time,
+            "parsing_cost_time": parsing_cost_time,
+            "composition_cost_time": composition_cost_time,
+            "assemble_cost_time": assemble_cost_time,
+            "persistence_cost_time": persistence_cost_time,
+        }
         
         return atlas, cost_time_info

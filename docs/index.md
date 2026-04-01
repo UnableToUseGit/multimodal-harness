@@ -46,6 +46,9 @@
   [docs/design-docs/data-shemas](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/data-shemas)
 - 内容：
   系统中各个 dataclass / schema 的设计文档。
+- 当前新增：
+  - [atlas-unit.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/data-shemas/atlas-unit.md)
+  - [canonical-composition-result.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/data-shemas/canonical-composition-result.md)
 
 ### Atlas 目录格式
 
@@ -88,7 +91,7 @@
   - [active](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active)
   - [completed](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/completed)
 - 当前 active plan：
-  - [2026-03-30-canonical-high-efficiency-implementation.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active/2026-03-30-canonical-high-efficiency-implementation.md)
+  - [2026-04-01-canonical-two-stage-composition.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active/2026-04-01-canonical-two-stage-composition.md)
 
 ## 决策记录
 
@@ -100,6 +103,7 @@
   - [2026-0327-1751.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0327-1751.md)
   - [2026-0329-aliyun-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0329-aliyun-transcription-route.md)
   - [2026-0330-0609-canonical-high-efficiency.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0330-0609-canonical-high-efficiency.md)
+  - [2026-0331.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0331.md)
 
 ## 参考资料
 

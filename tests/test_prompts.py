@@ -6,6 +6,7 @@ from unittest.mock import patch
 from video_atlas.prompts import (
     BOUNDARY_DETECTION_PROMPT,
     CAPTION_GENERATION_PROMPT,
+    CANONICAL_STRUCTURE_COMPOSITION_PROMPT,
     DERIVED_CAPTION_PROMPT,
     DERIVED_CANDIDATE_PROMPT,
     DERIVED_GROUNDING_PROMPT,
@@ -20,6 +21,7 @@ from video_atlas.prompts import (
     list_prompts,
     prompt_names,
 )
+from video_atlas.schemas import AtlasSegment, AtlasUnit
 from video_atlas.prompts.specs import PromptSpec as RawPromptSpec
 from video_atlas.workflows.canonical_atlas_workflow import CanonicalAtlasWorkflow
 
@@ -222,6 +224,7 @@ class PromptExportsTest(unittest.TestCase):
             BOUNDARY_DETECTION_PROMPT,
             TEXT_BOUNDARY_DETECTION_PROMPT,
             CAPTION_GENERATION_PROMPT,
+            CANONICAL_STRUCTURE_COMPOSITION_PROMPT,
             VIDEO_GLOBAL_PROMPT,
             DERIVED_CANDIDATE_PROMPT,
             DERIVED_GROUNDING_PROMPT,
@@ -239,6 +242,7 @@ class PromptExportsTest(unittest.TestCase):
                 "BOUNDARY_DETECTION_PROMPT",
                 "TEXT_BOUNDARY_DETECTION_PROMPT",
                 "CAPTION_GENERATION_PROMPT",
+                "CANONICAL_STRUCTURE_COMPOSITION_PROMPT",
                 "VIDEO_GLOBAL_PROMPT",
                 "DERIVED_CANDIDATE_PROMPT",
                 "DERIVED_GROUNDING_PROMPT",
@@ -247,6 +251,7 @@ class PromptExportsTest(unittest.TestCase):
             set(names),
         )
         self.assertIs(get_prompt("PLANNER_PROMPT"), PLANNER_PROMPT)
+        self.assertIs(get_prompt("CANONICAL_STRUCTURE_COMPOSITION_PROMPT"), CANONICAL_STRUCTURE_COMPOSITION_PROMPT)
         self.assertIs(PROMPT_REGISTRY.get("DERIVED_CAPTION_PROMPT"), DERIVED_CAPTION_PROMPT)
 
     def test_exported_prompt_specs_render(self) -> None:
@@ -287,6 +292,15 @@ class PromptExportsTest(unittest.TestCase):
                     "signal_priority": "visual",
                     "caption_policy": "policy",
                     "subtitles": "subtitles",
+                },
+            ),
+            (
+                CANONICAL_STRUCTURE_COMPOSITION_PROMPT,
+                {
+                    "units_description": "[UNIT_1]\nunit_id: unit_0001\n",
+                    "concise_description": "A lecture-style explainer with one speaker and supporting examples.",
+                    "genres": "lecture_talk, tutorial_howto",
+                    "structure_request": "Please keep the structure coarse.",
                 },
             ),
             (
@@ -354,13 +368,25 @@ class WorkflowPromptUsageTest(unittest.TestCase):
             captioner=_QueueGenerator(
                 [
                     {"summary": "Local summary", "caption": "Local detail"},
-                    {
-                        "title": "Atlas title",
-                        "abstract": "Atlas abstract",
-                        "segment_titles": [{"seg_id": "seg_0001", "title": "Segment title"}],
-                    },
                 ]
             ),
+        )
+        workflow.structure_composer = _QueueGenerator(
+            [
+                {
+                    "title": "Atlas title",
+                    "abstract": "Atlas abstract",
+                    "segments": [
+                        {
+                            "segment_id": "seg_0001",
+                            "unit_ids": ["unit_0001"],
+                            "title": "Segment title",
+                            "summary": "Local summary",
+                            "composition_rationale": "Single unit segment",
+                        }
+                    ],
+                }
+            ]
         )
         execution_plan = SimpleNamespace(
             genres=["lecture_talk"],
@@ -398,39 +424,36 @@ class WorkflowPromptUsageTest(unittest.TestCase):
             )
             caption = workflow._generate_local_caption(
                 video_path="/tmp/video.mp4",
-                segment=SimpleNamespace(start_time=0.0, end_time=20.0),
+                segment=SimpleNamespace(start_time=0.0, end_time=20.0, segment_title="Local title"),
                 seg_id=1,
                 subtitle_items=[{"start": 0.0, "end": 20.0, "text": "subtitle text"}],
                 execution_plan=execution_plan,
             )
-            atlas = workflow._assemble_canonical_atlas(
-                atlas_dir=Path("/tmp/atlas"),
-                duration=20.0,
-                execution_plan=execution_plan,
-                parsed_segments=[
-                    {
-                        "seg_id": "seg_0001",
-                        "start_time": 0.0,
-                        "end_time": 20.0,
-                        "summary": caption.summary,
-                        "detail": caption.detail,
-                    }
+            composition_result = workflow._compose_canonical_structure(
+                units=[
+                    AtlasUnit(
+                        unit_id="unit_0001",
+                        title="Local title",
+                        start_time=0.0,
+                        end_time=20.0,
+                        summary=caption.summary,
+                        caption=caption.detail,
+                        subtitles_text=caption.subtitles_text,
+                        folder_name="unit-0001-local-title-00:00:00-00:00:20",
+                    )
                 ],
-                video_path=Path("/tmp/atlas/video.mp4"),
-                audio_path=None,
-                subtitles_path=None,
-                srt_file_path=None,
-                verbose=False,
+                concise_description=execution_plan.concise_description,
+                genres=execution_plan.genres,
+                structure_request="Keep it coarse",
             )
+            atlas = workflow._finalize_composed_segments(composition_result)
 
         self.assertEqual(planner_output, {"plan": "ok"})
         self.assertEqual(planner_reasoning, "")
         self.assertEqual(len(candidate_boundaries), 1)
         self.assertEqual(candidate_boundaries[0].timestamp, 12.0)
         self.assertEqual(caption.summary, "Local summary")
-        self.assertEqual(atlas.title, "Atlas title")
-        self.assertEqual(atlas.abstract, "Atlas abstract")
-        self.assertEqual(atlas.segments[0].title, "Segment title")
+        self.assertEqual(atlas[0].title, "Segment title")
 
     def test_representative_input_fields_are_declared(self) -> None:
         self.assertEqual(PLANNER_PROMPT.input_fields, ())
@@ -451,6 +474,10 @@ class WorkflowPromptUsageTest(unittest.TestCase):
         self.assertEqual(
             CAPTION_GENERATION_PROMPT.input_fields,
             ("genres", "concise_description", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
+        )
+        self.assertEqual(
+            CANONICAL_STRUCTURE_COMPOSITION_PROMPT.input_fields,
+            ("units_description", "concise_description", "genres", "structure_request"),
         )
         self.assertEqual(
             DERIVED_CANDIDATE_PROMPT.input_fields,

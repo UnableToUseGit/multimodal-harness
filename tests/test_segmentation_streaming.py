@@ -162,15 +162,15 @@ class SegmentationStreamingTest(unittest.TestCase):
     def test_parse_video_into_segments_pipelines_caption_with_boundary_detection(self):
         harness = _StreamingSegmentationHarness()
         plan = self._make_plan()
-        contexts, boundary_records = harness._parse_video_into_segments(
+        units, boundary_records = harness._parse_video_into_segments(
             video_path="video.mp4",
             duration=100,
             subtitle_items=[],
             execution_plan=plan,
             verbose=False,
         )
-        self.assertEqual(len(contexts), 3)
-        self.assertEqual([item["start_time"] for item in contexts], [0, 40, 70])
+        self.assertEqual(len(units), 3)
+        self.assertEqual([item.start_time for item in units], [0, 40, 70])
         self.assertFalse(harness.detect_calls[0][2])
         self.assertTrue(harness.detect_calls[1][2])
         self.assertEqual(len(boundary_records), 2)

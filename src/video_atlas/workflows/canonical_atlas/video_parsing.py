@@ -6,8 +6,9 @@ import time
 
 from ...prompts import BOUNDARY_DETECTION_PROMPT, CAPTION_GENERATION_PROMPT, TEXT_BOUNDARY_DETECTION_PROMPT
 from ...schemas import ALLOWED_EVIDENCE
-from ...schemas import CandidateBoundary, CaptionedSegment, FinalizedSegment
+from ...schemas import AtlasUnit, CandidateBoundary, CaptionedSegment, FinalizedSegment
 from ...utils import get_subtitle_in_segment
+from ...persistence import format_hms_time_range, slugify_segment_title
 
 
 class VideoParsingMixin:
@@ -496,8 +497,25 @@ class VideoParsingMixin:
             next_segment_id += 1
         return next_segment_id
 
+    def _captioned_segment_to_unit(self, caption_object: CaptionedSegment) -> AtlasUnit:
+        title = (caption_object.title or caption_object.seg_id).strip()
+        folder_name = (
+            f"{caption_object.seg_id.replace('_', '-')}-{slugify_segment_title(title)}-"
+            f"{format_hms_time_range(caption_object.start_time, caption_object.end_time)}"
+        )
+        return AtlasUnit(
+            unit_id=caption_object.seg_id,
+            title=title,
+            start_time=caption_object.start_time,
+            end_time=caption_object.end_time,
+            summary=caption_object.summary,
+            caption=caption_object.detail,
+            subtitles_text=caption_object.subtitles_text,
+            folder_name=folder_name,
+        )
+
     def _parse_video_into_segments(self, video_path: str, duration: float, subtitle_items: list, execution_plan, verbose: bool = False):
-        parsed_segments = []
+        units: list[AtlasUnit] = []
         caption_futures = []
         record_generated_boundaries = []
         open_segment_start = 0.0
@@ -601,20 +619,9 @@ class VideoParsingMixin:
             for future in concurrent.futures.as_completed(caption_futures):
                 try:
                     caption_object = future.result()
-                    parsed_segments.append(
-                        {
-                            "seg_id": caption_object.seg_id,
-                            "start_time": caption_object.start_time,
-                            "end_time": caption_object.end_time,
-                            "title": caption_object.title,
-                            "summary": caption_object.summary,
-                            "detail": caption_object.detail,
-                            "subtitles_text": caption_object.subtitles_text,
-                            "token_usage": caption_object.token_usage,
-                        }
-                    )
+                    units.append(self._captioned_segment_to_unit(caption_object))
                 except Exception as exc:
                     self._log_error("Segment processing failed: %s", exc)
 
-        parsed_segments.sort(key=lambda item: item["start_time"])
-        return parsed_segments, record_generated_boundaries
+        units.sort(key=lambda item: item.start_time)
+        return units, record_generated_boundaries

@@ -115,21 +115,50 @@ class CaptionedSegment:
 
 
 @dataclass
-class AtlasSegment:
-    segment_id: str
+class AtlasUnit:
+    unit_id: str
     title: str
     start_time: float
     end_time: float
-    summary: str
-    caption: str
-    subtitles_text: str
-    folder_name: str
+    summary: str = ""
+    caption: str = ""
+    subtitles_text: str = ""
+    folder_name: str = ""
     relative_clip_path: Path | None = None
     relative_subtitles_path: Path | None = None
 
     @property
     def duration(self) -> float:
         return self.end_time - self.start_time
+
+
+@dataclass
+class AtlasSegment:
+    segment_id: str
+    unit_ids: list[str] = field(default_factory=list)
+    title: str = ""
+    start_time: float = 0.0
+    end_time: float = 0.0
+    summary: str = ""
+    composition_rationale: str = ""
+    folder_name: str = ""
+    caption: str = ""
+    subtitles_text: str = ""
+    relative_clip_path: Path | None = None
+    relative_subtitles_path: Path | None = None
+
+    @property
+    def duration(self) -> float:
+        return self.end_time - self.start_time
+
+
+@dataclass
+class CanonicalCompositionResult:
+    title: str
+    abstract: str
+    segments: list[AtlasSegment]
+    composition_rationale: str = ""
+    structure_request: str = ""
 
 
 @dataclass
@@ -144,3 +173,4 @@ class CanonicalAtlas:
     relative_audio_path: Path | None = None
     relative_subtitles_path: Path | None = None
     relative_srt_file_path: Path | None = None
+    units: list[AtlasUnit] = field(default_factory=list)

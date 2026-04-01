@@ -8,7 +8,9 @@ from pathlib import Path
 
 from video_atlas.schemas import (
     AtlasSegment,
+    AtlasUnit,
     CanonicalAtlas,
+    CanonicalCompositionResult,
     CanonicalExecutionPlan,
     DerivationPolicy,
     DerivationResultInfo,
@@ -64,15 +66,27 @@ class WorkspaceWritersTest(unittest.TestCase):
             title="Match Overview",
             duration=20.0,
             abstract="A concise abstract.",
-            segments=[
-                AtlasSegment(
-                    segment_id="seg_0001",
-                    title="Opening",
+            units=[
+                AtlasUnit(
+                    unit_id="unit_0001",
+                    title="Opening Unit",
                     start_time=0.0,
                     end_time=20.0,
                     summary="Opening summary",
                     caption="Opening detail",
                     subtitles_text="segment subtitles",
+                    folder_name="unit0001-opening-unit-00:00:00-00:00:20",
+                )
+            ],
+            segments=[
+                AtlasSegment(
+                    segment_id="seg_0001",
+                    unit_ids=["unit_0001"],
+                    title="Opening",
+                    start_time=0.0,
+                    end_time=20.0,
+                    summary="Opening summary",
+                    composition_rationale="The first unit already forms a complete opening chapter.",
                     folder_name="seg0001-opening-00:00:00-00:00:20",
                 )
             ],
@@ -88,24 +102,47 @@ class WorkspaceWritersTest(unittest.TestCase):
 
         for call in mock_write.call_args_list:
             harness.written[str(call.args[1])] = call.args[2]
-        harness.written["segments/seg0001-opening-00:00:00-00:00:20/video_clip.mp4"] = "clip"
-        mock_extract.assert_called_once_with(
+        harness.written["units/unit0001-opening-unit-00:00:00-00:00:20/video_clip.mp4"] = "clip"
+        harness.written["segments/seg0001-opening-00:00:00-00:00:20/unit0001-opening-unit-00:00:00-00:00:20/video_clip.mp4"] = "clip"
+        self.assertEqual(mock_extract.call_count, 2)
+        mock_extract.assert_any_call(
             Path("/tmp/canonical"),
             Path("/tmp/canonical/video.mp4"),
             0.0,
             20.0,
-            Path("segments/seg0001-opening-00:00:00-00:00:20/video_clip.mp4"),
+            Path("units/unit0001-opening-unit-00:00:00-00:00:20/video_clip.mp4"),
+        )
+        mock_extract.assert_any_call(
+            Path("/tmp/canonical"),
+            Path("/tmp/canonical/video.mp4"),
+            0.0,
+            20.0,
+            Path("segments/seg0001-opening-00:00:00-00:00:20/unit0001-opening-unit-00:00:00-00:00:20/video_clip.mp4"),
         )
 
         self.assertIn("README.md", harness.written)
+        self.assertIn("units/unit0001-opening-unit-00:00:00-00:00:20/README.md", harness.written)
+        self.assertIn("units/unit0001-opening-unit-00:00:00-00:00:20/SUBTITLES.md", harness.written)
         self.assertIn("segments/seg0001-opening-00:00:00-00:00:20/README.md", harness.written)
-        self.assertIn("segments/seg0001-opening-00:00:00-00:00:20/SUBTITLES.md", harness.written)
-        self.assertIn("segments/seg0001-opening-00:00:00-00:00:20/video_clip.mp4", harness.written)
+        self.assertIn(
+            "segments/seg0001-opening-00:00:00-00:00:20/unit0001-opening-unit-00:00:00-00:00:20/README.md",
+            harness.written,
+        )
+        self.assertIn(
+            "segments/seg0001-opening-00:00:00-00:00:20/unit0001-opening-unit-00:00:00-00:00:20/SUBTITLES.md",
+            harness.written,
+        )
+        self.assertIn("units/unit0001-opening-unit-00:00:00-00:00:20/video_clip.mp4", harness.written)
+        self.assertIn(
+            "segments/seg0001-opening-00:00:00-00:00:20/unit0001-opening-unit-00:00:00-00:00:20/video_clip.mp4",
+            harness.written,
+        )
         self.assertIn("Match Overview", harness.written["README.md"])
+        self.assertIn("There are 1 units extracted from the raw video.", harness.written["README.md"])
         self.assertIn("**Start Time**: 00:00:00", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
         self.assertIn("**End Time**: 00:00:20", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
         self.assertIn("**Duration**: 00:00:20", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
-        self.assertIn("**Duration**: 00:00:20", harness.written["README.md"])
+        self.assertIn("**Composition Rationale**: The first unit already forms a complete opening chapter.", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
 
     def test_derived_workspace_writer_persists_metadata_and_segments(self) -> None:
         from video_atlas.persistence import DerivedAtlasWriter

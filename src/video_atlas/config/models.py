@@ -66,6 +66,7 @@ class CanonicalPipelineConfig:
     segmentor: ModelRuntimeConfig | None = None
     text_segmentor: ModelRuntimeConfig | None = None
     multimodal_segmentor: ModelRuntimeConfig | None = None
+    structure_composer: ModelRuntimeConfig | None = None
     captioner: ModelRuntimeConfig | None = None
     transcriber: TranscriberRuntimeConfig = field(default_factory=TranscriberRuntimeConfig)
     runtime: CanonicalRuntimeConfig = field(default_factory=CanonicalRuntimeConfig)
@@ -125,6 +126,7 @@ def load_canonical_pipeline_config(path: str | Path) -> CanonicalPipelineConfig:
         segmentor=_build_model_runtime_config(segmentor_raw) if segmentor_raw else None,
         text_segmentor=_build_model_runtime_config(text_segmentor_raw) if text_segmentor_raw else None,
         multimodal_segmentor=_build_model_runtime_config(multimodal_segmentor_raw) if multimodal_segmentor_raw else None,
+        structure_composer=_build_model_runtime_config(raw.get("structure_composer")) if raw.get("structure_composer") else _build_model_runtime_config(raw["planner"]),
         captioner=_build_model_runtime_config(raw["captioner"]) if raw.get("captioner") else None,
         transcriber=TranscriberRuntimeConfig(**raw.get("transcriber", {})),
         runtime=_build_canonical_runtime_config(raw.get("runtime", {})),

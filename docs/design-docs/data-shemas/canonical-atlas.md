@@ -17,6 +17,7 @@
 | `title` | `str` | 是 | 无 | atlas 标题 |
 | `duration` | `float` | 是 | 无 | 视频总时长 |
 | `abstract` | `str` | 是 | 无 | 全局摘要 |
+| `units` | `list[AtlasUnit]` | 是 | 无 | Stage 1 基本单元列表 |
 | `segments` | `list[AtlasSegment]` | 是 | 无 | 片段列表 |
 | `execution_plan` | `CanonicalExecutionPlan` | 是 | 无 | 执行计划 |
 | `atlas_dir` | `Path` | 是 | 无 | atlas 根目录 |
@@ -45,11 +46,17 @@
 - 约束：应为可读文本。
 - 注意事项：服务于上层快速理解。
 
+### `units`
+
+- 语义：由 Stage 1 产出的基本单元列表。
+- 约束：元素应为有效的 `AtlasUnit`，并保持原始时间顺序。
+- 注意事项：实验期 atlas 会显式保留这些 units 以便验证和调试。
+
 ### `segments`
 
-- 语义：atlas 中的标准片段列表。
+- 语义：由 Stage 2 组合得到的最终结构片段列表。
 - 约束：元素应为有效的 `AtlasSegment`。
-- 注意事项：这是 atlas 的主体内容。
+- 注意事项：这是 atlas 的主体内容，也是最终面向用户的高层结构。
 
 ### `execution_plan`
 
@@ -77,6 +84,7 @@
 
 ## 校验规则与约束
 
+- `units` 中每个 `unit_id` 应唯一。
 - `segments` 中每个 `segment_id` 应唯一。
 - `relative_*` 路径应相对于 `atlas_dir`。
 - `execution_plan` 应与 atlas 生成方式保持一致。
@@ -88,6 +96,7 @@ CanonicalAtlas(
     title="Match Overview",
     duration=3600.0,
     abstract="A structured overview of the full video.",
+    units=[...],
     segments=[...],
     execution_plan=some_execution_plan,
     atlas_dir=Path("/tmp/canonical"),

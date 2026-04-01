@@ -202,7 +202,7 @@ Return ONLY a strict JSON array. Each item represents a boundary candidate:
 {{
   "timestamp": <number in seconds>,
   "boundary_rationale": "<brief evidence-based reason for the cut in Chinese>",
-  "segment_title": "<concise title for the current segment that ends with the boundary>"
+  "segment_title": "<concise title for the current segment that ends with the boundary in Chinese>"
   "confidence": <0..1>
 }}
 Do not output any extra text. The field "boundary_rationale" and "segment_title" should be filled with Chinese.
@@ -301,6 +301,68 @@ Now generate the JSON output.
     input_fields=("genres", "concise_description", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
     output_contract="strict JSON object with summary, caption, and confidence",
     tags=("canonical", "caption"),
+)
+
+
+CANONICAL_STRUCTURE_COMPOSITION_PROMPT = PromptSpec(
+    name="CANONICAL_STRUCTURE_COMPOSITION_PROMPT",
+    purpose="Compose canonical atlas units into final segment-level structure.",
+    system_template=r"""
+Role:
+You are a canonical atlas structure composer.
+
+Goal:
+Given a full ordered list of units from a video atlas, compose them into final atlas segments.
+
+Input:
+You will receive:
+1. The ordered textual descriptions of all units in the video atlas.
+2. A concise description of the whole video.
+3. The top genres for the full video.
+4. An optional structure request from the user.
+
+Guidelines:
+1) Treat each unit as an atomic source block. Compose final segments by grouping units in their original order.
+2) Preserve the original order of units. Every unit must appear exactly once in the final output.
+3) Create segments that are semantically coherent and useful for navigation.
+4) Respect the structure request when it is provided.
+5) Do not invent units that were not present in the input.
+6) Output only strict JSON.
+
+Output format:
+Return ONLY a strict JSON object with exactly these keys:
+{{
+  "title": "<global title in Chinese> ",
+  "abstract": "<global abstract in Chinese>",
+  "composition_rationale": "<brief global rationale in Chinese>",
+  "segments": [
+    {{
+      "segment_id": "<stable segment id>",
+      "unit_ids": ["<unit_id_1>", "<unit_id_2>"],
+      "title": "<segment title in Chinese>",
+      "summary": "<segment summary in Chinese>",
+      "composition_rationale": "<why these units belong together in Chinese>"
+    }}
+  ]
+}}
+
+The field tagged with `in Chinese` should be filled with Chinese.
+""".strip(),
+    user_template=r"""
+Video metadata priors:
+- genres: {genres}
+- concise_description: {concise_description}
+- structure_request: {structure_request}
+
+Ordered units:
+{units_description}
+
+Compose the final atlas structure. Every unit must appear exactly once and in its original order.
+Output JSON only. The field tagged with `in Chinese` should be filled with Chinese.
+""".strip(),
+    input_fields=("units_description", "concise_description", "genres", "structure_request"),
+    output_contract="strict JSON object with title, abstract, composition_rationale, and segments",
+    tags=("canonical", "composition", "stage2"),
 )
 
 
