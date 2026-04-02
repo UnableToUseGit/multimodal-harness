@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 from video_atlas.application.canonical_create import create_canonical_from_local, create_canonical_from_url
 from video_atlas.config.models import CanonicalPipelineConfig
 from video_atlas.schemas import SourceAcquisitionResult, SourceInfoRecord, SourceMetadata
-from video_atlas.workflows.canonical_atlas_workflow import CanonicalAtlasWorkflow
+from video_atlas.workflows.text_first_canonical_atlas_workflow import TextFirstCanonicalAtlasWorkflow
 
 
 class CanonicalCreateApplicationTest(unittest.TestCase):
@@ -25,7 +25,7 @@ class CanonicalCreateApplicationTest(unittest.TestCase):
             patch("video_atlas.application.canonical_create.build_transcriber", return_value=None):
             workflow = _build_workflow(config)
 
-        self.assertIsInstance(workflow, CanonicalAtlasWorkflow)
+        self.assertIsInstance(workflow, TextFirstCanonicalAtlasWorkflow)
         self.assertTrue(workflow.verbose)
 
     @patch("video_atlas.application.canonical_create._build_workflow")

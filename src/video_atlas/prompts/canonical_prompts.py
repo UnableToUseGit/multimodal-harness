@@ -3,6 +3,7 @@
 
 from .canonical_prompt_parts import (
     render_genre_options,
+    render_profile_options,
     render_sampling_profile_options,
     render_segmentation_profile_options,
 )
@@ -10,6 +11,7 @@ from .specs import PromptSpec
 
 
 PLANNER_SEGMENTATION_PROFILE_OPTIONS = render_segmentation_profile_options()
+TEXT_FIRST_PROFILE_OPTIONS = render_profile_options()
 PLANNER_SAMPLING_PROFILE_OPTIONS = render_sampling_profile_options()
 PLANNER_GENRE_OPTIONS = render_genre_options()
 
@@ -91,6 +93,74 @@ You MUST output strict JSON only. Do not output any extra text.""",
 )
 
 
+TEXT_FIRST_PLANNER_PROMPT_USER = """
+You will receive:
+- The input kind. It will be exactly one of:
+  - video_with_visual_access
+  - video_without_visual_access
+  - audio
+- A small subtitle probe assembled from representative excerpts of the source text. This probe is only a partial view, not the full subtitle file.
+- An optional metadata summary.
+- A required output language instruction that tells you what language all generated planner text must use.
+- For video_with_visual_access only: sparse visual probe frames may also be provided after the user text.
+
+Your task:
+Based ONLY on the provided subtitle probe, optional metadata summary, and optional sparse visual probe frames, output the key planner decisions (JSON) needed to construct an execution plan for:
+1) profile selection
+2) genre understanding
+3) concise description of this content
+
+Guidelines:
+1) Use ONLY the provided probe context. Do NOT hallucinate detailed unseen content.
+2) profile MUST be exactly ONE value from the profile list below.
+3) genres must contain at most 2 items, and every item MUST come from the genre list below.
+4) concise_description should be brief, stable, and useful as global context for later segmentation and composition.
+5) If the content looks ambiguous, choose the most conservative profile.
+6) Output MUST be valid JSON following the schema below. No markdown, no comments, no extra keys.
+7) The concise_description must follow the output language instruction exactly.
+
+PROFILE OPTIONS
+__PROFILE_OPTIONS__
+
+GENRE OPTIONS
+__GENRE_OPTIONS__
+
+STRICT OUTPUT JSON SCHEMA (MUST FOLLOW EXACTLY)
+{{
+  "planner_confidence": 0.0,
+  "genres": ["<genre_1>", "<genre_2>"],
+  "concise_description": "<concise_description>",
+  "profile": "<profile_name>"
+}}
+
+YOU WILL RECEIVE THE DATA IN THIS FORMAT
+[INPUT_KIND]
+{input_kind}
+
+[SUBTITLE_PROBE]
+{subtitle_probe}
+
+[METADATA_SUMMARY]
+{metadata_summary}
+
+[OUTPUT_LANGUAGE]
+{output_language}
+
+NOW produce JSON that strictly matches the schema. Output JSON ONLY.
+""".replace("__PROFILE_OPTIONS__", TEXT_FIRST_PROFILE_OPTIONS).replace("__GENRE_OPTIONS__", PLANNER_GENRE_OPTIONS)
+
+
+TEXT_FIRST_PLANNER_PROMPT = PromptSpec(
+    name="TEXT_FIRST_PLANNER_PROMPT",
+    purpose="Plan canonical text-first execution decisions from subtitle probes, optional metadata, and optional sparse visual probes.",
+    system_template="""You are a planner for a text-first canonical atlas workflow. Given sampled subtitle evidence, optional metadata, and optional sparse visual frames, produce the minimal strict-JSON planning result needed for downstream execution. Output JSON only.""",
+    user_template=TEXT_FIRST_PLANNER_PROMPT_USER,
+    input_fields=("input_kind", "subtitle_probe", "metadata_summary", "output_language"),
+    output_contract="strict JSON object with planner_confidence, genres, concise_description, and profile",
+    tags=("canonical", "planner", "text-first"),
+)
+
+
 BOUNDARY_DETECTION_PROMPT = PromptSpec(
     name="BOUNDARY_DETECTION_PROMPT",
     purpose="Detect semantic boundaries inside a long video chunk using local context.",
@@ -109,6 +179,8 @@ You will be given:
 4. The video category.
 5. A segmentation policy that tells you how this video should be segmented.
 6. The last detection point produced in the previous turn.
+7. An output language instruction for all generated titles and rationales.
+7. An output language instruction for all generated titles and rationales.
 
 Guidelines:
 1) The current chunk is only one part of a longer video. That is why you are given a larger temporal context [T_start, T_end] together with a smaller core detection window [Core_start, Core_end): use the larger context to better understand how the local content relates to what comes before and after.
@@ -148,6 +220,8 @@ Segmentation policy: {segmentation_policy}
 
 Last detection point: {last_detection_point}
 
+Output language instruction: {output_language}
+
 Now output the JSON list of boundaries within the detection window.
 Only include boundaries whose timestamps fall inside [Core_start, Core_end).
 """.strip(),
@@ -161,6 +235,7 @@ Only include boundaries whose timestamps fall inside [Core_start, Core_end).
         "segmentation_profile",
         "segmentation_policy",
         "last_detection_point",
+        "output_language",
     ),
     output_contract="strict JSON array of boundary candidates",
     tags=("canonical", "boundary-detection"),
@@ -201,11 +276,10 @@ Output format:
 Return ONLY a strict JSON array. Each item represents a boundary candidate:
 {{
   "timestamp": <number in seconds>,
-  "boundary_rationale": "<brief evidence-based reason for the cut in Chinese>",
-  "segment_title": "<concise title for the current segment that ends with the boundary in Chinese>"
+  "boundary_rationale": "<brief evidence-based reason for the cut>",
+  "segment_title": "<concise title for the current segment that ends with the boundary>",
   "confidence": <0..1>
 }}
-Do not output any extra text. The field "boundary_rationale" and "segment_title" should be filled with Chinese.
 """.strip(),
     user_template=r"""
 Given the following:
@@ -225,9 +299,11 @@ Segmentation policy: {segmentation_policy}
 
 Last detection point: {last_detection_point}
 
+Output language instruction: {output_language}
+
 Now output the JSON list of boundaries within the detection window.
 Only include boundaries whose timestamps fall inside [Core_start, Core_end).
-The field "boundary_rationale" and "segment_title" should be filled with Chinese.
+
 """.strip(),
     input_fields=(
         "subtitles",
@@ -237,6 +313,7 @@ The field "boundary_rationale" and "segment_title" should be filled with Chinese
         "segmentation_profile",
         "segmentation_policy",
         "last_detection_point",
+        "output_language",
     ),
     output_contract="strict JSON array of boundary candidates",
     tags=("canonical", "boundary-detection", "text"),
@@ -264,6 +341,7 @@ You will be given:
 4. The segmentation profile for the full video.
 5. Signal priority for this video type.
 6. A caption policy that tells you what kind of segment description is expected.
+7. An output language instruction for all generated text.
 
 Guidelines:
 1) Use genres, concise_description, and segmentation_profile to understand what kind of segment this is and what kind of description is most appropriate.
@@ -274,6 +352,7 @@ Guidelines:
 6) It is acceptable to be uncertain. If some detail is unclear, stay conservative instead of guessing.
 7) The summary should be short and easy to scan.
 8) The caption should be self-contained, coherent, and detailed enough to describe the segment as a stable semantic unit.
+9) The summary and caption must follow the output language instruction exactly.
 
 Output format:
 Return ONLY a strict JSON object with exactly these keys:
@@ -292,13 +371,14 @@ Captioning priors:
 - segmentation_profile: {segmentation_profile}
 - signal_priority: {signal_priority}
 - caption_policy: {caption_policy}
+- output_language: {output_language}
 
 Segment subtitles (if provided; may be noisy/incomplete):
 {subtitles}
 
 Now generate the JSON output.
 """.strip(),
-    input_fields=("genres", "concise_description", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
+    input_fields=("genres", "concise_description", "segmentation_profile", "signal_priority", "caption_policy", "subtitles", "output_language"),
     output_contract="strict JSON object with summary, caption, and confidence",
     tags=("canonical", "caption"),
 )
@@ -320,6 +400,7 @@ You will receive:
 2. A concise description of the whole video.
 3. The top genres for the full video.
 4. An optional structure request from the user.
+5. An output language instruction for all generated atlas text.
 
 Guidelines:
 1) Treat each unit as an atomic source block. Compose final segments by grouping units in their original order.
@@ -328,39 +409,39 @@ Guidelines:
 4) Respect the structure request when it is provided.
 5) Do not invent units that were not present in the input.
 6) Output only strict JSON.
+7) title, abstract, segment titles, and segment summaries must follow the output language instruction exactly.
 
 Output format:
 Return ONLY a strict JSON object with exactly these keys:
 {{
-  "title": "<global title in Chinese> ",
-  "abstract": "<global abstract in Chinese>",
-  "composition_rationale": "<brief global rationale in Chinese>",
+  "title": "<global title> ",
+  "abstract": "<global abstract>",
+  "composition_rationale": "<brief global rationale>",
   "segments": [
     {{
       "segment_id": "<stable segment id>",
       "unit_ids": ["<unit_id_1>", "<unit_id_2>"],
-      "title": "<segment title in Chinese>",
-      "summary": "<segment summary in Chinese>",
-      "composition_rationale": "<why these units belong together in Chinese>"
+      "title": "<segment title>",
+      "summary": "<segment summary>",
+      "composition_rationale": "<why these units belong together>"
     }}
   ]
 }}
 
-The field tagged with `in Chinese` should be filled with Chinese.
 """.strip(),
     user_template=r"""
 Video metadata priors:
 - genres: {genres}
 - concise_description: {concise_description}
 - structure_request: {structure_request}
+- output_language: {output_language}
 
 Ordered units:
 {units_description}
 
 Compose the final atlas structure. Every unit must appear exactly once and in its original order.
-Output JSON only. The field tagged with `in Chinese` should be filled with Chinese.
 """.strip(),
-    input_fields=("units_description", "concise_description", "genres", "structure_request"),
+    input_fields=("units_description", "concise_description", "genres", "structure_request", "output_language"),
     output_contract="strict JSON object with title, abstract, composition_rationale, and segments",
     tags=("canonical", "composition", "stage2"),
 )

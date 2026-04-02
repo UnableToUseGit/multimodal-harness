@@ -72,6 +72,7 @@ class ExecutionPlanBuilderMixin:
             concise_description=concise_description,
             profile_name=profile_name,
             profile=profile,
+            output_language=str(planner_output.get("output_language", "en") or "en"),
             chunk_size_sec=max(60, int(getattr(self, "chunk_size_sec", 600))),
             chunk_overlap_sec=max(0, int(getattr(self, "chunk_overlap_sec", 20))),
             planner_reasoning_content=planner_reasoning_content,

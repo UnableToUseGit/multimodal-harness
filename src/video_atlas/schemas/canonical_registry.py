@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from .canonical_atlas import CaptionProfile, FrameSamplingProfile, SegmentationProfile
+from .canonical_atlas import CaptionProfile, FrameSamplingProfile, Profile, SegmentationProfile
 
 
 DEFAULT_SEGMENTATION_PROFILE = "generic_longform_continuous"
 DEFAULT_CAPTION_PROFILE = "generic_longform_continuous"
 DEFAULT_SAMPLING_PROFILE = "balanced"
+DEFAULT_PROFILE = "other"
 
 ALLOWED_GENRES = {
     "narrative_film",
@@ -35,6 +36,91 @@ ALLOWED_EVIDENCE = {
     "time_jump_or_recap",
     "other",
 }
+
+PROFILES: dict[str, Profile] = {
+    "lecture": Profile(
+        route="text_first",
+        segmentation_policy=(
+            "Prefer concept-complete or section-complete segments. Cut when the speaker clearly moves to a new topic, "
+            "section, or major explanatory step."
+        ),
+        caption_policy=(
+            "Summarize each segment as a coherent lecture section. Emphasize the main concept, teaching goal, and key "
+            "explanatory takeaway."
+        ),
+    ),
+    "podcast": Profile(
+        route="text_first",
+        segmentation_policy=(
+            "Prefer semantically complete discussion arcs. Cut when the conversation clearly moves into a new major "
+            "theme or self-contained discussion thread."
+        ),
+        caption_policy=(
+            "Summarize each segment as a coherent conversation arc. Emphasize the topic being discussed and the main "
+            "point or story being developed."
+        ),
+    ),
+    "explanatory_commentary": Profile(
+        route="text_first",
+        segmentation_policy=(
+            "Prefer semantically complete explanation blocks. Cut only when the narration clearly moves to a new major "
+            "question, analytical direction, or self-contained explanatory block."
+        ),
+        caption_policy=(
+            "Summarize each segment as a coherent explanation block. Emphasize the argument, analysis, or explanatory "
+            "point being advanced."
+        ),
+    ),
+    "movie": Profile(
+        route="multimodal",
+        segmentation_policy=(
+            "Prefer plot-complete or dramatic-unit-complete segments rather than shot-level cuts."
+        ),
+        caption_policy=(
+            "Describe each segment as a coherent dramatic unit with emphasis on plot progression, conflict, and scene "
+            "state."
+        ),
+    ),
+    "drama": Profile(
+        route="multimodal",
+        segmentation_policy=(
+            "Prefer scene-complete dramatic units rather than short local transitions or dialogue turns."
+        ),
+        caption_policy=(
+            "Describe each segment as a coherent dramatic scene with emphasis on situation, character tension, and "
+            "story movement."
+        ),
+    ),
+    "sports": Profile(
+        route="multimodal",
+        segmentation_policy=(
+            "Prefer structurally complete match phases, replay blocks, and analysis sections over isolated short-term "
+            "events."
+        ),
+        caption_policy=(
+            "Describe each segment as a coherent sports broadcast phase, emphasizing the game situation and analysis "
+            "focus."
+        ),
+    ),
+    "other": Profile(
+        route="multimodal",
+        segmentation_policy=(
+            "Prefer self-contained coarse segments with defensible semantic boundaries. Avoid cutting on weak local "
+            "variation alone."
+        ),
+        caption_policy=(
+            "Describe each segment conservatively as a coherent content block without overcommitting to uncertain "
+            "detail."
+        ),
+    ),
+}
+
+
+def resolve_profile(name: str) -> tuple[str, Profile]:
+    normalized = (name or "").strip()
+    if normalized in PROFILES:
+        return normalized, PROFILES[normalized]
+    return DEFAULT_PROFILE, PROFILES[DEFAULT_PROFILE]
 
 ALLOWED_SIGNAL_PRIORITIES = {"visual", "language", "balanced"}
 SAMPLING_PROFILE_DESCRIPTIONS: dict[str, str] = {

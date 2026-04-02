@@ -19,6 +19,13 @@ SamplingConfig = FrameSamplingProfile
 
 
 @dataclass(frozen=True)
+class Profile:
+    route: str
+    segmentation_policy: str
+    caption_policy: str
+
+
+@dataclass(frozen=True)
 class SegmentationProfile:
     segmentation_route: str
     signal_priority: str
@@ -59,6 +66,18 @@ def _default_caption_profile() -> CaptionProfile:
     return CAPTION_PROFILES[DEFAULT_CAPTION_PROFILE]
 
 
+def _default_profile_name() -> str:
+    from .canonical_registry import DEFAULT_PROFILE
+
+    return DEFAULT_PROFILE
+
+
+def _default_profile() -> Profile:
+    from .canonical_registry import DEFAULT_PROFILE, PROFILES
+
+    return PROFILES[DEFAULT_PROFILE]
+
+
 @dataclass
 class SegmentationSpecification:
     profile_name: str = field(default_factory=_default_segmentation_profile_name)
@@ -78,8 +97,9 @@ class CanonicalExecutionPlan:
     planner_confidence: float = 0.25
     genres: list[str] = field(default_factory=lambda: ["other"])
     concise_description: str = ""
-    segmentation_specification: SegmentationSpecification = field(default_factory=SegmentationSpecification)
-    caption_specification: CaptionSpecification = field(default_factory=CaptionSpecification)
+    profile_name: str = field(default_factory=_default_profile_name)
+    profile: Profile = field(default_factory=_default_profile)
+    output_language: str = "en"
     chunk_size_sec: int = 600
     chunk_overlap_sec: int = 20
     planner_reasoning_content: str = ""

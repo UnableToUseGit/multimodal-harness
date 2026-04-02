@@ -218,6 +218,7 @@ class CanonicalHighEfficiencyWorkflowInitTest(unittest.TestCase):
             planner=object(),
             text_segmentor=object(),
             multimodal_segmentor=object(),
+            structure_composer=object(),
             captioner=object(),
             text_chunk_size_sec=1800,
             text_chunk_overlap_sec=120,

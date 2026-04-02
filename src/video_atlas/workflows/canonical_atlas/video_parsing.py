@@ -12,10 +12,103 @@ from ...persistence import format_hms_time_range, slugify_segment_title
 
 
 class VideoParsingMixin:
+    def _execution_profile(self, execution_plan):
+        profile = getattr(execution_plan, "profile", None)
+        if profile is not None:
+            return profile
+        segmentation_spec = getattr(execution_plan, "segmentation_specification", None)
+        if segmentation_spec is not None:
+            return getattr(segmentation_spec, "profile", None)
+        return None
+
+    def _execution_profile_name(self, execution_plan) -> str:
+        profile_name = getattr(execution_plan, "profile_name", None)
+        if isinstance(profile_name, str) and profile_name.strip():
+            return profile_name
+        segmentation_spec = getattr(execution_plan, "segmentation_specification", None)
+        profile_name = getattr(segmentation_spec, "profile_name", None)
+        if isinstance(profile_name, str) and profile_name.strip():
+            return profile_name
+        return "other"
+
+    def _execution_route(self, execution_plan) -> str:
+        profile = self._execution_profile(execution_plan)
+        if profile is None:
+            return "multimodal_local"
+        route = getattr(profile, "route", None)
+        if route == "text_first":
+            return "text_llm"
+        if route == "multimodal":
+            return "multimodal_local"
+        legacy_route = getattr(profile, "segmentation_route", None)
+        if isinstance(legacy_route, str) and legacy_route:
+            return legacy_route
+        return "multimodal_local"
+
+    def _execution_segmentation_policy(self, execution_plan) -> str:
+        profile = self._execution_profile(execution_plan)
+        return str(getattr(profile, "segmentation_policy", "") or "")
+
+    def _execution_caption_policy(self, execution_plan) -> str:
+        profile = self._execution_profile(execution_plan)
+        if profile is not None:
+            caption_policy = getattr(profile, "caption_policy", None)
+            if isinstance(caption_policy, str) and caption_policy:
+                return caption_policy
+        caption_spec = getattr(execution_plan, "caption_specification", None)
+        if caption_spec is not None:
+            caption_profile = getattr(caption_spec, "profile", None)
+            caption_policy = getattr(caption_profile, "caption_policy", None)
+            if isinstance(caption_policy, str) and caption_policy:
+                return caption_policy
+        return ""
+
+    def _execution_signal_priority(self, execution_plan) -> str:
+        profile = self._execution_profile(execution_plan)
+        signal_priority = getattr(profile, "signal_priority", None)
+        if isinstance(signal_priority, str) and signal_priority:
+            return signal_priority
+        route = self._execution_route(execution_plan)
+        return "language" if route == "text_llm" else "balanced"
+
+    def _execution_output_language(self, execution_plan) -> str:
+        output_language = getattr(execution_plan, "output_language", None)
+        if isinstance(output_language, str) and output_language.strip():
+            normalized = output_language.strip().lower()
+            if normalized == "zh":
+                return "所有生成文本必须使用中文。"
+            if normalized == "ja":
+                return "すべての生成テキストは日本語で出力すること。"
+        return "All generated text must be in English."
+
+    def _execution_target_segment_length_sec(self, execution_plan) -> tuple[int, int]:
+        profile = self._execution_profile(execution_plan)
+        target = getattr(profile, "target_segment_length_sec", None)
+        if isinstance(target, tuple) and len(target) == 2:
+            return int(target[0]), int(target[1])
+        if isinstance(target, list) and len(target) == 2:
+            return int(target[0]), int(target[1])
+        return (30, 120)
+
+    def _execution_segmentation_sampling_profile(self, execution_plan):
+        segmentation_spec = getattr(execution_plan, "segmentation_specification", None)
+        if segmentation_spec is not None:
+            sampling_profile = getattr(segmentation_spec, "frame_sampling_profile", None)
+            if sampling_profile is not None:
+                return sampling_profile
+        return getattr(self, "sampling_config", None)
+
+    def _execution_caption_sampling_profile(self, execution_plan):
+        caption_spec = getattr(execution_plan, "caption_specification", None)
+        if caption_spec is not None:
+            sampling_profile = getattr(caption_spec, "frame_sampling_profile", None)
+            if sampling_profile is not None:
+                return sampling_profile
+        return getattr(self, "sampling_config", None)
+
     def _resolve_segmentation_route(self, execution_plan, subtitle_items: list | None = None) -> str:
         subtitle_items = subtitle_items or []
-        profile = execution_plan.segmentation_specification.profile
-        route = getattr(profile, "segmentation_route", "multimodal_local")
+        route = self._execution_route(execution_plan)
         if route == "text_llm" and subtitle_items:
             return "text_llm"
         return "multimodal_local"
@@ -124,8 +217,7 @@ class VideoParsingMixin:
         execution_plan,
     ) -> CaptionedSegment:
         try:
-            caption_spec = execution_plan.caption_specification
-            description_sampling = caption_spec.frame_sampling_profile
+            description_sampling = self._execution_caption_sampling_profile(execution_plan)
 
             if self.caption_with_subtitles:
                 _, subtitles_str_in_seg = get_subtitle_in_segment(subtitle_items, segment.start_time, segment.end_time)
@@ -136,10 +228,11 @@ class VideoParsingMixin:
             user_prompt = CAPTION_GENERATION_PROMPT.render_user(
                 genres=self._genres_str(execution_plan.genres),
                 concise_description=execution_plan.concise_description,
-                segmentation_profile=execution_plan.segmentation_specification.profile_name,
-                signal_priority=execution_plan.segmentation_specification.profile.signal_priority,
-                caption_policy=caption_spec.profile.caption_policy,
+                segmentation_profile=self._execution_profile_name(execution_plan),
+                signal_priority=self._execution_signal_priority(execution_plan),
+                caption_policy=self._execution_caption_policy(execution_plan),
                 subtitles=subtitles_str_in_seg,
+                output_language=self._execution_output_language(execution_plan),
             )
 
             output = self.captioner.generate_single(
@@ -257,12 +350,13 @@ class VideoParsingMixin:
         segments: list[FinalizedSegment],
         execution_plan,
     ) -> list[FinalizedSegment]:
-        min_target = execution_plan.segmentation_specification.profile.target_segment_length_sec[0]
+        target_segment_length_sec = self._execution_target_segment_length_sec(execution_plan)
+        min_target = target_segment_length_sec[0]
         merge_below_sec = max(10, int(min_target * 0.5))
         merged_segments = self._merge_short_segments(segments, merge_below_sec)
         return self._mark_refinement_needed(
             merged_segments,
-            list(execution_plan.segmentation_specification.profile.target_segment_length_sec),
+            list(target_segment_length_sec),
         )
 
     def _detect_candidate_boundaries_for_chunk_multimodal(
@@ -279,7 +373,6 @@ class VideoParsingMixin:
     ) -> list[CandidateBoundary]:
         _, subtitles_str_in_seg = get_subtitle_in_segment(subtitle_items, window_start_time, window_end_time)
         
-        segmentation_profile = execution_plan.segmentation_specification.profile
         system_prompt = BOUNDARY_DETECTION_PROMPT.render_system()
         user_prompt = BOUNDARY_DETECTION_PROMPT.render_user(
             t_start=window_start_time,
@@ -288,9 +381,10 @@ class VideoParsingMixin:
             core_end=core_end_time,
             subtitles=subtitles_str_in_seg,
             concise_description=execution_plan.concise_description,
-            segmentation_profile=execution_plan.segmentation_specification.profile_name,
-            segmentation_policy=segmentation_profile.segmentation_policy,
+            segmentation_profile=self._execution_profile_name(execution_plan),
+            segmentation_policy=self._execution_segmentation_policy(execution_plan),
             last_detection_point="None" if last_detection_point is None else str(last_detection_point),
+            output_language=self._execution_output_language(execution_plan),
         )
 
         output = self._get_segmentation_generator("multimodal_local").generate_single(
@@ -300,7 +394,7 @@ class VideoParsingMixin:
                 video_path=video_path,
                 start_time=window_start_time,
                 end_time=window_end_time,
-                video_sampling=execution_plan.segmentation_specification.frame_sampling_profile,
+                video_sampling=self._execution_segmentation_sampling_profile(execution_plan),
             )
         )
         
@@ -324,16 +418,16 @@ class VideoParsingMixin:
         min_confidence: float = 0.35,
     ) -> list[CandidateBoundary]:
         _, subtitles_str_in_seg = get_subtitle_in_segment(subtitle_items, window_start_time, window_end_time)
-        segmentation_profile = execution_plan.segmentation_specification.profile
         system_prompt = TEXT_BOUNDARY_DETECTION_PROMPT.render_system()
         user_prompt = TEXT_BOUNDARY_DETECTION_PROMPT.render_user(
             subtitles=subtitles_str_in_seg,
             core_start=core_start_time,
             core_end=core_end_time,
             concise_description=execution_plan.concise_description,
-            segmentation_profile=execution_plan.segmentation_specification.profile_name,
-            segmentation_policy=segmentation_profile.segmentation_policy,
+            segmentation_profile=self._execution_profile_name(execution_plan),
+            segmentation_policy=self._execution_segmentation_policy(execution_plan),
             last_detection_point="None" if last_detection_point is None else str(last_detection_point),
+            output_language=self._execution_output_language(execution_plan),
         )
 
         output = self._get_segmentation_generator("text_llm").generate_single(

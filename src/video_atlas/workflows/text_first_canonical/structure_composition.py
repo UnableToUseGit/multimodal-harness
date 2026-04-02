@@ -1,26 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Sequence
 
 from ...parsing import parse_json_response
 from ...persistence import format_hms_time_range, slugify_segment_title
 from ...prompts import CANONICAL_STRUCTURE_COMPOSITION_PROMPT
 from ...schemas import AtlasSegment, AtlasUnit, CanonicalCompositionResult
+from .language import render_output_language_instruction
 
 
 class CanonicalStructureCompositionError(ValueError):
     pass
-
-
-def _render_output_language_instruction(output_language: str) -> str:
-    normalized = (output_language or "en").strip().lower()
-    if normalized == "zh":
-        return "所有生成文本必须使用中文。"
-    if normalized == "ja":
-        return "すべての生成テキストは日本語で出力すること。"
-    return "All generated text must be in English."
 
 
 def serialize_units_for_composition(units: Sequence[AtlasUnit]) -> str:
@@ -54,7 +45,7 @@ def build_canonical_structure_composition_messages(
         concise_description=concise_description,
         genres=list(genres or []),
         structure_request=structure_request,
-        output_language=_render_output_language_instruction(output_language),
+        output_language=render_output_language_instruction(output_language),
     )
     return [
         {"role": "system", "content": system_prompt},

@@ -11,7 +11,7 @@ from video_atlas.config.models import CanonicalPipelineConfig
 from video_atlas.schemas import CanonicalCreateRequest, SourceMetadata, SourceInfoRecord
 from video_atlas.persistence import write_json_to
 from video_atlas.source_acquisition import acquire_from_url
-from video_atlas.workflows.canonical_atlas_workflow import CanonicalAtlasWorkflow
+from video_atlas.workflows.text_first_canonical_atlas_workflow import TextFirstCanonicalAtlasWorkflow
 
 
 @dataclass(frozen=True)
@@ -23,19 +23,17 @@ class _MaterializedLocalInputs:
     source_metadata: SourceMetadata | None
 
 
-def _build_workflow(config: CanonicalPipelineConfig) -> CanonicalAtlasWorkflow:
-    return CanonicalAtlasWorkflow(
+def _build_workflow(config: CanonicalPipelineConfig) -> TextFirstCanonicalAtlasWorkflow:
+    text_segmentor = config.text_segmentor or config.segmentor
+    return TextFirstCanonicalAtlasWorkflow(
         planner=build_generator(config.planner),
-        text_segmentor=build_generator(config.text_segmentor) if config.text_segmentor is not None else None,
-        multimodal_segmentor=build_generator(config.multimodal_segmentor) if config.multimodal_segmentor is not None else None,
+        text_segmentor=build_generator(text_segmentor) if text_segmentor is not None else None,
         structure_composer=build_generator(config.structure_composer) if config.structure_composer is not None else None,
         captioner=build_generator(config.captioner) if config.captioner is not None else None,
         transcriber=build_transcriber(config.transcriber),
         generate_subtitles_if_missing=config.runtime.generate_subtitles_if_missing,
-        text_chunk_size_sec=config.runtime.text_chunk_size_sec,
-        text_chunk_overlap_sec=config.runtime.text_chunk_overlap_sec,
-        multimodal_chunk_size_sec=config.runtime.multimodal_chunk_size_sec,
-        multimodal_chunk_overlap_sec=config.runtime.multimodal_chunk_overlap_sec,
+        chunk_size_sec=config.runtime.text_chunk_size_sec,
+        chunk_overlap_sec=config.runtime.text_chunk_overlap_sec,
         caption_with_subtitles=config.runtime.caption_with_subtitles,
         verbose=config.runtime.verbose,
     )

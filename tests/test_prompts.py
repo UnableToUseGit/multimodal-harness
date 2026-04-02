@@ -16,6 +16,7 @@ from video_atlas.prompts import (
     PromptRenderError,
     PromptSpec,
     TEXT_BOUNDARY_DETECTION_PROMPT,
+    TEXT_FIRST_PLANNER_PROMPT,
     VIDEO_GLOBAL_PROMPT,
     get_prompt,
     list_prompts,
@@ -42,8 +43,14 @@ class _QueueGenerator:
 
 
 class _CanonicalPromptWorkflow(CanonicalAtlasWorkflow):
-    def __init__(self, planner, segmentor, captioner):
-        super().__init__(planner=planner, segmentor=segmentor, captioner=captioner)
+    def __init__(self, planner, text_segmentor, captioner):
+        super().__init__(
+            planner=planner,
+            text_segmentor=text_segmentor,
+            multimodal_segmentor=text_segmentor,
+            structure_composer=None,
+            captioner=captioner,
+        )
         self.video_message_calls = []
 
     def _build_video_messages_from_path(
@@ -221,6 +228,7 @@ class PromptExportsTest(unittest.TestCase):
     def test_exported_prompts_are_prompt_specs(self) -> None:
         for prompt in (
             PLANNER_PROMPT,
+            TEXT_FIRST_PLANNER_PROMPT,
             BOUNDARY_DETECTION_PROMPT,
             TEXT_BOUNDARY_DETECTION_PROMPT,
             CAPTION_GENERATION_PROMPT,
@@ -239,6 +247,7 @@ class PromptExportsTest(unittest.TestCase):
         self.assertEqual(
             {
                 "PLANNER_PROMPT",
+                "TEXT_FIRST_PLANNER_PROMPT",
                 "BOUNDARY_DETECTION_PROMPT",
                 "TEXT_BOUNDARY_DETECTION_PROMPT",
                 "CAPTION_GENERATION_PROMPT",
@@ -251,12 +260,22 @@ class PromptExportsTest(unittest.TestCase):
             set(names),
         )
         self.assertIs(get_prompt("PLANNER_PROMPT"), PLANNER_PROMPT)
+        self.assertIs(get_prompt("TEXT_FIRST_PLANNER_PROMPT"), TEXT_FIRST_PLANNER_PROMPT)
         self.assertIs(get_prompt("CANONICAL_STRUCTURE_COMPOSITION_PROMPT"), CANONICAL_STRUCTURE_COMPOSITION_PROMPT)
         self.assertIs(PROMPT_REGISTRY.get("DERIVED_CAPTION_PROMPT"), DERIVED_CAPTION_PROMPT)
 
     def test_exported_prompt_specs_render(self) -> None:
         render_cases = [
             (PLANNER_PROMPT, {}),
+            (
+                get_prompt("TEXT_FIRST_PLANNER_PROMPT"),
+                {
+                    "input_kind": "audio",
+                    "subtitle_probe": "hello world",
+                    "metadata_summary": "[NONE]",
+                    "output_language": "en",
+                },
+            ),
             (
                 BOUNDARY_DETECTION_PROMPT,
                 {
@@ -269,6 +288,7 @@ class PromptExportsTest(unittest.TestCase):
                     "segmentation_profile": "profile",
                     "segmentation_policy": "policy",
                     "last_detection_point": 0.0,
+                    "output_language": "en",
                 },
             ),
             (
@@ -281,6 +301,7 @@ class PromptExportsTest(unittest.TestCase):
                     "segmentation_profile": "profile",
                     "segmentation_policy": "policy",
                     "last_detection_point": 0.0,
+                    "output_language": "en",
                 },
             ),
             (
@@ -292,6 +313,7 @@ class PromptExportsTest(unittest.TestCase):
                     "signal_priority": "visual",
                     "caption_policy": "policy",
                     "subtitles": "subtitles",
+                    "output_language": "en",
                 },
             ),
             (
@@ -301,6 +323,7 @@ class PromptExportsTest(unittest.TestCase):
                     "concise_description": "A lecture-style explainer with one speaker and supporting examples.",
                     "genres": "lecture_talk, tutorial_howto",
                     "structure_request": "Please keep the structure coarse.",
+                    "output_language": "en",
                 },
             ),
             (
@@ -353,7 +376,7 @@ class WorkflowPromptUsageTest(unittest.TestCase):
     def test_canonical_workflow_prompt_paths_do_not_require_mapping_access(self) -> None:
         workflow = _CanonicalPromptWorkflow(
             planner=_QueueGenerator([{"plan": "ok"}]),
-            segmentor=_QueueGenerator(
+            text_segmentor=_QueueGenerator(
                 [
                     [
                         {
@@ -391,6 +414,7 @@ class WorkflowPromptUsageTest(unittest.TestCase):
         execution_plan = SimpleNamespace(
             genres=["lecture_talk"],
             concise_description="A lecture-style explainer with one speaker and supporting examples.",
+            output_language="en",
             segmentation_specification=SimpleNamespace(
                 profile_name="balanced",
                 profile=SimpleNamespace(
@@ -469,15 +493,20 @@ class WorkflowPromptUsageTest(unittest.TestCase):
                 "segmentation_profile",
                 "segmentation_policy",
                 "last_detection_point",
+                "output_language",
             ),
         )
         self.assertEqual(
+            TEXT_FIRST_PLANNER_PROMPT.input_fields,
+            ("input_kind", "subtitle_probe", "metadata_summary", "output_language"),
+        )
+        self.assertEqual(
             CAPTION_GENERATION_PROMPT.input_fields,
-            ("genres", "concise_description", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
+            ("genres", "concise_description", "segmentation_profile", "signal_priority", "caption_policy", "subtitles", "output_language"),
         )
         self.assertEqual(
             CANONICAL_STRUCTURE_COMPOSITION_PROMPT.input_fields,
-            ("units_description", "concise_description", "genres", "structure_request"),
+            ("units_description", "concise_description", "genres", "structure_request", "output_language"),
         )
         self.assertEqual(
             DERIVED_CANDIDATE_PROMPT.input_fields,

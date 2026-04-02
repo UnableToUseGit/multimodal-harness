@@ -2,17 +2,14 @@ import tempfile
 import threading
 import time
 import unittest
+from types import SimpleNamespace
 
 from video_atlas.workflows.canonical_atlas.video_parsing import VideoParsingMixin
 from video_atlas.schemas.canonical_atlas import (
     CandidateBoundary,
     CaptionedSegment,
     CanonicalExecutionPlan,
-    CaptionSpecification,
     FinalizedSegment,
-    FrameSamplingProfile,
-    SegmentationProfile,
-    SegmentationSpecification,
 )
 from video_atlas.workspaces.base import get_logger
 
@@ -73,26 +70,18 @@ class _StreamingSegmentationHarness(VideoParsingMixin):
 
 class SegmentationStreamingTest(unittest.TestCase):
     def _make_plan(self) -> CanonicalExecutionPlan:
-        sampling = FrameSamplingProfile(fps=0.5, max_resolution=480)
-        profile = SegmentationProfile(
-            segmentation_route="multimodal_local",
-            signal_priority="balanced",
-            target_segment_length_sec=(30, 120),
-            default_sampling_profile="balanced",
-            boundary_evidence_primary=("topic_shift_in_subtitles",),
-            boundary_evidence_secondary=("speaker_change",),
+        profile = SimpleNamespace(
+            route="multimodal",
             segmentation_policy="Prefer stable segments.",
+            caption_policy="Describe the segment conservatively.",
+            target_segment_length_sec=(30, 120),
         )
         return CanonicalExecutionPlan(
             planner_confidence=0.9,
             genres=["other"],
             concise_description="A test video.",
-            segmentation_specification=SegmentationSpecification(
-                profile_name="test_profile",
-                profile=profile,
-                frame_sampling_profile=sampling,
-            ),
-            caption_specification=CaptionSpecification(frame_sampling_profile=sampling),
+            profile_name="sports",
+            profile=profile,
             chunk_size_sec=60,
             chunk_overlap_sec=10,
         )

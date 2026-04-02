@@ -57,10 +57,8 @@ class CanonicalSchemesTest(unittest.TestCase):
 
     def test_canonical_execution_plan_is_available_from_schemas(self) -> None:
         from video_atlas.schemas.canonical_registry import (
-            CAPTION_PROFILES,
-            DEFAULT_CAPTION_PROFILE,
-            DEFAULT_SEGMENTATION_PROFILE,
-            SEGMENTATION_PROFILES,
+            DEFAULT_PROFILE,
+            PROFILES,
         )
         from video_atlas.schemas.canonical_atlas import CanonicalExecutionPlan
 
@@ -69,25 +67,19 @@ class CanonicalSchemesTest(unittest.TestCase):
         self.assertEqual(plan.genres, ["other"])
         self.assertEqual(plan.concise_description, "")
         self.assertEqual(plan.planner_confidence, 0.25)
-        self.assertEqual(
-            plan.segmentation_specification.profile,
-            SEGMENTATION_PROFILES[DEFAULT_SEGMENTATION_PROFILE],
-        )
-        self.assertEqual(
-            plan.caption_specification.profile,
-            CAPTION_PROFILES[DEFAULT_CAPTION_PROFILE],
-        )
-        self.assertTrue(plan.caption_specification.profile.caption_policy)
-        self.assertEqual(DEFAULT_SEGMENTATION_PROFILE, "generic_longform_continuous")
+        self.assertEqual(plan.profile_name, DEFAULT_PROFILE)
+        self.assertEqual(plan.profile, PROFILES[DEFAULT_PROFILE])
+        self.assertTrue(plan.profile.caption_policy)
+        self.assertEqual(DEFAULT_PROFILE, "other")
         self.assertEqual(plan.chunk_size_sec, 600)
         self.assertEqual(plan.chunk_overlap_sec, 20)
+        self.assertEqual(plan.output_language, "en")
 
     def test_canonical_atlas_module_stays_dataclass_focused(self) -> None:
         import video_atlas.schemas.canonical_atlas as module
 
-        self.assertFalse(hasattr(module, "SEGMENTATION_PROFILES"))
-        self.assertFalse(hasattr(module, "CAPTION_PROFILES"))
-        self.assertFalse(hasattr(module, "resolve_segmentation_profile"))
+        self.assertFalse(hasattr(module, "PROFILES"))
+        self.assertFalse(hasattr(module, "resolve_profile"))
 
     def test_execution_plan_is_available_from_schemas_package(self) -> None:
         from video_atlas.schemas import CanonicalExecutionPlan
@@ -100,52 +92,42 @@ class CanonicalSchemesTest(unittest.TestCase):
         with self.assertRaises(ImportError):
             from video_atlas.schemas import DetectionWindowSpec  # noqa: F401
 
-    def test_sports_broadcast_and_narrative_film_profiles_are_registered(self) -> None:
+    def test_sports_and_movie_profiles_are_registered(self) -> None:
         from video_atlas.schemas.canonical_registry import (
-            CAPTION_PROFILES,
-            SEGMENTATION_PROFILES,
-            resolve_caption_profile,
-            resolve_segmentation_profile,
+            PROFILES,
+            resolve_profile,
         )
 
-        self.assertIn("sports_broadcast", SEGMENTATION_PROFILES)
-        self.assertIn("narrative_film", SEGMENTATION_PROFILES)
-        self.assertIn("sports_broadcast", CAPTION_PROFILES)
-        self.assertIn("narrative_film", CAPTION_PROFILES)
+        self.assertIn("sports", PROFILES)
+        self.assertIn("movie", PROFILES)
 
-        sports_name, sports_profile = resolve_segmentation_profile("sports_broadcast")
-        film_name, film_profile = resolve_segmentation_profile("narrative_film")
-        sports_caption_name, sports_caption = resolve_caption_profile("sports_broadcast")
-        film_caption_name, film_caption = resolve_caption_profile("narrative_film")
+        sports_name, sports_profile = resolve_profile("sports")
+        movie_name, movie_profile = resolve_profile("movie")
 
-        self.assertEqual(sports_name, "sports_broadcast")
-        self.assertEqual(film_name, "narrative_film")
-        self.assertEqual(sports_caption_name, "sports_broadcast")
-        self.assertEqual(film_caption_name, "narrative_film")
+        self.assertEqual(sports_name, "sports")
+        self.assertEqual(movie_name, "movie")
+        self.assertEqual(sports_profile.route, "multimodal")
+        self.assertEqual(movie_profile.route, "multimodal")
         self.assertTrue(sports_profile.segmentation_policy)
-        self.assertTrue(film_profile.segmentation_policy)
-        self.assertTrue(sports_caption.caption_policy)
-        self.assertTrue(film_caption.caption_policy)
+        self.assertTrue(movie_profile.segmentation_policy)
+        self.assertTrue(sports_profile.caption_policy)
+        self.assertTrue(movie_profile.caption_policy)
 
-    def test_vlog_documentary_and_explanatory_commentary_profiles_are_registered(self) -> None:
+    def test_lecture_podcast_and_explanatory_commentary_profiles_are_registered(self) -> None:
         from video_atlas.schemas.canonical_registry import (
-            CAPTION_PROFILES,
-            SEGMENTATION_PROFILES,
-            resolve_caption_profile,
-            resolve_segmentation_profile,
+            PROFILES,
+            resolve_profile,
         )
 
-        for profile_name in ("vlog_lifestyle", "documentary", "explanatory_commentary"):
-            self.assertIn(profile_name, SEGMENTATION_PROFILES)
-            self.assertIn(profile_name, CAPTION_PROFILES)
+        for profile_name in ("lecture", "podcast", "explanatory_commentary"):
+            self.assertIn(profile_name, PROFILES)
 
-            resolved_name, segmentation_profile = resolve_segmentation_profile(profile_name)
-            caption_name, caption_profile = resolve_caption_profile(profile_name)
+            resolved_name, profile = resolve_profile(profile_name)
 
             self.assertEqual(resolved_name, profile_name)
-            self.assertEqual(caption_name, profile_name)
-            self.assertTrue(segmentation_profile.segmentation_policy)
-            self.assertTrue(caption_profile.caption_policy)
+            self.assertEqual(profile.route, "text_first")
+            self.assertTrue(profile.segmentation_policy)
+            self.assertTrue(profile.caption_policy)
 
 
 if __name__ == "__main__":

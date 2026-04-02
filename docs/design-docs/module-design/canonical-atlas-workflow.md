@@ -59,9 +59,15 @@
       - 可选的 `verbose`
     - 输出：
       - `tuple[CanonicalAtlas, dict]`
-- 说明：
+  - 说明：
   - 该类是 canonical atlas 流程的对外入口。
   - 上层应通过该入口发起流程，而不是直接拼接内部 mixin 能力。
+
+### 当前默认实现：`TextFirstCanonicalAtlasWorkflow`
+
+- 当前 canonical atlas 的默认业务入口已经切换为 `TextFirstCanonicalAtlasWorkflow`。
+- 该实现面向 text-first canonical 主线，优先服务 `video-absent` 与 `video-present + text-led` 场景。
+- 旧的 `CanonicalAtlasWorkflow` 仍保留为 legacy / reference 实现，主要用于对照、回溯和兼容性参考，不再作为新的默认主线。
 
 ## 依赖关系
 
@@ -177,6 +183,104 @@
 7. 流程将 `units + segments` 组装为完整 `CanonicalAtlas`。
 8. 流程调用 `CanonicalAtlasWriter` 完成结果写入。
 
+## Text-First V1 设计方向
+
+当前 canonical workflow 的下一阶段目标，不再是继续强化“默认依赖本地多模态视频模型”的主路径，而是优先构建一个适合普通用户本地运行的 text-first canonical workflow。
+
+第一阶段只明确支持以下两类输入：
+
+- `video-absent`
+- `video-present + text-led`
+
+对于 `video-present + visual-led`，第一阶段不提供弱多模态实现或隐式降级，而是显式返回不支持。
+
+### 输入分型
+
+从 business layer 视角，输入只分两类：
+
+- 有 `video_path`
+- 无 `video_path`
+
+但在有视频的情况下，程序是否进入 text-first 主线，需要先由 planner 判断内容 profile。因此，第一阶段真正的执行判断是：
+
+- `video-absent`
+  - 直接进入 text-first canonical pipeline
+- `video-present`
+  - 先准备字幕，再做 profile selection
+
+### 字幕优先的公共前置步骤
+
+在第一阶段里，字幕是 route selection 之前的公共中间资产。
+
+统一规则如下：
+
+- 若 request 已提供 `subtitle_path`，直接使用
+- 否则若存在 `audio_path`，先转写生成字幕
+- 否则若存在 `video_path`，先从视频转写生成字幕
+- 若以上条件都不满足，则直接失败
+
+这意味着：
+
+- `transcription` 仍属于 business layer
+- 但在第一阶段，它要先于 route selection 执行，而不是在 route 之后的某个分支中附带触发
+
+### Profile 与 Route 的关系
+
+第一阶段 planner 继续只负责输出内容 profile，不直接输出 router。程序维护固定映射关系：
+
+- `lecture` / `video_podcast` / `interview` / `knowledge`
+  - 映射到 `text-first`
+- `movie` / `drama` / 其他 visual-led profile
+  - 映射到 `multimodal`
+
+对应处理策略为：
+
+- `text-first`
+  - 继续执行 canonical pipeline
+- `multimodal`
+  - 显式返回 `NotImplemented` / `unsupported route`
+
+这样可以把：
+
+- 模型的职责：判断“这是什么内容”
+- 程序的职责：决定“当前系统怎么处理这类内容”
+
+清晰分离。
+
+### Text-First Pipeline
+
+当 route 为 `text-first` 时，`video-absent` 和 `video-present + text-led` 统一复用同一条主线：
+
+1. `text parsing -> units`
+   - 复用现有 text boundary detection / text segmentation
+   - 基于字幕文本生成稳定 `AtlasUnit`
+   - `caption` / `summary` 也走 text-only 生成
+2. `structure composition`
+   - 继续复用 `structure_composition`
+   - 基于 units 文本、planner 给出的全局上下文和 `structure_request` 生成最终 segments
+3. `atlas assembly`
+   - 若存在视频，则保留 clip / review / time anchor 能力
+   - 若不存在视频，则生成 text-first atlas，不依赖视频相关产物
+
+### 第一阶段明确不做的内容
+
+以下能力不纳入 text-first v1：
+
+- 不实现弱多模态 heuristics 版本的 `multimodal_router`
+- 不使用关键帧修正 text boundaries
+- 不为 visual-led 内容提供隐式 text-only 降级 atlas
+- 不依赖本地部署多模态大模型作为默认主路径前提
+
+### 第一阶段建议实现顺序
+
+建议按以下顺序落地：
+
+1. 在 business layer 中引入显式 route gate
+2. 打通 `text-only canonical create`
+3. 将 `video-present + text-led` 统一接入同一条 text-first parsing 主线
+4. 对 `visual-led` profile 显式失败
+5. 为 subtitle-only / audio-only / video+text-led / video+visual-led 四类路径补测试
+
 ## 设计约束
 
 - 该模块是核心流程模块，不应退化为底层工具集合。
@@ -193,3 +297,8 @@
 - [canonical_atlas/execution_plan_builder.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/workflows/canonical_atlas/execution_plan_builder.py)：将 planner 输出构造成 `CanonicalExecutionPlan`。
 - [canonical_atlas/video_parsing.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/workflows/canonical_atlas/video_parsing.py)：实现文本/多模态双路线边界检测、unit 整理与局部 caption 生成。
 - [canonical_atlas/structure_composition.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/workflows/canonical_atlas/structure_composition.py)：实现 Stage 2 结构组合、composer 调用与结果校验。
+- `text_first_canonical_atlas_workflow.py`：text-first canonical workflow 的默认入口实现。
+- `text_first_canonical/subtitle_preparation.py`：字幕准备与转写前置的共享 helper。
+- `text_first_canonical/plan.py`：text-first profile 选择与 route gate。
+- `text_first_canonical/parsing.py`：text-first unit 生成。
+- `text_first_canonical/pipeline.py`：text-first canonical pipeline 主链。

@@ -6,8 +6,7 @@ from __future__ import annotations
 from importlib import import_module
 
 _EXPORT_MAP = {
-    "CanonicalAtlasWorkflow": "video_atlas.workflows.canonical_atlas_workflow",
-    "DerivedAtlasWorkflow": "video_atlas.workflows.derived_atlas_workflow",
+    "CanonicalAtlasWorkflow": "video_atlas.workflows.canonical_atlas_workflow"
 }
 
 __all__ = list(_EXPORT_MAP.keys())

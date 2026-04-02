@@ -103,6 +103,22 @@ class CliSmokeTest(unittest.TestCase):
         self.assertEqual(args.metadata_file, "/tmp/metadata.json")
         self.assertIsNone(args.url)
 
+    def test_build_parser_supports_create_with_audio_file(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(
+            [
+                "create",
+                "--audio-file",
+                "/tmp/audio.m4a",
+                "--output-dir",
+                "/tmp/out",
+            ]
+        )
+
+        self.assertEqual(args.command, "create")
+        self.assertEqual(args.audio_file, "/tmp/audio.m4a")
+        self.assertIsNone(args.url)
+
     @patch("video_atlas.cli.main.create_canonical_from_url")
     @patch("video_atlas.cli.main.load_canonical_pipeline_config")
     def test_main_runs_create_from_url(
@@ -173,6 +189,40 @@ class CliSmokeTest(unittest.TestCase):
             audio_file=None,
             subtitle_file="/tmp/subtitles.srt",
             metadata_file="/tmp/metadata.json",
+            structure_request="",
+        )
+
+    @patch("video_atlas.cli.main.create_canonical_from_local")
+    @patch("video_atlas.cli.main.load_canonical_pipeline_config")
+    def test_main_runs_create_from_local_audio_file(
+        self,
+        mock_load_config: MagicMock,
+        mock_create_canonical_from_local: MagicMock,
+    ) -> None:
+        mock_load_config.return_value = MagicMock(
+            runtime=MagicMock(),
+            acquisition=MagicMock(),
+        )
+
+        with TemporaryDirectory() as tmpdir:
+            exit_code = main(
+                [
+                    "create",
+                    "--audio-file",
+                    "/tmp/audio.m4a",
+                    "--output-dir",
+                    tmpdir,
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        mock_create_canonical_from_local.assert_called_once_with(
+            tmpdir,
+            mock_load_config.return_value,
+            video_file=None,
+            audio_file="/tmp/audio.m4a",
+            subtitle_file=None,
+            metadata_file=None,
             structure_request="",
         )
 
