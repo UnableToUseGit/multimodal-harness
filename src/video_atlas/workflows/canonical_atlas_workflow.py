@@ -52,6 +52,7 @@ class CanonicalAtlasWorkflow(
         multimodal_chunk_size_sec: Optional[int] = None,
         multimodal_chunk_overlap_sec: Optional[int] = None,
         caption_with_subtitles: bool = True,
+        verbose: bool = False,
     ):
         self.planner = planner
         self.text_segmentor = text_segmentor
@@ -71,6 +72,7 @@ class CanonicalAtlasWorkflow(
             multimodal_chunk_overlap_sec if multimodal_chunk_overlap_sec is not None else chunk_overlap_sec
         )
         self.caption_with_subtitles = caption_with_subtitles
+        self.verbose = verbose
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def _log_info(self, message: str, *args) -> None:

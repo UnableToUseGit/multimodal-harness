@@ -2,13 +2,11 @@ import os
 import subprocess
 import sys
 import unittest
-from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
 from video_atlas.cli.main import build_parser, main
 from video_atlas.source_acquisition import UnsupportedSourceError
-from video_atlas.schemas import SourceInfoRecord
 
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -83,61 +81,39 @@ class CliSmokeTest(unittest.TestCase):
         self.assertEqual(args.config, "configs/canonical/default.json")
         self.assertEqual(args.structure_request, "keep it coarse")
 
-    @patch("video_atlas.cli.main.CanonicalAtlasWorkflow")
-    @patch("video_atlas.cli.main.acquire_from_url")
-    @patch("video_atlas.cli.main.create_acquisition_subdir")
-    @patch("video_atlas.cli.main.build_generator")
-    @patch("video_atlas.cli.main.build_transcriber")
+    def test_build_parser_supports_create_with_local_files(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(
+            [
+                "create",
+                "--video-file",
+                "/tmp/video.mp4",
+                "--subtitle-file",
+                "/tmp/subtitles.srt",
+                "--metadata-file",
+                "/tmp/metadata.json",
+                "--output-dir",
+                "/tmp/out",
+            ]
+        )
+
+        self.assertEqual(args.command, "create")
+        self.assertEqual(args.video_file, "/tmp/video.mp4")
+        self.assertEqual(args.subtitle_file, "/tmp/subtitles.srt")
+        self.assertEqual(args.metadata_file, "/tmp/metadata.json")
+        self.assertIsNone(args.url)
+
+    @patch("video_atlas.cli.main.create_canonical_from_url")
     @patch("video_atlas.cli.main.load_canonical_pipeline_config")
     def test_main_runs_create_from_url(
         self,
         mock_load_config: MagicMock,
-        mock_build_transcriber: MagicMock,
-        mock_build_generator: MagicMock,
-        mock_create_acquisition_subdir: MagicMock,
-        mock_acquire_from_url: MagicMock,
-        mock_workflow_cls: MagicMock,
+        mock_create_canonical_from_url: MagicMock,
     ) -> None:
         mock_load_config.return_value = MagicMock(
-            planner=MagicMock(),
-            text_segmentor=MagicMock(),
-            multimodal_segmentor=MagicMock(),
-            structure_composer=MagicMock(),
-            captioner=MagicMock(),
-            transcriber=MagicMock(),
-            runtime=MagicMock(
-                generate_subtitles_if_missing=True,
-                text_chunk_size_sec=1800,
-                text_chunk_overlap_sec=120,
-                multimodal_chunk_size_sec=600,
-                multimodal_chunk_overlap_sec=60,
-                caption_with_subtitles=True,
-            ),
-            acquisition=MagicMock(
-                prefer_youtube_subtitles=True,
-                youtube_output_template="%(id)s.%(ext)s",
-            ),
+            runtime=MagicMock(),
+            acquisition=MagicMock(),
         )
-        mock_build_generator.side_effect = lambda config: config
-        mock_build_transcriber.return_value = "transcriber"
-        mock_create_acquisition_subdir.return_value = Path("/tmp/downloaded/session-uid")
-
-        source_info = SourceInfoRecord(
-            source_type="youtube",
-            source_url="https://www.youtube.com/watch?v=abc123xyz89",
-            canonical_source_url="https://www.youtube.com/watch?v=abc123xyz89",
-            subtitle_source="youtube_caption",
-            subtitle_fallback_required=False,
-        )
-        mock_acquire_from_url.return_value = MagicMock(
-            local_video_path=Path("/tmp/downloaded/video.mp4"),
-            local_subtitles_path=Path("/tmp/downloaded/subtitles.srt"),
-            source_info=source_info,
-            source_metadata={"title": "Example Video"},
-        )
-
-        mock_workflow = mock_workflow_cls.return_value
-        mock_workflow.create.return_value = (MagicMock(), {})
 
         with TemporaryDirectory() as tmpdir:
             exit_code = main(
@@ -155,38 +131,61 @@ class CliSmokeTest(unittest.TestCase):
             )
 
         self.assertEqual(exit_code, 0)
-        mock_create_acquisition_subdir.assert_called_once_with(Path(tmpdir) / ".acquisition")
-        mock_acquire_from_url.assert_called_once()
-        mock_workflow.create.assert_called_once_with(
-            output_dir=Path(tmpdir),
-            source_video_path=Path("/tmp/downloaded/video.mp4"),
-            source_srt_file_path=Path("/tmp/downloaded/subtitles.srt"),
+        mock_create_canonical_from_url.assert_called_once_with(
+            "https://www.youtube.com/watch?v=abc123xyz89",
+            tmpdir,
+            mock_load_config.return_value,
             structure_request="keep it coarse",
-            verbose=False,
-            source_info=source_info,
-            source_metadata={"title": "Example Video"},
         )
 
-    @patch("video_atlas.cli.main.materialize_fetch_workspace")
+    @patch("video_atlas.cli.main.create_canonical_from_local")
+    @patch("video_atlas.cli.main.load_canonical_pipeline_config")
+    def test_main_runs_create_from_local_files(
+        self,
+        mock_load_config: MagicMock,
+        mock_create_canonical_from_local: MagicMock,
+    ) -> None:
+        mock_load_config.return_value = MagicMock(
+            runtime=MagicMock(),
+            acquisition=MagicMock(),
+        )
+
+        with TemporaryDirectory() as tmpdir:
+            exit_code = main(
+                [
+                    "create",
+                    "--video-file",
+                    "/tmp/video.mp4",
+                    "--subtitle-file",
+                    "/tmp/subtitles.srt",
+                    "--metadata-file",
+                    "/tmp/metadata.json",
+                    "--output-dir",
+                    tmpdir,
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        mock_create_canonical_from_local.assert_called_once_with(
+            tmpdir,
+            mock_load_config.return_value,
+            video_file="/tmp/video.mp4",
+            audio_file=None,
+            subtitle_file="/tmp/subtitles.srt",
+            metadata_file="/tmp/metadata.json",
+            structure_request="",
+        )
+
     @patch("video_atlas.cli.main.acquire_from_url")
-    @patch("video_atlas.cli.main.create_acquisition_subdir")
     @patch("video_atlas.cli.main.load_canonical_pipeline_config")
     def test_main_runs_fetch_from_url(
         self,
         mock_load_config: MagicMock,
-        mock_create_acquisition_subdir: MagicMock,
         mock_acquire_from_url: MagicMock,
-        mock_materialize_fetch_workspace: MagicMock,
     ) -> None:
         mock_load_config.return_value = MagicMock(
-            acquisition=MagicMock(
-                prefer_youtube_subtitles=True,
-                youtube_output_template="%(id)s.%(ext)s",
-            )
+            acquisition=MagicMock(),
         )
-        acquisition = MagicMock()
-        mock_acquire_from_url.return_value = acquisition
-        mock_create_acquisition_subdir.return_value = Path("/tmp/downloaded/session-uid")
 
         with TemporaryDirectory() as tmpdir:
             exit_code = main(
@@ -200,9 +199,12 @@ class CliSmokeTest(unittest.TestCase):
             )
 
         self.assertEqual(exit_code, 0)
-        mock_create_acquisition_subdir.assert_called_once_with(Path(tmpdir) / ".acquisition")
-        mock_acquire_from_url.assert_called_once()
-        mock_materialize_fetch_workspace.assert_called_once_with(acquisition, Path(tmpdir))
+        mock_acquire_from_url.assert_called_once_with(
+            "https://www.youtube.com/watch?v=abc123xyz89",
+            tmpdir,
+            prefer_youtube_subtitles=mock_load_config.return_value.acquisition.prefer_youtube_subtitles,
+            youtube_output_template=mock_load_config.return_value.acquisition.youtube_output_template,
+        )
 
     @patch("video_atlas.cli.main.acquire_from_url", side_effect=UnsupportedSourceError("unsupported source"))
     def test_main_returns_error_for_unsupported_url(self, _mock_acquire_from_url: MagicMock) -> None:

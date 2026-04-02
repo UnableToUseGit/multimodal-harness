@@ -247,11 +247,6 @@ class CanonicalAtlasWriter:
         if not self.caption_with_subtitles:
             markdown_text = markdown_text.replace("- Full subtitles for this video: `./SUBTITLES.md`", "")
         
-        if atlas.source_info is not None:
-            write_json_to(atlas_dir, "SOURCE_INFO.json", asdict(atlas.source_info))
-        if atlas.source_metadata:
-            write_json_to(atlas_dir, "SOURCE_METADATA.json", atlas.source_metadata)
-
         write_text_to(atlas_dir, "README.md", markdown_text)
 
 

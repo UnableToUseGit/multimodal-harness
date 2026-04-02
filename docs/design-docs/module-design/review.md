@@ -18,7 +18,7 @@
 - 负责将结果组织为便于检查和展示的结构。
 - 负责提供本地 review 服务与静态页面支撑。
 - 在 canonical 两阶段实验期，负责同时暴露顶层 `units/` 与 composed `segments/` 的检查信息。
-- 在来源 metadata 存在时，负责读取根目录 `SOURCE_INFO.json` 与 `SOURCE_METADATA.json`。
+- 在来源 metadata 存在时，优先读取 `input/SOURCE_INFO.json` 与 `input/SOURCE_METADATA.json`，必要时兼容根目录旧布局。
 
 ### 不负责的内容
 
@@ -135,7 +135,7 @@
 - 该模块只消费结果目录，不参与结果生成。
 - review 逻辑应建立在稳定外部契约之上，而不是依赖内部 workflow 细节。
 - 前端展示层与目录解析层应保持职责分离。
-- 对来源信息的读取应优先依赖根级结构化 JSON 文件，而不是解析 README 中的自由文本。
+- 对来源信息的读取应优先依赖 `input/` 下的结构化 JSON 文件，而不是解析 README 中的自由文本。
 
 ## 当前实现
 

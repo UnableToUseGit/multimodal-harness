@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
+from dateutil import parser
+from datetime import datetime, timezone
 
-from .models import SourceAcquisitionResult
-from ..schemas.source_info import SourceInfoRecord
+from ..schemas import SourceInfoRecord, SourceAcquisitionResult
 
 try:  # pragma: no cover - exercised through mocking in tests
     import yt_dlp  # type: ignore[import-not-found]
@@ -79,16 +80,27 @@ class YouTubeVideoAcquirer:
         source_info = SourceInfoRecord(
             source_type="youtube",
             source_url=youtube_url,
-            canonical_source_url=info.get("webpage_url", youtube_url),
             subtitle_source="youtube_caption" if subtitle_path is not None else "missing",
-            subtitle_fallback_required=subtitle_path is None,
         )
+        
+        publish_date = parser.parse(sanitized_info.get("upload_date")) if sanitized_info.get("upload_date", "") else datetime(1970, 1, 1)
+        thumbnails = [item['url'] for item in sanitized_info.get("thumbnails", [])]
+        source_metadata = SourceMetadata(
+            title=sanitized_info.get("title", ""),
+            introduction=sanitized_info.get("description", ""),
+            author=sanitized_info.get("uploader", ""),
+            publish_date=publish_date,
+            thumbnails=thumbnails
+        )
+        
+        write_json_to(output_dir, "SOURCE_INFO.json", asdict(source_info))
+        write_json_to(output_dir, "SOURCE_METADATA.json", source_metadata)
 
         return SourceAcquisitionResult(
             source_info=source_info,
-            local_video_path=video_path,
-            local_subtitles_path=subtitle_path,
-            source_metadata=sanitized_info,
+            source_metadata=source_metadata,
+            video_path=video_path,
+            subtitles_path=subtitle_path,
         )
 
     def _resolve_video_path(self, info: dict[str, object], output_dir: Path) -> Path:

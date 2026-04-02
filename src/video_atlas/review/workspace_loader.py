@@ -251,8 +251,9 @@ def load_review_workspace(root_path: str | Path, workspace_id: str, label: str |
             if segment is not None:
                 segments.append(segment)
 
-    source_video = _first_existing(root, ["*.mp4"])
-    normalized_audio = _first_existing(root, ["*.wav"])
+    input_dir = root / "input"
+    source_video = _first_existing(root, ["*.mp4", "input/*.mp4"])
+    normalized_audio = _first_existing(root, ["*.wav", "input/*.wav"])
     execution_plan_path = None
     if (root / ".agentignore").exists():
         execution_plan_path = _first_existing(root / ".agentignore", ["EXECUTION_PLAN.json", "PROBE_RESULT.json"])
@@ -269,8 +270,16 @@ def load_review_workspace(root_path: str | Path, workspace_id: str, label: str |
         task_text=_read_text_if_exists((root / "TASK.md") if (root / "TASK.md").exists() else None),
         execution_plan=_read_json_if_exists(execution_plan_path),
         derivation=_read_json_if_exists((root / "derivation.json") if (root / "derivation.json").exists() else None),
-        source_info=_read_json_if_exists((root / "SOURCE_INFO.json") if (root / "SOURCE_INFO.json").exists() else None) or {},
-        source_metadata=_read_json_if_exists((root / "SOURCE_METADATA.json") if (root / "SOURCE_METADATA.json").exists() else None) or {},
+        source_info=(
+            _read_json_if_exists((input_dir / "SOURCE_INFO.json") if (input_dir / "SOURCE_INFO.json").exists() else None)
+            or _read_json_if_exists((root / "SOURCE_INFO.json") if (root / "SOURCE_INFO.json").exists() else None)
+            or {}
+        ),
+        source_metadata=(
+            _read_json_if_exists((input_dir / "SOURCE_METADATA.json") if (input_dir / "SOURCE_METADATA.json").exists() else None)
+            or _read_json_if_exists((root / "SOURCE_METADATA.json") if (root / "SOURCE_METADATA.json").exists() else None)
+            or {}
+        ),
         source_video_relative_path=str(source_video.relative_to(root)) if source_video is not None else None,
         normalized_audio_relative_path=str(normalized_audio.relative_to(root)) if normalized_audio is not None else None,
         units=units,

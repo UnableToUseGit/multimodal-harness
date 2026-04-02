@@ -32,7 +32,8 @@ from .canonical_atlas import (
     SegmentationProfile,
     SegmentationSpecification,
 )
-from .source_info import SourceInfoRecord
+from .canonical_request import CanonicalCreateRequest
+from .acquisition import SourceInfoRecord, SourceAcquisitionResult, SourceMetadata
 from .derived_atlas import DerivationPolicy, DerivationResultInfo, DerivedAtlas, DerivedSegmentDraft
 
 __all__ = [
@@ -47,6 +48,7 @@ __all__ = [
     "CandidateBoundary",
     "CaptionedSegment",
     "CanonicalExecutionPlan",
+    "CanonicalCreateRequest",
     "CanonicalAtlas",
     "CanonicalCompositionResult",
     "CaptionProfile",
@@ -65,6 +67,8 @@ __all__ = [
     "SegmentationProfile",
     "SegmentationSpecification",
     "SourceInfoRecord",
+    "SourceMetadata",
+    "SourceAcquisitionResult",
     "resolve_caption_profile",
     "resolve_sampling_profile",
     "resolve_segmentation_profile",

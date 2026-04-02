@@ -1,16 +1,16 @@
 """Source acquisition exports."""
 
-from .acquire import acquire_from_url, create_acquisition_subdir, materialize_fetch_workspace
-from .detection import InvalidSourceUrlError, UnsupportedSourceError, detect_source_from_url
-from .models import SourceAcquisitionResult, SourceInfoRecord
+from .acquire import acquire_from_url, InvalidSourceUrlError, UnsupportedSourceError, detect_source_from_url
+from .youtube import YouTubeVideoAcquirer, is_supported_youtube_watch_url
+from .xiaoyuzhou import XiaoyuzhouAudioAcquirer, is_supported_xiaoyuzhou_episode_url
 
 __all__ = [
     "acquire_from_url",
-    "create_acquisition_subdir",
     "detect_source_from_url",
     "InvalidSourceUrlError",
     "UnsupportedSourceError",
-    "materialize_fetch_workspace",
-    "SourceAcquisitionResult",
-    "SourceInfoRecord",
+    "YouTubeVideoAcquirer",
+    "is_supported_youtube_watch_url",
+    "XiaoyuzhouAudioAcquirer",
+    "is_supported_xiaoyuzhou_episode_url",
 ]

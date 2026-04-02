@@ -5,7 +5,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from video_atlas.schemas import AtlasSegment, CanonicalCompositionResult, CanonicalExecutionPlan, SourceInfoRecord
+from video_atlas.schemas import (
+    AtlasSegment,
+    CanonicalCompositionResult,
+    CanonicalCreateRequest,
+    CanonicalExecutionPlan,
+    SourceInfoRecord,
+)
 from video_atlas.workflows.canonical_atlas_workflow import CanonicalAtlasWorkflow
 
 
@@ -83,24 +89,25 @@ class CanonicalTwoStagePipelineTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            video_path = root / "video.mp4"
+            run_dir = root / "run"
+            input_dir = run_dir / "input"
+            input_dir.mkdir(parents=True)
+            video_path = input_dir / "video.mp4"
             video_path.write_bytes(b"video")
-            srt_path = root / "subtitles.srt"
+            srt_path = input_dir / "subtitles.srt"
             srt_path.write_text("1\n00:00:00,000 --> 00:00:10,000\nhello\n", encoding="utf-8")
-            output_dir = root / "atlas"
+            request = CanonicalCreateRequest(
+                atlas_dir=run_dir,
+                video_path=video_path,
+                subtitle_path=srt_path,
+                structure_request="请按较粗的章节划分",
+            )
 
-            with patch("video_atlas.workflows.canonical_atlas.pipeline.copy_to", side_effect=lambda src, dest: Path(dest) / Path(src).name), \
-                patch("video_atlas.workflows.canonical_atlas.pipeline.write_text_to", side_effect=lambda dest, rel, content: Path(dest) / Path(rel)), \
+            with patch("video_atlas.workflows.canonical_atlas.pipeline.write_text_to", side_effect=lambda dest, rel, content: Path(dest) / Path(rel)), \
                 patch("video_atlas.workflows.canonical_atlas.pipeline.parse_srt", return_value=([{"start": 0.0, "end": 10.0, "text": "hello"}], "hello")), \
                 patch("video_atlas.workflows.canonical_atlas.pipeline.get_video_property", return_value={"duration": 30.0, "resolution": "1280x720"}), \
                 patch("video_atlas.workflows.canonical_atlas.pipeline.CanonicalAtlasWriter.write", autospec=True) as mock_write:
-                atlas, cost_time_info = harness.create(
-                    output_dir=output_dir,
-                    source_video_path=video_path,
-                    source_srt_file_path=srt_path,
-                    structure_request="请按较粗的章节划分",
-                    verbose=False,
-                )
+                atlas, cost_time_info = harness.create(request)
 
         self.assertEqual(harness.structure_request_seen, "请按较粗的章节划分")
         self.assertEqual(atlas.title, "Composed Atlas")
@@ -115,33 +122,32 @@ class CanonicalTwoStagePipelineTest(unittest.TestCase):
         source_info = SourceInfoRecord(
             source_type="youtube",
             source_url="https://www.youtube.com/watch?v=abc123xyz89",
-            canonical_source_url="https://www.youtube.com/watch?v=abc123xyz89",
             subtitle_source="youtube_caption",
-            subtitle_fallback_required=False,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            video_path = root / "video.mp4"
+            run_dir = root / "run"
+            input_dir = run_dir / "input"
+            input_dir.mkdir(parents=True)
+            video_path = input_dir / "video.mp4"
             video_path.write_bytes(b"video")
-            srt_path = root / "subtitles.srt"
+            srt_path = input_dir / "subtitles.srt"
             srt_path.write_text("1\n00:00:00,000 --> 00:00:10,000\nhello\n", encoding="utf-8")
-            output_dir = root / "atlas"
+            request = CanonicalCreateRequest(
+                atlas_dir=run_dir,
+                video_path=video_path,
+                subtitle_path=srt_path,
+                structure_request="",
+                source_info=source_info,
+                source_metadata={"title": "Example Video"},
+            )
 
-            with patch("video_atlas.workflows.canonical_atlas.pipeline.copy_to", side_effect=lambda src, dest: Path(dest) / Path(src).name), \
-                patch("video_atlas.workflows.canonical_atlas.pipeline.write_text_to", side_effect=lambda dest, rel, content: Path(dest) / Path(rel)), \
+            with patch("video_atlas.workflows.canonical_atlas.pipeline.write_text_to", side_effect=lambda dest, rel, content: Path(dest) / Path(rel)), \
                 patch("video_atlas.workflows.canonical_atlas.pipeline.parse_srt", return_value=([{"start": 0.0, "end": 10.0, "text": "hello"}], "hello")), \
                 patch("video_atlas.workflows.canonical_atlas.pipeline.get_video_property", return_value={"duration": 30.0, "resolution": "1280x720"}), \
                 patch("video_atlas.workflows.canonical_atlas.pipeline.CanonicalAtlasWriter.write", autospec=True):
-                atlas, _ = harness.create(
-                    output_dir=output_dir,
-                    source_video_path=video_path,
-                    source_srt_file_path=srt_path,
-                    structure_request="",
-                    verbose=False,
-                    source_info=source_info,
-                    source_metadata={"title": "Example Video"},
-                )
+                atlas, _ = harness.create(request)
 
         self.assertEqual(atlas.source_info, source_info)
         self.assertEqual(atlas.source_metadata["title"], "Example Video")

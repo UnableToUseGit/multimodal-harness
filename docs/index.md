@@ -94,6 +94,7 @@
   - [completed](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/completed)
 - 当前 active plan：
   - [2026-04-01-canonical-two-stage-composition.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active/2026-04-01-canonical-two-stage-composition.md)
+  - [2026-04-01-youtube-source-acquisition-cli.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active/2026-04-01-youtube-source-acquisition-cli.md)
 
 ## 决策记录
 
@@ -106,6 +107,7 @@
   - [2026-0329-aliyun-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0329-aliyun-transcription-route.md)
   - [2026-0330-0609-canonical-high-efficiency.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0330-0609-canonical-high-efficiency.md)
   - [2026-0331.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0331.md)
+  - [2026-0401.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0401.md)
 
 ## 参考资料
 

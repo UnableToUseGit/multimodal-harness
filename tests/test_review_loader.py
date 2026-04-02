@@ -13,7 +13,9 @@ class ReviewWorkspaceLoaderTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             (root / "README.md").write_text("# Canonical\n", encoding="utf-8")
-            (root / "SOURCE_INFO.json").write_text(
+            input_dir = root / "input"
+            input_dir.mkdir()
+            (input_dir / "SOURCE_INFO.json").write_text(
                 json.dumps(
                     {
                         "source_type": "youtube",
@@ -22,7 +24,7 @@ class ReviewWorkspaceLoaderTest(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (root / "SOURCE_METADATA.json").write_text(
+            (input_dir / "SOURCE_METADATA.json").write_text(
                 json.dumps(
                     {
                         "title": "Canonical Title",

@@ -179,3 +179,7 @@ class CanonicalAtlas:
     units: list[AtlasUnit] = field(default_factory=list)
     source_info: SourceInfoRecord | None = None
     source_metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def raw_source_metadata(self) -> dict[str, Any]:
+        return self.source_metadata

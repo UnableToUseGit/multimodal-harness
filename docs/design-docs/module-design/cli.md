@@ -8,22 +8,23 @@
 
 - 取消 `canonical` 子命令层级，使 `create` 默认表示 canonical atlas create
 - 增加统一的 URL 输入分发能力
+- 增加本地文件输入能力
 - 增加 `fetch` 命令用于单独验证 acquisition 阶段
 
 ## 模块概览
 
 - 名称：`cli`
 - 路径：`src/video_atlas/cli/`
-- 主要职责：提供稳定、可组合、适合 agent 调用的命令行入口，并将用户输入分发到 acquisition 或 atlas workflow
+- 主要职责：提供稳定、可组合、适合 agent 调用的命令行入口，并将用户输入交给 application layer 编排
 
 ## 职责与边界
 
 ### 职责
 
 - 定义清晰、稳定的命令结构和参数约定。
-- 将 `--url` 形式的外部输入交给 `source_acquisition` 层识别和分发。
-- 在 `create` 命令中协调 acquisition 结果与 canonical workflow。
-- 在 `fetch` 命令中输出 acquisition workspace，用于单独验证视频、字幕和 source metadata 获取。
+- 将 URL 或本地文件输入交给 application layer。
+- 在 `create` 命令中触发 input preparation 与 canonical workflow。
+- 在 `fetch` 命令中输出 run workspace，用于单独验证输入准备结果。
 
 ### 不负责的内容
 
@@ -37,6 +38,9 @@
 
 ```bash
 video-atlas create --url <url> --output-dir <dir> [--config ...] [--structure-request ...]
+video-atlas create --video-file <path> [--subtitle-file <path>] --output-dir <dir> [--config ...] [--structure-request ...]
+video-atlas create --audio-file <path> --output-dir <dir> [--config ...] [--structure-request ...]
+video-atlas create --subtitle-file <path> --output-dir <dir> [--config ...] [--structure-request ...]
 video-atlas fetch --url <url> --output-dir <dir>
 video-atlas info
 video-atlas check-import
@@ -48,12 +52,19 @@ video-atlas config
 - 语义：默认表示 canonical atlas create
 - 输入：
   - `--url`
+  - 或本地文件参数
+    - `--video-file`
+    - `--audio-file`
+    - `--subtitle-file`
+    - `--metadata-file`
   - `--output-dir`
   - 可选 `--config`
   - 可选 `--structure-request`
 - 行为：
-  - 先执行来源识别与 acquisition
-  - 再将 acquisition 结果送入 canonical workflow
+- URL 输入时，先通过 application layer 执行来源识别、acquisition 与输入落盘
+- 本地输入时，通过 application layer 执行 copy、metadata 读取与输入落盘
+- application layer 加载 `CanonicalPipelineConfig` 并实例化 workflow
+- 再将 `CanonicalCreateRequest` 送入 canonical workflow
 - 说明：
   - 当前不再要求 `video-atlas canonical create ...`
   - derived atlas 当前不纳入 CLI 结构
@@ -65,8 +76,8 @@ video-atlas config
   - `--url`
   - `--output-dir`
 - 行为：
-  - 执行来源识别与 acquisition
-  - 将 acquisition 产物写入输出目录后退出
+- 执行来源识别与 acquisition
+- 将 acquisition 结果直接写入输出目录后退出
 - 说明：
   - 该命令主要用于验证下载、字幕和 source metadata 获取能力
 
@@ -76,10 +87,7 @@ CLI 不再暴露来源站点特化参数，例如 `--youtube-url`，统一改为
 
 - `--url`
 
-CLI 在收到 URL 后，不直接写站点判断逻辑，而是调用 `source_acquisition` 的统一入口：
-
-- `detect_source_from_url(...)`
-- `acquire_from_url(...)`
+CLI 在收到 URL 后，不直接写站点判断逻辑，而是调用 application layer 或 acquisition 入口；来源识别与 acquisition 由上层委托给 `source_acquisition`。
 
 这样 CLI 只关心：
 
@@ -89,13 +97,14 @@ CLI 在收到 URL 后，不直接写站点判断逻辑，而是调用 `source_ac
 
 ## 来源识别与分发设计
 
-建议在 `src/video_atlas/source_acquisition/` 中新增两层薄封装：
+当前实现中，来源识别与分发集中在 `src/video_atlas/source_acquisition/`：
 
-### `detection.py`
+### `detect_source_from_url(...)`
 
 - 角色：识别 URL 所属来源
 - 当前范围：
-  - 只识别标准 YouTube 视频页面 URL
+  - 识别标准 YouTube 视频页面 URL
+  - 识别小宇宙单集 URL
 - 输出：
   - 标准来源类型，例如 `youtube`
 
@@ -106,9 +115,10 @@ CLI 在收到 URL 后，不直接写站点判断逻辑，而是调用 `source_ac
   - 先调用 detection
   - 再根据来源类型分发到具体 acquirer
 - 当前范围：
-  - 只分发到 `YouTubeVideoAcquirer`
+  - 分发到 `YouTubeVideoAcquirer`
+  - 分发到 `XiaoyuzhouAudioAcquirer`
 
-当前阶段虽然只有 YouTube 一个来源，但该层必须存在，以避免 CLI 直接耦合站点判断逻辑。
+当前阶段来源仍然较少，但该层仍用于避免 CLI 直接耦合站点判断逻辑。
 
 ## 错误处理语义
 
@@ -136,32 +146,28 @@ CLI 对 URL 输入的错误处理应区分为三类：
 
 ## `fetch` 输出契约
 
-`fetch` 命令的输出目录应被定义为轻量但稳定的 acquisition workspace，而不是临时散乱下载目录。
+`fetch` 命令的输出目录应被定义为轻量但稳定的 run workspace，而不是临时散乱下载目录。
 
-最小建议结构如下：
+当前实现下的最小建议结构如下：
 
 ```text
 <fetch-output-dir>/
 ├── SOURCE_INFO.json
 ├── SOURCE_METADATA.json
-├── video.mp4
-├── subtitles.srt          # 可选
-└── source/
-    └── ...                # 可选原始字幕或辅助产物
+├── <downloaded-video-or-audio>
+└── <downloaded-subtitles>     # 可选
 ```
 
 ### 关键文件说明
 
-- `video.mp4`
-  - acquisition 下载到的本地视频文件
-- `subtitles.srt`
+- `<downloaded-video-or-audio>`
+  - acquisition 下载到的本地视频或音频文件
+- `<downloaded-subtitles>`
   - 抓到并标准化后的字幕文件，若无可用字幕则可缺失
 - `SOURCE_INFO.json`
   - 来源类型、原始 URL、规范化 URL、字幕来源、是否需要 fallback 等信息
 - `SOURCE_METADATA.json`
-  - 输入来源的完整或近完整 metadata
-- `source/`
-  - 可选保存原始字幕、原始 metadata 或其他 acquisition 辅助产物
+  - 输入来源的归一化 metadata
 
 ## `create` 与 `fetch` 的关系
 
@@ -175,20 +181,25 @@ CLI 对 URL 输入的错误处理应区分为三类：
 
 - CLI 不应直接写站点判断逻辑，应通过 `source_acquisition` 统一入口调用。
 - `create` 默认表示 canonical atlas create，不再保留 `canonical` 子命令层级。
-- 当前只识别并支持 YouTube；其他 URL 一律明确报错，不做隐式尝试。
-- `fetch` 必须保留视频、字幕和 source metadata，而不是只下载视频文件。
+- 当前识别并支持 YouTube 与小宇宙；其他 URL 一律明确报错，不做隐式尝试。
+- `fetch` 必须保留主媒体文件、可用字幕和 source metadata，而不是只下载媒体文件。
 - 不应因为未来可能支持 derived atlas，而在当前阶段提前引入多余 CLI 层级。
 
 ## 当前实现规划
 
 - `src/video_atlas/cli/main.py`
   - 重构命令结构，增加 `create` / `fetch`
-- `src/video_atlas/source_acquisition/detection.py`
-  - 新增 URL 来源识别
+- `src/video_atlas/application/canonical_create.py`
+  - 负责本地文件与 URL 到 `CanonicalCreateRequest` 的组装
+- `src/video_atlas/application/`
+  - 增加 application layer 编排入口
 - `src/video_atlas/source_acquisition/acquire.py`
-  - 新增统一 acquisition 分发入口
+  - 统一 URL 来源识别与 acquisition 分发入口
+  - 暴露 `detect_source_from_url(...)` 与 `acquire_from_url(...)`
 - `src/video_atlas/source_acquisition/youtube.py`
   - 继续承载 YouTube acquisition 本体
+- `src/video_atlas/source_acquisition/xiaoyuzhou.py`
+  - 承载小宇宙 acquisition 本体
 - `tests/test_cli.py`
   - 覆盖新的命令结构与错误提示
 - `tests/test_source_acquisition_*.py`

@@ -17,13 +17,14 @@
 - 负责结果对象到目录结构的外部化写入。
 - 负责文本文件写入、文件复制、clip 提取等持久化辅助操作。
 - 为 canonical 与 derived 两类结果提供专门 writer。
-- 在 canonical atlas 包含来源信息时，负责将 source metadata 写为稳定根级 JSON 文件。
 
 ### 不负责的内容
 
 - 不负责业务流程编排。
 - 不负责模型调用与响应解析。
 - 不负责业务策略决策。
+- 不负责 URL acquisition 或本地输入 materialization。
+- 不负责 `input/SOURCE_INFO.json` 与 `input/SOURCE_METADATA.json` 的生成。
 
 ## 核心接口
 
@@ -99,7 +100,7 @@
 - 输出：
   - 写入后的目标路径
 - 说明：
-  - 适用于 `SOURCE_INFO.json`、`SOURCE_METADATA.json` 等结构化 metadata 写出。
+- 适用于结构化 metadata 写出。
 
 ### `extract_clip`
 
@@ -147,7 +148,6 @@
 - 边界：
   - 负责 canonical 结果到目录表示的转换
   - 负责实验期 `units/` 与 `segments/` 的双层写出
-  - 负责根目录 source metadata 文件写出
   - 不负责 canonical 结果对象的生成
 - 输入：
   - `CanonicalAtlas`
@@ -171,7 +171,7 @@
 
 1. 上层 workflow 产出标准结果对象。
 2. writer 读取结果对象及相关路径信息。
-3. 模块写出根级说明文件、unit 文件、segment 文件和辅助 metadata。
+3. 模块写出根级说明文件、unit 文件、segment 文件和辅助结果文件。
 4. 模块在需要时提取 unit 视频，并在实验期复制到 segment 目录中完成目录组织。
 
 ## 设计约束
@@ -180,9 +180,9 @@
 - writer 应以稳定契约写出结果，不应内联业务推理。
 - 目录结构、文件名和 metadata 格式应保持可追踪和可验证。
 - 内部时间字段使用数值时间范围表达。
-- 当这些信息被写入 atlas 目录中的 README 或 metadata 时，应由持久化层统一转换为 ISO 8601 格式
+- 当这些信息被写入 atlas 目录中的 README 或结果 metadata 时，应由持久化层统一转换为 ISO 8601 格式
 - canonical 两阶段实验期允许存在冗余目录与媒体复制，以换取更高的可验证性和可解释性。
-- 对 YouTube URL 等外部来源输入，应优先通过根级 `SOURCE_INFO.json` 和 `SOURCE_METADATA.json` 暴露来源信息，而不是要求下游从 README 推断。
+- 对 URL 或本地输入来源信息，应优先通过 application layer 写出的 `input/SOURCE_INFO.json` 和 `input/SOURCE_METADATA.json` 暴露，而不是要求下游从 README 推断。
 
 ## 当前实现
 

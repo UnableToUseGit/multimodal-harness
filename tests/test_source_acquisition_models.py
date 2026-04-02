@@ -57,6 +57,21 @@ class SourceAcquisitionModelsTest(unittest.TestCase):
         self.assertEqual(result.source_metadata["title"], "Sample Title")
         self.assertEqual(result.artifacts["info_json"], Path("source/info.json"))
 
+    def test_source_acquisition_result_supports_audio_assets(self) -> None:
+        record = SourceInfoRecord(
+            source_type="xiaoyuzhou",
+            source_url="https://www.xiaoyuzhoufm.com/episode/1234567890abcdef12345678",
+            canonical_source_url="https://www.xiaoyuzhoufm.com/episode/1234567890abcdef12345678",
+        )
+        result = SourceAcquisitionResult(
+            source_info=record,
+            local_audio_path=Path("/tmp/audio.m4a"),
+            source_metadata={"title": "Podcast"},
+        )
+
+        self.assertEqual(result.local_audio_path, Path("/tmp/audio.m4a"))
+        self.assertIsNone(result.local_video_path)
+
     def test_canonical_atlas_accepts_optional_source_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             atlas = CanonicalAtlas(

@@ -6,9 +6,32 @@ from pathlib import Path
 from uuid import uuid4
 
 from ..persistence import write_json_to
-from .detection import detect_source_from_url
-from .models import SourceAcquisitionResult
+from .xiaoyuzhou import XiaoyuzhouAudioAcquirer
 from .youtube import YouTubeVideoAcquirer
+
+from urllib.parse import urlparse
+from .xiaoyuzhou import is_supported_xiaoyuzhou_episode_url
+from .youtube import is_supported_youtube_watch_url
+from ..schemas import SourceAcquisitionResult
+
+
+class InvalidSourceUrlError(ValueError):
+    pass
+
+
+class UnsupportedSourceError(ValueError):
+    pass
+
+
+def detect_source_from_url(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise InvalidSourceUrlError("invalid url")
+    if is_supported_youtube_watch_url(url):
+        return "youtube"
+    if is_supported_xiaoyuzhou_episode_url(url):
+        return "xiaoyuzhou"
+    raise UnsupportedSourceError("unsupported source")
 
 
 def acquire_from_url(
@@ -24,29 +47,7 @@ def acquire_from_url(
             prefer_youtube_subtitles=prefer_youtube_subtitles,
             output_template=youtube_output_template,
         ).acquire(url, Path(output_dir))
+    if source_type == "xiaoyuzhou":
+        return XiaoyuzhouAudioAcquirer().acquire(url, Path(output_dir))
     raise RuntimeError(f"Unhandled source type: {source_type}")
 
-
-def create_acquisition_subdir(output_dir: str | Path) -> Path:
-    output_root = Path(output_dir)
-    output_root.mkdir(parents=True, exist_ok=True)
-    output_path = output_root / uuid4().hex
-    output_path.mkdir(parents=True, exist_ok=False)
-    return output_path
-
-
-def materialize_fetch_workspace(acquisition: SourceAcquisitionResult, output_dir: str | Path) -> Path:
-    output_path = create_acquisition_subdir(output_dir)
-
-    target_video_path = output_path / "video.mp4"
-    if acquisition.local_video_path.resolve() != target_video_path.resolve():
-        shutil.copy2(acquisition.local_video_path, target_video_path)
-
-    if acquisition.local_subtitles_path is not None:
-        target_subtitles_path = output_path / "subtitles.srt"
-        if acquisition.local_subtitles_path.resolve() != target_subtitles_path.resolve():
-            shutil.copy2(acquisition.local_subtitles_path, target_subtitles_path)
-
-    write_json_to(output_path, "SOURCE_INFO.json", asdict(acquisition.source_info))
-    write_json_to(output_path, "SOURCE_METADATA.json", acquisition.source_metadata)
-    return output_path
