@@ -16,7 +16,7 @@ PLANNER_GENRE_OPTIONS = render_genre_options()
 
 PLANNER_PROMPT_USER = """
 You will receive:
-- 4 probes sampled from the video at progress 0%, 25%, 50%, and 75%. Each probe contains:
+- 4 probes sampled from the video at progress 0%, 50%, and 100%. Each probe contains:
   - a sequence of frames (in temporal order)
   - subtitle text for the same time window (may be noisy/incomplete)
 - Global statistics for the whole video: total duration, subtitle density (chars/min or tokens/min), and optionally other stats.
@@ -63,15 +63,11 @@ YOU WILL RECEIVE THE DATA IN THIS FORMAT
 Frames: ...
 Subtitles: ...
 
-[PROBE_25%]
-Frames: ...
-Subtitles: ...
-
 [PROBE_50%]
 Frames: ...
 Subtitles: ...
 
-[PROBE_75%]
+[PROBE_100%]
 Frames: ...
 Subtitles: ...
 
@@ -171,6 +167,82 @@ Only include boundaries whose timestamps fall inside [Core_start, Core_end).
 )
 
 
+TEXT_BOUNDARY_DETECTION_PROMPT = PromptSpec(
+    name="TEXT_BOUNDARY_DETECTION_PROMPT",
+    purpose="Detect semantic boundaries inside a long video chunk using subtitles and text priors only.",
+    system_template=r"""
+Role:
+You are a semantic boundary detector for subtitle-driven long videos.
+
+Goal:
+Given subtitles from a long video chunk, a core detection window [Core_start, Core_end), and prior information about the video, detect valid semantic boundaries inside the core window.
+
+Input:
+You will be given:
+1. Subtitle text from the video chunk.
+2. A core detection window [Core_start, Core_end).
+3. A concise description of the whole video.
+4. The video category.
+5. A segmentation policy that tells you how this video should be segmented.
+6. The last detection point produced in the previous turn.
+
+Guidelines:
+1) Use the subtitles as the primary source of truth for semantic structure.
+2) The segmentation policy comes from a planner that has already analyzed the video. Follow it carefully.
+3) It is completely acceptable to detect no boundary. If the chunk belongs to a single semantic unit, return an empty list.
+4) Every time you detect a boundary point, you should simultaneously generate a title for the segment ending at that point. The title should be stable, descriptive, and useful for navigation.
+5) Output hygiene:
+   - Output timestamps MUST be strictly within (Core_start, Core_end).
+   - Sort boundaries by timestamp in ascending order.
+   - Remove duplicates (timestamps within 0.5s count as duplicates; keep the higher-confidence one).
+   - If no valid boundary exists in (Core_start, Core_end), return [].
+
+Output format:
+Return ONLY a strict JSON array. Each item represents a boundary candidate:
+{{
+  "timestamp": <number in seconds>,
+  "boundary_rationale": "<brief evidence-based reason for the cut in Chinese>",
+  "segment_title": "<concise title for the current segment that ends with the boundary in Chinese>"
+  "confidence": <0..1>
+}}
+Do not output any extra text. The field "boundary_rationale" and "segment_title" should be filled with Chinese.
+""".strip(),
+    user_template=r"""
+Given the following:
+
+Subtitles:
+{subtitles}
+
+Detection window:
+- Core_start: {core_start}
+- Core_end: {core_end}
+
+Concise description: {concise_description}
+
+Video category: {segmentation_profile}
+
+Segmentation policy: {segmentation_policy}
+
+Last detection point: {last_detection_point}
+
+Now output the JSON list of boundaries within the detection window.
+Only include boundaries whose timestamps fall inside [Core_start, Core_end).
+The field "boundary_rationale" and "segment_title" should be filled with Chinese.
+""".strip(),
+    input_fields=(
+        "subtitles",
+        "core_start",
+        "core_end",
+        "concise_description",
+        "segmentation_profile",
+        "segmentation_policy",
+        "last_detection_point",
+    ),
+    output_contract="strict JSON array of boundary candidates",
+    tags=("canonical", "boundary-detection", "text"),
+)
+
+
 CAPTION_GENERATION_PROMPT = PromptSpec(
     name="CAPTION_GENERATION_PROMPT",
     purpose="Generate segment-level canonical captions from frames and subtitles.",
@@ -229,6 +301,68 @@ Now generate the JSON output.
     input_fields=("genres", "concise_description", "segmentation_profile", "signal_priority", "caption_policy", "subtitles"),
     output_contract="strict JSON object with summary, caption, and confidence",
     tags=("canonical", "caption"),
+)
+
+
+CANONICAL_STRUCTURE_COMPOSITION_PROMPT = PromptSpec(
+    name="CANONICAL_STRUCTURE_COMPOSITION_PROMPT",
+    purpose="Compose canonical atlas units into final segment-level structure.",
+    system_template=r"""
+Role:
+You are a canonical atlas structure composer.
+
+Goal:
+Given a full ordered list of units from a video atlas, compose them into final atlas segments.
+
+Input:
+You will receive:
+1. The ordered textual descriptions of all units in the video atlas.
+2. A concise description of the whole video.
+3. The top genres for the full video.
+4. An optional structure request from the user.
+
+Guidelines:
+1) Treat each unit as an atomic source block. Compose final segments by grouping units in their original order.
+2) Preserve the original order of units. Every unit must appear exactly once in the final output.
+3) Create segments that are semantically coherent and useful for navigation.
+4) Respect the structure request when it is provided.
+5) Do not invent units that were not present in the input.
+6) Output only strict JSON.
+
+Output format:
+Return ONLY a strict JSON object with exactly these keys:
+{{
+  "title": "<global title in Chinese> ",
+  "abstract": "<global abstract in Chinese>",
+  "composition_rationale": "<brief global rationale in Chinese>",
+  "segments": [
+    {{
+      "segment_id": "<stable segment id>",
+      "unit_ids": ["<unit_id_1>", "<unit_id_2>"],
+      "title": "<segment title in Chinese>",
+      "summary": "<segment summary in Chinese>",
+      "composition_rationale": "<why these units belong together in Chinese>"
+    }}
+  ]
+}}
+
+The field tagged with `in Chinese` should be filled with Chinese.
+""".strip(),
+    user_template=r"""
+Video metadata priors:
+- genres: {genres}
+- concise_description: {concise_description}
+- structure_request: {structure_request}
+
+Ordered units:
+{units_description}
+
+Compose the final atlas structure. Every unit must appear exactly once and in its original order.
+Output JSON only. The field tagged with `in Chinese` should be filled with Chinese.
+""".strip(),
+    input_fields=("units_description", "concise_description", "genres", "structure_request"),
+    output_contract="strict JSON object with title, abstract, composition_rationale, and segments",
+    tags=("canonical", "composition", "stage2"),
 )
 
 

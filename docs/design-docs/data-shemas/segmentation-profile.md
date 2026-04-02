@@ -14,6 +14,7 @@
 
 | 字段名 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
+| `segmentation_route` | `str` | 是 | 无 | 决定切分阶段使用哪条执行路线 |
 | `signal_priority` | `str` | 是 | 无 | 切分时优先关注的信号类型 |
 | `target_segment_length_sec` | `tuple[int, int]` | 是 | 无 | 目标片段时长范围 |
 | `default_sampling_profile` | `str` | 是 | 无 | 默认采样配置名 |
@@ -22,6 +23,12 @@
 | `segmentation_policy` | `str` | 是 | 无 | 切分策略说明 |
 
 ## 字段说明
+
+### `segmentation_route`
+
+- 语义：定义该切分 profile 默认应走哪条工程执行路线。
+- 约束：当前应为 `text_llm` 或 `multimodal_local`。
+- 注意事项：该字段不仅影响输入模态，还会联动选择使用哪个 `segmentor`、哪组 chunk 参数，以及字幕缺失时是否需要回退。
 
 ### `signal_priority`
 
@@ -69,6 +76,7 @@
 
 ```python
 SegmentationProfile(
+    segmentation_route="multimodal_local",
     signal_priority="visual_first",
     target_segment_length_sec=(30, 90),
     default_sampling_profile="default",

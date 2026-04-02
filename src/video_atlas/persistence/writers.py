@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from ..schemas import CanonicalAtlas, DerivedAtlas, CandidateBoundary
+from ..schemas import AtlasUnit, CanonicalAtlas, DerivedAtlas, CandidateBoundary
 from ..utils.video_metadata import seconds_to_hms
 
 
@@ -36,6 +36,7 @@ def write_candidate_boundaries_for_debug(
             {
                 "timestamp": item.timestamp,
                 "boundary_rationale": item.boundary_rationale,
+                "boundary_rationale": item.segment_title,
                 "evidence": list(item.evidence),
                 "confidence": item.confidence,
             }
@@ -72,6 +73,10 @@ def write_text_to(destination: str | Path, relative_path: str | Path, content: s
     target_path.parent.mkdir(parents=True, exist_ok=True)
     target_path.write_text(content, encoding="utf-8")
     return target_path
+
+
+def write_json_to(destination: str | Path, relative_path: str | Path, payload: dict[str, object]) -> Path:
+    return write_text_to(destination, relative_path, json.dumps(payload, indent=2, ensure_ascii=False))
 
 def slugify_segment_title(title: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
@@ -116,26 +121,59 @@ class CanonicalAtlasWriter:
     def __init__(self, caption_with_subtitles: bool = True) -> None:
         self.caption_with_subtitles = caption_with_subtitles
 
-    def _segment_readme_text(self, segment) -> str:
-        
+    def _unit_readme_text(self, unit: AtlasUnit) -> str:
+        return "\n".join(
+            [
+                "# Unit",
+                "",
+                f"**UnitID**: {unit.unit_id}",
+                "",
+                f"**Start Time**: {seconds_to_hms(unit.start_time)}",
+                "",
+                f"**End Time**: {seconds_to_hms(unit.end_time)}",
+                "",
+                f"**Duration**: {seconds_to_hms(unit.duration)}",
+                "",
+                f"**Title**: {unit.title}",
+                "",
+                f"**Summary**: {unit.summary}",
+                "",
+                f"**Detail Description**: {unit.caption}",
+                "",
+                "# Additional Files",
+                "- Raw video for this unit: `./video_clip.mp4`",
+                "- Subtitles for this unit: `./SUBTITLES.md`",
+            ]
+        )
+
+    def _segment_readme_text(self, segment, composed_units: list[AtlasUnit]) -> str:
+        unit_lines = [
+            f"- {unit.unit_id}: {unit.title} ({seconds_to_hms(unit.start_time)} - {seconds_to_hms(unit.end_time)})"
+            for unit in composed_units
+        ]
         return "\n".join(
             [
                 "# Segment",
                 "",
                 f"**SegID**: {segment.segment_id}",
-                f"**Start Time**: {seconds_to_hms(segment.start_time)}",
-                f"**End Time**: {seconds_to_hms(segment.end_time)}",
-                f"**Duration**: {seconds_to_hms(segment.duration)}",
-                f"**Title**: {segment.title}",
-                f"**Summary**: {segment.summary}",
-                f"**Detail Description**: {segment.caption}",
                 "",
-                "# Additional Files",
-                "- Raw video for this segment: `./video_clip.mp4`",
-                "- Subtitles for this segment: `./SUBTITLES.md`",
+                f"**Start Time**: {seconds_to_hms(segment.start_time)}",
+                "",
+                f"**End Time**: {seconds_to_hms(segment.end_time)}",
+                "",
+                f"**Duration**: {seconds_to_hms(segment.duration)}",
+                "",
+                f"**Title**: {segment.title}",
+                "",
+                f"**Summary**: {segment.summary}",
+                "",
+                f"**Composition Rationale**: {segment.composition_rationale}",
+                "",
+                "## Composed Units",
+                *unit_lines,
             ]
         )
-        
+
     def _global_readme_text(self, atlas, max_end_time) -> str:
         return "\n".join(
             [
@@ -145,50 +183,70 @@ class CanonicalAtlasWriter:
                 f"**Duration**: {seconds_to_hms(max_end_time)}",
                 f"**Abstract**: {atlas.abstract}",
                 "",
-                "# Segmentation Context",
-                f"There are {len(atlas.segments)} segments extracted from the raw video.",
-                "- Each segment is saved in `./segments`.",
-                "- Each segment includes a `README.md` file containing the title, description, start time, and end time.",
-                "- Each segment includes a `video_clip.mp4` file with the corresponding video clip.",
-                "- Each segment includes a `SUBTITLES.md` file with the corresponding subtitles.",
+                "# Structure Context",
+                f"There are {len(getattr(atlas, 'units', []) or [])} units extracted from the raw video.",
+                f"There are {len(atlas.segments)} final composed segments generated from those units.",
+                "- All original units are saved in `./units`.",
+                "- Final composed segments are saved in `./segments`.",
+                "- Each segment folder contains its own `README.md` and a copied view of the units it is composed from.",
                 "",
                 "# Additional Files",
                 "- Raw video: `./video.mp4`",
+                "- Unit detail information: `./units/`",
                 "- Segment detail information: `./segments/`",
                 "- Full subtitles for this video: `./SUBTITLES.md`",
             ]
         )
+
+    def _write_unit_directory(
+        self,
+        atlas_dir: Path,
+        video_path: Path,
+        unit: AtlasUnit,
+        relative_dir: Path,
+    ) -> None:
+        write_text_to(atlas_dir, relative_dir / "README.md", self._unit_readme_text(unit))
+        if self.caption_with_subtitles and unit.subtitles_text:
+            write_text_to(atlas_dir, relative_dir / "SUBTITLES.md", unit.subtitles_text)
+        clip_relative_path = relative_dir / "video_clip.mp4"
+        if not clip_exists(atlas_dir, clip_relative_path):
+            extract_clip(atlas_dir, video_path, unit.start_time, unit.end_time, clip_relative_path)
     
     def write(
         self,
         atlas: CanonicalAtlas,
     ) -> None:
-        segments_quickview_items = []
-        
         atlas_dir = atlas.atlas_dir
         video_path = atlas.atlas_dir / atlas.relative_video_path
+        units = list(getattr(atlas, "units", []) or [])
+        units_by_id = {unit.unit_id: unit for unit in units}
+
+        for unit in units:
+            self._write_unit_directory(
+                atlas_dir=atlas_dir,
+                video_path=video_path,
+                unit=unit,
+                relative_dir=Path("units") / unit.folder_name,
+            )
 
         for segment in atlas.segments:
             segment_dir = Path("segments") / segment.folder_name
-            write_text_to(atlas_dir, segment_dir / "README.md", self._segment_readme_text(segment))
-            
-            subtitles_text = segment.subtitles_text
-            if self.caption_with_subtitles and subtitles_text:
-                write_text_to(atlas_dir, segment_dir / "SUBTITLES.md", subtitles_text)
+            composed_units = [units_by_id[unit_id] for unit_id in segment.unit_ids if unit_id in units_by_id]
+            write_text_to(atlas_dir, segment_dir / "README.md", self._segment_readme_text(segment, composed_units))
 
-            clip_relative_path = segment_dir / "video_clip.mp4"
-            if not clip_exists(atlas_dir, clip_relative_path):
-                extract_clip(atlas_dir, video_path, segment.start_time, segment.end_time, clip_relative_path)
-
-            segments_quickview_items.append(
-                f"- {segment.segment_id} ({segment.title}): {seconds_to_hms(segment.start_time)} - {seconds_to_hms(segment.end_time)}: {segment.summary}"
-            )
+            for unit in composed_units:
+                self._write_unit_directory(
+                    atlas_dir=atlas_dir,
+                    video_path=video_path,
+                    unit=unit,
+                    relative_dir=segment_dir / unit.folder_name,
+                )
 
         markdown_text = self._global_readme_text(atlas, atlas.duration)
                                  
         if not self.caption_with_subtitles:
-            markdown_text = markdown_text.replace("- Full subtitles for this video: `./SUBTITLES.md`", "").replace("- A `SUBTITLES.md` file with the corresponding subtitles.", "")
-                                 
+            markdown_text = markdown_text.replace("- Full subtitles for this video: `./SUBTITLES.md`", "")
+        
         write_text_to(atlas_dir, "README.md", markdown_text)
 
 

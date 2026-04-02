@@ -29,6 +29,7 @@
 - 目录：
   [docs/design-docs/module-design](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design)
 - 当前主要模块文档：
+  - [cli.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/cli.md)
   - [canonical-atlas-workflow.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/canonical-atlas-workflow.md)
   - [derived-atlas-workflow.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/derived-atlas-workflow.md)
   - [generators.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/generators.md)
@@ -36,6 +37,7 @@
   - [parsing.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/parsing.md)
   - [persistence.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/persistence.md)
   - [review.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/review.md)
+  - [source-acquisition.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/source-acquisition.md)
   - [transcription.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/transcription.md)
   - [utils.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/utils.md)
   - [prompts](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/module-design/prompts.md)
@@ -46,6 +48,9 @@
   [docs/design-docs/data-shemas](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/data-shemas)
 - 内容：
   系统中各个 dataclass / schema 的设计文档。
+- 当前新增：
+  - [atlas-unit.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/data-shemas/atlas-unit.md)
+  - [canonical-composition-result.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/design-docs/data-shemas/canonical-composition-result.md)
 
 ### Atlas 目录格式
 
@@ -87,6 +92,9 @@
 - 子目录：
   - [active](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active)
   - [completed](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/completed)
+- 当前 active plan：
+  - [2026-04-01-canonical-two-stage-composition.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active/2026-04-01-canonical-two-stage-composition.md)
+  - [2026-04-01-youtube-source-acquisition-cli.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/exec-plans/active/2026-04-01-youtube-source-acquisition-cli.md)
 
 ## 决策记录
 
@@ -94,6 +102,12 @@
   [docs/decision-making](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making)
 - 用途：
   保存关键设计取舍、命名调整、边界变化和其他需要长期追踪的决策记录。
+- 当前文档：
+  - [2026-0327-1751.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0327-1751.md)
+  - [2026-0329-aliyun-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0329-aliyun-transcription-route.md)
+  - [2026-0330-0609-canonical-high-efficiency.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0330-0609-canonical-high-efficiency.md)
+  - [2026-0331.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0331.md)
+  - [2026-0401.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0401.md)
 
 ## 参考资料
 

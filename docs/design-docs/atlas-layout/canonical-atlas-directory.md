@@ -16,18 +16,38 @@
 <canonical-atlas-root>/
 ├── README.md
 ├── EXECUTION_PLAN.json
-├── video.mp4
-├── subtitles.srt                # 可选
+├── input/
+│   ├── video.mp4
+│   ├── subtitles.srt            # 可选
+│   ├── SOURCE_INFO.json         # 可选
+│   └── SOURCE_METADATA.json     # 可选
 ├── SUBTITLES.md                 # 可选
+├── units/
+│   ├── <unit-folder-1>/
+│   │   ├── README.md
+│   │   ├── video_clip.mp4
+│   │   └── SUBTITLES.md         # 可选
+│   └── <unit-folder-2>/
+│       ├── README.md
+│       ├── video_clip.mp4
+│       └── SUBTITLES.md         # 可选
 └── segments/
     ├── <segment-folder-1>/
     │   ├── README.md
-    │   ├── video_clip.mp4
-    │   └── SUBTITLES.md         # 可选
+    │   ├── <unit-folder-1>/
+    │   │   ├── README.md
+    │   │   ├── video_clip.mp4
+    │   │   └── SUBTITLES.md     # 可选
+    │   └── <unit-folder-2>/
+    │       ├── README.md
+    │       ├── video_clip.mp4
+    │       └── SUBTITLES.md     # 可选
     └── <segment-folder-2>/
         ├── README.md
-        ├── video_clip.mp4
-        └── SUBTITLES.md         # 可选
+        └── <unit-folder-3>/
+            ├── README.md
+            ├── video_clip.mp4
+            └── SUBTITLES.md     # 可选
 ```
 
 ## 根目录项说明
@@ -50,7 +70,7 @@
   - 内容应与 `CanonicalExecutionPlan` 保持一致。
   - 该文件主要服务于调试、解释和流程复现。
 
-### `video.mp4`
+### `input/video.mp4`
 
 - 类型：`file`
 - 作用：保存 canonical atlas 的源视频副本。
@@ -58,7 +78,25 @@
 - 说明：
   - 后续 clip 提取与 review 都可能依赖该文件。
 
-### `subtitles.srt`
+### `input/SOURCE_INFO.json`
+
+- 类型：`file`
+- 作用：记录本次 canonical atlas 的输入来源信息。
+- 是否必需：`否`
+- 说明：
+  - 当输入来自 URL 或本地文件时，都可以写出该文件。
+  - 当前稳定字段包括 `source_type`、`source_url`、`subtitle_source` 和 `acquisition_timestamp`。
+
+### `input/SOURCE_METADATA.json`
+
+- 类型：`file`
+- 作用：保存输入来源的较完整元数据。
+- 是否必需：`否`
+- 说明：
+  - 当输入具备可用 metadata 时，应写出该文件。
+  - 该文件用于保留归一化后的来源 metadata，供 review 和后续 agent 消费。
+
+### `input/subtitles.srt`
 
 - 类型：`file`
 - 作用：保存原始或自动生成的 SRT 字幕文件。
@@ -74,16 +112,42 @@
 - 说明：
   - 其存在受 `caption_with_subtitles` 等运行时选项影响。
 
+### `units/`
+
+- 类型：`directory`
+- 作用：保存 Stage 1 产出的原始基本单元。
+- 是否必需：`是`
+- 说明：
+  - 每个 unit 对应一个稳定子目录。
+  - 该目录主要服务于实验期调试、验证和结构解释。
+
 ### `segments/`
 
 - 类型：`directory`
-- 作用：保存 canonical atlas 的片段级结果。
+- 作用：保存 canonical atlas 的最终组合结果。
 - 是否必需：`是`
 - 说明：
-  - 每个片段对应一个稳定子目录。
-  - 子目录名通常由 `segment_id`、标题 slug 和时间范围组合生成。
+  - 每个最终 segment 对应一个稳定子目录。
+  - 每个 segment 目录中会复制它所包含的 unit 内容，便于人工验证组合结果。
 
 ## 子目录与文件说明
+
+### `units/<unit-folder>/`
+
+- 目录结构：
+
+```text
+units/<unit-folder>/
+├── README.md
+├── video_clip.mp4
+└── SUBTITLES.md     # 可选
+```
+
+- 作用：表达单个 unit 的完整外部表示。
+- 文件约定：
+  - `README.md`：记录 `UnitID`、时间范围、标题、摘要与详细描述。
+  - `video_clip.mp4`：该 unit 对应的视频片段。
+  - `SUBTITLES.md`：该 unit 对应的字幕文本。
 
 ### `segments/<segment-folder>/`
 
@@ -92,15 +156,20 @@
 ```text
 segments/<segment-folder>/
 ├── README.md
-├── video_clip.mp4
-└── SUBTITLES.md     # 可选
+├── <unit-folder-1>/
+│   ├── README.md
+│   ├── video_clip.mp4
+│   └── SUBTITLES.md     # 可选
+└── <unit-folder-2>/
+    ├── README.md
+    ├── video_clip.mp4
+    └── SUBTITLES.md     # 可选
 ```
 
-- 作用：表达单个 canonical 片段的完整外部表示。
+- 作用：表达单个最终 segment 及其组成 unit 的完整外部表示。
 - 文件约定：
-  - `README.md`：记录片段标识、时间范围、标题、摘要与详细描述。
-  - `video_clip.mp4`：该片段对应的视频片段。
-  - `SUBTITLES.md`：该片段对应的字幕文本。
+  - `README.md`：记录 `SegID`、时间范围、标题、摘要与组合理由。
+  - 嵌套 `unit` 目录：复制该 segment 所包含的 unit 内容，用于实验期验证和调试。
 
 ## 必需项与可选项
 
@@ -109,14 +178,20 @@ segments/<segment-folder>/
 - 根目录 `README.md`
 - 根目录 `EXECUTION_PLAN.json`
 - 根目录源视频文件
+- `units/` 目录
 - `segments/` 目录
+- 每个 unit 目录中的 `README.md`
+- 每个 unit 目录中的 `video_clip.mp4`
 - 每个片段目录中的 `README.md`
-- 每个片段目录中的 `video_clip.mp4`
+- 每个 segment 目录中至少一个嵌套 unit 目录
 
 ### 可选项
 
-- 根目录 `subtitles.srt`
+- `input/SOURCE_INFO.json`
+- `input/SOURCE_METADATA.json`
+- `input/subtitles.srt`
 - 根目录 `SUBTITLES.md`
+- unit 目录中的 `SUBTITLES.md`
 - 片段目录中的 `SUBTITLES.md`
 
 ## 文件内容约定
@@ -128,7 +203,7 @@ segments/<segment-folder>/
   - `Title`
   - `Duration`
   - `Abstract`
-  - Segmentation Context
+  - Structure Context
 - 说明：
   - 应提供整个 canonical atlas 的全局概览。
   - 该文件是人工检查的第一入口之一。
@@ -147,7 +222,38 @@ segments/<segment-folder>/
 - 说明：
   - 其内容应与 `CanonicalExecutionPlan` 对齐。
 
-### 片段目录 `README.md`
+### `input/SOURCE_INFO.json`
+
+- 内容类型：`JSON`
+- 主要字段或内容：
+  - `source_type`
+  - `source_url`
+  - `subtitle_source`
+  - `acquisition_timestamp`
+
+### `input/SOURCE_METADATA.json`
+
+- 内容类型：`JSON`
+- 主要字段或内容：
+  - 归一化后的来源 metadata
+  - 当前实现中包括 `title`、`introduction`、`author`、`publish_date`、`duration_seconds`、`thumbnails`
+- 说明：
+  - 该文件的字段集合可以随着来源能力扩展，但其“保存稳定可消费的来源 metadata”这一角色应保持稳定。
+  - 当前 YouTube 与小宇宙来源都会尽量写出上述字段；小宇宙的描述、发布时间、节目作者和封面图也会被归一化到该文件中。
+
+### unit 目录 `README.md`
+
+- 内容类型：`Markdown`
+- 主要字段或内容：
+  - `UnitID`
+  - `Start Time`
+  - `End Time`
+  - `Duration`
+  - `Title`
+  - `Summary`
+  - `Detail Description`
+
+### segment 目录 `README.md`
 
 - 内容类型：`Markdown`
 - 主要字段或内容：
@@ -157,16 +263,17 @@ segments/<segment-folder>/
   - `Duration`
   - `Title`
   - `Summary`
-  - `Detail Description`
+  - `Composition Rationale`
 - 说明：
-  - 片段时间字段当前由 persistence 层写出。
+  - 最终 segment 的时间字段当前由 persistence 层写出。
   - 当前 `Start Time`、`End Time` 和 `Duration` 统一使用 `HH:MM:SS` 格式。
 
 ## 稳定契约
 
-- `segments/` 目录及每个片段子目录的存在方式应被视为稳定契约。
+- `units/` 与 `segments/` 目录及其子目录的存在方式应被视为实验期稳定契约。
 - 根级与片段级 `README.md` 的关键字段命名不应静默变更。
 - `EXECUTION_PLAN.json` 的整体角色与主要字段语义应保持稳定。
+- `input/SOURCE_INFO.json` 与 `input/SOURCE_METADATA.json` 一旦写出，应被视为稳定输入契约的一部分。
 - 可选项可以在保持兼容的前提下增减，但不应影响必需项的解释方式。
 
 ## 示例目录树
@@ -178,13 +285,24 @@ canonical-atlas/
 ├── video.mp4
 ├── subtitles.srt
 ├── SUBTITLES.md
+├── units/
+│   ├── unit-0001-opening-00:00:00-00:00:24/
+│   │   ├── README.md
+│   │   ├── video_clip.mp4
+│   │   └── SUBTITLES.md
+│   └── unit-0002-transition-00:00:24-00:01:01/
+│       ├── README.md
+│       ├── video_clip.mp4
+│       └── SUBTITLES.md
 └── segments/
-    ├── seg-0001-opening-00:00:00-00:00:24/
+    ├── seg-0001-opening-phase-00:00:00-00:01:01/
     │   ├── README.md
-    │   ├── video_clip.mp4
-    │   └── SUBTITLES.md
-    └── seg-0002-transition-00:00:24-00:01:01/
-        ├── README.md
-        ├── video_clip.mp4
-        └── SUBTITLES.md
+    │   ├── unit-0001-opening-00:00:00-00:00:24/
+    │   │   ├── README.md
+    │   │   ├── video_clip.mp4
+    │   │   └── SUBTITLES.md
+    │   └── unit-0002-transition-00:00:24-00:01:01/
+    │       ├── README.md
+    │       ├── video_clip.mp4
+    │       └── SUBTITLES.md
 ```

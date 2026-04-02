@@ -82,6 +82,7 @@ SEGMENTATION_PROFILE_DESCRIPTIONS: dict[str, str] = {
 
 SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
     "vlog_lifestyle": SegmentationProfile(
+        segmentation_route="multimodal_local",
         signal_priority="balanced",
         target_segment_length_sec=(60, 240),
         default_sampling_profile="balanced",
@@ -103,6 +104,7 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
         ),
     ),
     "documentary": SegmentationProfile(
+        segmentation_route="multimodal_local",
         signal_priority="balanced",
         target_segment_length_sec=(90, 300),
         default_sampling_profile="balanced",
@@ -124,6 +126,7 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
         ),
     ),
     "explanatory_commentary": SegmentationProfile(
+        segmentation_route="text_llm",
         signal_priority="language",
         target_segment_length_sec=(120, 360),
         default_sampling_profile="language_lean",
@@ -137,6 +140,7 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
         ),
     ),
     "esports_match_broadcast": SegmentationProfile(
+        segmentation_route="multimodal_local",
         signal_priority="balanced",
         target_segment_length_sec=(90, 240),
         default_sampling_profile="balanced",
@@ -158,6 +162,7 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
         ),
     ),
     "sports_broadcast": SegmentationProfile(
+        segmentation_route="multimodal_local",
         signal_priority="balanced",
         target_segment_length_sec=(60, 240),
         default_sampling_profile="balanced",
@@ -179,6 +184,7 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
         ),
     ),
     "narrative_film": SegmentationProfile(
+        segmentation_route="multimodal_local",
         signal_priority="balanced",
         target_segment_length_sec=(45, 240),
         default_sampling_profile="balanced",
@@ -200,6 +206,7 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
         ),
     ),
     "podcast_topic_conversation": SegmentationProfile(
+        segmentation_route="text_llm",
         signal_priority="language",
         target_segment_length_sec=(180, 480),
         default_sampling_profile="language_lean",
@@ -213,6 +220,7 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
         ),
     ),
     "lecture_slide_driven": SegmentationProfile(
+        segmentation_route="text_llm",
         signal_priority="balanced",
         target_segment_length_sec=(120, 360),
         default_sampling_profile="balanced",
@@ -225,6 +233,7 @@ SEGMENTATION_PROFILES: dict[str, SegmentationProfile] = {
         ),
     ),
     DEFAULT_SEGMENTATION_PROFILE: SegmentationProfile(
+        segmentation_route="multimodal_local",
         signal_priority="balanced",
         target_segment_length_sec=(90, 300),
         default_sampling_profile="balanced",

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
+
+from .source_info import SourceInfoRecord
 
 
 @dataclass(frozen=True)
@@ -17,6 +20,7 @@ SamplingConfig = FrameSamplingProfile
 
 @dataclass(frozen=True)
 class SegmentationProfile:
+    segmentation_route: str
     signal_priority: str
     target_segment_length_sec: tuple[int, int]
     default_sampling_profile: str
@@ -85,6 +89,7 @@ class CanonicalExecutionPlan:
 class CandidateBoundary:
     timestamp: float
     boundary_rationale: str = ""
+    segment_title: str = ""
     evidence: list[str] = field(default_factory=list)
     confidence: float = 0.0
 
@@ -94,6 +99,7 @@ class FinalizedSegment:
     start_time: float
     end_time: float
     boundary_rationale: str = ""
+    segment_title: str = ""
     boundary_confidence: float = 0.0
     evidence: list[str] = field(default_factory=list)
     refinement_needed: bool = False
@@ -104,28 +110,58 @@ class CaptionedSegment:
     seg_id: str
     start_time: float
     end_time: float
-    summary: str
-    detail: str
+    title: str = ""
+    summary: str = ""
+    detail: str = ""
     subtitles_text: str = ""
     token_usage: int = 0
 
 
 @dataclass
-class AtlasSegment:
-    segment_id: str
+class AtlasUnit:
+    unit_id: str
     title: str
     start_time: float
     end_time: float
-    summary: str
-    caption: str
-    subtitles_text: str
-    folder_name: str
+    summary: str = ""
+    caption: str = ""
+    subtitles_text: str = ""
+    folder_name: str = ""
     relative_clip_path: Path | None = None
     relative_subtitles_path: Path | None = None
 
     @property
     def duration(self) -> float:
         return self.end_time - self.start_time
+
+
+@dataclass
+class AtlasSegment:
+    segment_id: str
+    unit_ids: list[str] = field(default_factory=list)
+    title: str = ""
+    start_time: float = 0.0
+    end_time: float = 0.0
+    summary: str = ""
+    composition_rationale: str = ""
+    folder_name: str = ""
+    caption: str = ""
+    subtitles_text: str = ""
+    relative_clip_path: Path | None = None
+    relative_subtitles_path: Path | None = None
+
+    @property
+    def duration(self) -> float:
+        return self.end_time - self.start_time
+
+
+@dataclass
+class CanonicalCompositionResult:
+    title: str
+    abstract: str
+    segments: list[AtlasSegment]
+    composition_rationale: str = ""
+    structure_request: str = ""
 
 
 @dataclass
@@ -140,3 +176,10 @@ class CanonicalAtlas:
     relative_audio_path: Path | None = None
     relative_subtitles_path: Path | None = None
     relative_srt_file_path: Path | None = None
+    units: list[AtlasUnit] = field(default_factory=list)
+    source_info: SourceInfoRecord | None = None
+    source_metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def raw_source_metadata(self) -> dict[str, Any]:
+        return self.source_metadata

@@ -2,25 +2,46 @@
   "planner": {
     "provider": "openai_compatible",
     "model_name": "Qwen/Qwen3.5-122B-A10B",
+    "connection": "local",
     "temperature": 0.6,
     "top_p": 0.95,
     "max_tokens": 8192,
-    "extra_body": {"chat_template_kwargs": {"enable_thinking": true}}
+    "extra_body": {"chat_template_kwargs": {"enable_thinking": false}}
   },
-  "segmentor": {
+  "text_segmentor": {
+    "provider": "openai_compatible",
+    "model_name": "gpt-5.1",
+    "connection": "remote",
+    "temperature": 0.3,
+    "top_p": 0.95,
+    "max_tokens": 4096,
+    "extra_body": {"reasoning_effort": "none"}
+  },
+  "multimodal_segmentor": {
     "provider": "openai_compatible",
     "model_name": "Qwen/Qwen3.5-122B-A10B",
+    "connection": "local",
     "temperature": 0.3,
     "top_p": 0.95,
     "max_tokens": 1600,
     "extra_body": {"chat_template_kwargs": {"enable_thinking": false}}
   },
+  "structure_composer": {
+    "provider": "openai_compatible",
+    "model_name": "gpt-5.1",
+    "connection": "remote",
+    "temperature": 0.3,
+    "top_p": 0.95,
+    "max_tokens": 4096,
+    "extra_body": {"reasoning_effort": "none"}
+  },
   "captioner": {
     "provider": "openai_compatible",
     "model_name": "Qwen/Qwen3.5-122B-A10B",
+    "connection": "local",
     "temperature": 0.6,
     "top_p": 0.95,
-    "max_tokens": 1600,
+    "max_tokens": 3200,
     "extra_body": {"chat_template_kwargs": {"enable_thinking": false}}
   },
   "transcriber": {
@@ -35,11 +56,19 @@
     "use_batched_inference": true,
     "batch_size": 32
   },
+  "acquisition": {
+    "enabled": true,
+    "prefer_youtube_subtitles": true,
+    "youtube_output_template": "%(id)s.%(ext)s",
+    "max_youtube_video_duration_sec": 3000
+  },
   "runtime": {
     "caption_with_subtitles": true,
     "generate_subtitles_if_missing": true,
     "verbose": false,
-    "chunk_size_sec": 600,
-    "chunk_overlap_sec": 60
+    "text_chunk_size_sec": 1800,
+    "text_chunk_overlap_sec": 120,
+    "multimodal_chunk_size_sec": 600,
+    "multimodal_chunk_overlap_sec": 60
   }
 }

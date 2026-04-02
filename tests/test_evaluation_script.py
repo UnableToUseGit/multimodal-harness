@@ -13,18 +13,26 @@ class _FakeCanonicalWorkflow:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
-    def create(self, output_dir: Path, source_video_path: Path, source_srt_file_path: Path | None = None, verbose: bool = False):
+    def create(
+        self,
+        output_dir: Path,
+        source_video_path: Path,
+        source_srt_file_path: Path | None = None,
+        structure_request: str | None = None,
+        verbose: bool = False,
+    ):
         self.__class__.calls.append(
             {
                 "output_dir": output_dir,
                 "source_video_path": source_video_path,
                 "source_srt_file_path": source_srt_file_path,
+                "structure_request": structure_request,
                 "verbose": verbose,
             }
         )
         output_dir.mkdir(parents=True, exist_ok=True)
         (output_dir / "README.md").write_text("canonical", encoding="utf-8")
-        return type(
+        atlas = type(
             "FakeCanonicalAtlas",
             (),
             {
@@ -32,6 +40,7 @@ class _FakeCanonicalWorkflow:
                 "relative_video_path": Path(source_video_path.name),
             },
         )()
+        return atlas, {"plan_cost_time": 1.0, "parsing_cost_time": 1.0, "assemble_cost_time": 0.5, "persistence_cost_time": 0.5}
 
 
 class _FakeDerivedWorkflow:
@@ -55,6 +64,37 @@ class _FakeDerivedWorkflow:
 
 
 class EvaluationScriptTest(unittest.TestCase):
+    @staticmethod
+    def _fake_canonical_config():
+        return type(
+            "Cfg",
+            (),
+            {
+                "planner": object(),
+                "segmentor": object(),
+                "text_segmentor": object(),
+                "multimodal_segmentor": object(),
+                "structure_composer": object(),
+                "captioner": object(),
+                "transcriber": object(),
+                "runtime": type(
+                    "Runtime",
+                    (),
+                    {
+                        "generate_subtitles_if_missing": True,
+                        "text_chunk_size_sec": 1800,
+                        "text_chunk_overlap_sec": 120,
+                        "multimodal_chunk_size_sec": 600,
+                        "multimodal_chunk_overlap_sec": 20,
+                        "chunk_size_sec": 600,
+                        "chunk_overlap_sec": 20,
+                        "caption_with_subtitles": True,
+                        "verbose": False,
+                    },
+                )(),
+            },
+        )()
+
     def test_run_evaluation_writes_case_outputs_and_summary(self) -> None:
         from scripts.run_evaluation import run_evaluation
 
@@ -84,6 +124,7 @@ class EvaluationScriptTest(unittest.TestCase):
                                 "case_video_path": str(video_path),
                                 "case_str_file_path": str(srt_path),
                                 "case_task_request_path": str(task_path),
+                                "structure_request": "帮我把这个视频分成4-6部分",
                                 "canonical_atlas_workflow_config": "configs/canonical/default.json",
                                 "derived_atlas_workflow_config": "configs/derivation/default.json",
                             }
@@ -95,7 +136,7 @@ class EvaluationScriptTest(unittest.TestCase):
             )
 
             fake_times = iter([100.0, 112.5, 200.0, 206.0])
-            with patch("scripts.run_evaluation.load_canonical_pipeline_config", return_value=type("Cfg", (), {"planner": object(), "segmentor": object(), "captioner": object(), "transcriber": object(), "runtime": type("Runtime", (), {"generate_subtitles_if_missing": True, "chunk_size_sec": 600, "chunk_overlap_sec": 20, "caption_with_subtitles": True, "verbose": False})()})()), \
+            with patch("scripts.run_evaluation.load_canonical_pipeline_config", return_value=self._fake_canonical_config()), \
                 patch("scripts.run_evaluation.load_derived_pipeline_config", return_value=type("Cfg", (), {"planner": object(), "segmentor": object(), "captioner": object(), "runtime": type("Runtime", (), {"num_workers": 2, "verbose": False})()})()), \
                 patch("scripts.run_evaluation.build_generator", side_effect=lambda config: config), \
                 patch("scripts.run_evaluation.build_transcriber", side_effect=lambda config: config), \
@@ -115,7 +156,8 @@ class EvaluationScriptTest(unittest.TestCase):
             self.assertEqual(case_summary["case_name"], "case_001")
             self.assertTrue(case_summary["canonical_success"])
             self.assertTrue(case_summary["derived_success"])
-            self.assertAlmostEqual(case_summary["canonical_duration_sec"], 12.5)
+            self.assertAlmostEqual(case_summary["canonical_duration_sec"]["total_cost_time"], 12.5)
+            self.assertAlmostEqual(case_summary["canonical_duration_sec"]["plan_cost_time"], 1.0)
             self.assertAlmostEqual(case_summary["derived_duration_sec"], 6.0)
             self.assertEqual(Path(case_summary["canonical_output_dir"]), canonical_dir.resolve())
             self.assertEqual(Path(case_summary["derived_output_dir"]), derived_dir.resolve())
@@ -127,6 +169,7 @@ class EvaluationScriptTest(unittest.TestCase):
             persisted_summary = json.loads(summary_path.read_text(encoding="utf-8"))
             self.assertEqual(persisted_summary["cases"][0]["case_name"], "case_001")
             self.assertEqual(_FakeCanonicalWorkflow.calls[0]["source_srt_file_path"], srt_path)
+            self.assertEqual(_FakeCanonicalWorkflow.calls[0]["structure_request"], "帮我把这个视频分成4-6部分")
             self.assertEqual(_FakeDerivedWorkflow.calls[0]["task_request"], "find opening")
 
     def test_run_evaluation_can_skip_derived_generation(self) -> None:
@@ -169,7 +212,7 @@ class EvaluationScriptTest(unittest.TestCase):
             )
 
             fake_times = iter([10.0, 13.0])
-            with patch("scripts.run_evaluation.load_canonical_pipeline_config", return_value=type("Cfg", (), {"planner": object(), "segmentor": object(), "captioner": object(), "transcriber": object(), "runtime": type("Runtime", (), {"generate_subtitles_if_missing": True, "chunk_size_sec": 600, "chunk_overlap_sec": 20, "caption_with_subtitles": True, "verbose": False})()})()), \
+            with patch("scripts.run_evaluation.load_canonical_pipeline_config", return_value=self._fake_canonical_config()), \
                 patch("scripts.run_evaluation.build_generator", side_effect=lambda config: config), \
                 patch("scripts.run_evaluation.build_transcriber", side_effect=lambda config: config), \
                 patch("scripts.run_evaluation.CanonicalAtlasWorkflow", _FakeCanonicalWorkflow), \

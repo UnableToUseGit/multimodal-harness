@@ -5,6 +5,7 @@ from __future__ import annotations
 from importlib import import_module
 
 _EXPORT_MAP = {
+    "AcquisitionRuntimeConfig": "video_atlas.config.models",
     "CanonicalPipelineConfig": "video_atlas.config.models",
     "CanonicalRuntimeConfig": "video_atlas.config.models",
     "DerivedPipelineConfig": "video_atlas.config.models",

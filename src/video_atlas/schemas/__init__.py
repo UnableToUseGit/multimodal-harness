@@ -18,10 +18,12 @@ from .canonical_registry import (
 )
 from .canonical_atlas import (
     AtlasSegment,
+    AtlasUnit,
     CandidateBoundary,
     CaptionedSegment,
     CanonicalAtlas,
     CanonicalExecutionPlan,
+    CanonicalCompositionResult,
     CaptionProfile,
     CaptionSpecification,
     FrameSamplingProfile,
@@ -30,6 +32,8 @@ from .canonical_atlas import (
     SegmentationProfile,
     SegmentationSpecification,
 )
+from .canonical_request import CanonicalCreateRequest
+from .acquisition import SourceInfoRecord, SourceAcquisitionResult, SourceMetadata
 from .derived_atlas import DerivationPolicy, DerivationResultInfo, DerivedAtlas, DerivedSegmentDraft
 
 __all__ = [
@@ -39,11 +43,14 @@ __all__ = [
     "ALLOWED_SEGMENTATION_PROFILES",
     "ALLOWED_SIGNAL_PRIORITIES",
     "AtlasSegment",
+    "AtlasUnit",
     "CAPTION_PROFILES",
     "CandidateBoundary",
     "CaptionedSegment",
     "CanonicalExecutionPlan",
+    "CanonicalCreateRequest",
     "CanonicalAtlas",
+    "CanonicalCompositionResult",
     "CaptionProfile",
     "CaptionSpecification",
     "DEFAULT_CAPTION_PROFILE",
@@ -59,6 +66,9 @@ __all__ = [
     "SamplingConfig",
     "SegmentationProfile",
     "SegmentationSpecification",
+    "SourceInfoRecord",
+    "SourceMetadata",
+    "SourceAcquisitionResult",
     "resolve_caption_profile",
     "resolve_sampling_profile",
     "resolve_segmentation_profile",

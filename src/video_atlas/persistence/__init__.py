@@ -9,6 +9,7 @@ from .writers import (
     format_hms_time_range,
     slugify_segment_title,
     write_candidate_boundaries_for_debug,
+    write_json_to,
     write_text_to,
 )
 
@@ -21,5 +22,6 @@ __all__ = [
     "format_hms_time_range",
     "slugify_segment_title",
     "write_candidate_boundaries_for_debug",
+    "write_json_to",
     "write_text_to",
 ]

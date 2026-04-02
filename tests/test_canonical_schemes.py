@@ -3,17 +3,40 @@ import unittest
 
 class CanonicalSchemesTest(unittest.TestCase):
     def test_atlas_domain_models_are_available_from_schemas(self) -> None:
-        from video_atlas.schemas import AtlasSegment, CanonicalAtlas, CanonicalExecutionPlan
+        from video_atlas.schemas import (
+            AtlasSegment,
+            AtlasUnit,
+            CanonicalAtlas,
+            CanonicalCompositionResult,
+            CanonicalExecutionPlan,
+        )
+
+        unit = AtlasUnit(
+            unit_id="unit_0001",
+            title="Opening Unit",
+            start_time=0.0,
+            end_time=5.0,
+            summary="Setup",
+            caption="Opening caption",
+            subtitles_text="hello",
+            folder_name="unit0001-opening-unit",
+        )
 
         segment = AtlasSegment(
             segment_id="seg_0001",
+            unit_ids=["unit_0001"],
             title="Opening",
             start_time=0.0,
             end_time=10.0,
             summary="Setup",
-            caption="Opening caption",
-            subtitles_text="",
+            composition_rationale="Merged as one introductory block.",
             folder_name="seg0001-opening",
+        )
+        composition = CanonicalCompositionResult(
+            title="Atlas",
+            abstract="Overview",
+            segments=[segment],
+            composition_rationale="Two-stage composition result",
         )
         atlas = CanonicalAtlas(
             title="Atlas",
@@ -23,10 +46,14 @@ class CanonicalSchemesTest(unittest.TestCase):
             execution_plan=CanonicalExecutionPlan(),
             atlas_dir="/tmp/example",
             relative_video_path="video.mp4",
+            units=[unit],
         )
 
+        self.assertEqual(unit.unit_id, "unit_0001")
         self.assertEqual(atlas.segments[0].segment_id, "seg_0001")
         self.assertEqual(atlas.segments[0].title, "Opening")
+        self.assertEqual(atlas.units[0].unit_id, "unit_0001")
+        self.assertEqual(composition.segments[0].unit_ids, ["unit_0001"])
 
     def test_canonical_execution_plan_is_available_from_schemas(self) -> None:
         from video_atlas.schemas.canonical_registry import (

@@ -8,7 +8,7 @@
 
 - 名称：`persistence`
 - 路径：`src/video_atlas/persistence`
-- 主要职责：将内存中的 atlas 结果对象转换为稳定的目录与文件表示
+- 主要职责：将内存中的 atlas 结果对象转换为稳定的目录与文件表示，并在实验期支持 canonical 的 `units + segments` 双层结果写出
 
 ## 职责与边界
 
@@ -23,6 +23,8 @@
 - 不负责业务流程编排。
 - 不负责模型调用与响应解析。
 - 不负责业务策略决策。
+- 不负责 URL acquisition 或本地输入 materialization。
+- 不负责 `input/SOURCE_INFO.json` 与 `input/SOURCE_METADATA.json` 的生成。
 
 ## 核心接口
 
@@ -40,7 +42,7 @@
       - `CanonicalAtlas`
       - 目标 atlas 目录
     - 输出：
-      - canonical atlas 对应的目录结构、说明文件和片段文件
+      - canonical atlas 对应的目录结构、说明文件、unit 文件和 segment 文件
 - 说明：
   - 该实现类只消费完整结果对象，不参与结果生成。
 
@@ -87,6 +89,19 @@
 - 说明：
   - 适用于 README、字幕文本和 metadata 文件写出。
 
+### `write_json_to`
+
+- 类型：`function`
+- 作用：将 JSON payload 写入目标目录下的指定相对路径。
+- 输入：
+  - 目标目录
+  - 相对路径
+  - JSON 对象
+- 输出：
+  - 写入后的目标路径
+- 说明：
+- 适用于结构化 metadata 写出。
+
 ### `extract_clip`
 
 - 类型：`function`
@@ -132,6 +147,7 @@
 - 角色：负责 canonical atlas 的整体外部化写入。
 - 边界：
   - 负责 canonical 结果到目录表示的转换
+  - 负责实验期 `units/` 与 `segments/` 的双层写出
   - 不负责 canonical 结果对象的生成
 - 输入：
   - `CanonicalAtlas`
@@ -155,8 +171,8 @@
 
 1. 上层 workflow 产出标准结果对象。
 2. writer 读取结果对象及相关路径信息。
-3. 模块写出根级说明文件、分段文件和辅助 metadata。
-4. 模块在需要时提取片段视频并完成目录组织。
+3. 模块写出根级说明文件、unit 文件、segment 文件和辅助结果文件。
+4. 模块在需要时提取 unit 视频，并在实验期复制到 segment 目录中完成目录组织。
 
 ## 设计约束
 
@@ -164,7 +180,9 @@
 - writer 应以稳定契约写出结果，不应内联业务推理。
 - 目录结构、文件名和 metadata 格式应保持可追踪和可验证。
 - 内部时间字段使用数值时间范围表达。
-- 当这些信息被写入 atlas 目录中的 README 或 metadata 时，应由持久化层统一转换为 ISO 8601 格式
+- 当这些信息被写入 atlas 目录中的 README 或结果 metadata 时，应由持久化层统一转换为 ISO 8601 格式
+- canonical 两阶段实验期允许存在冗余目录与媒体复制，以换取更高的可验证性和可解释性。
+- 对 URL 或本地输入来源信息，应优先通过 application layer 写出的 `input/SOURCE_INFO.json` 和 `input/SOURCE_METADATA.json` 暴露，而不是要求下游从 README 推断。
 
 ## 当前实现
 

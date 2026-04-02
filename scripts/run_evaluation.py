@@ -40,6 +40,7 @@ def _run_case(case_config: dict[str, Any], verbose: bool = False) -> dict[str, A
     case_video_path = _resolve_path(case_config["case_video_path"])
     case_srt_file_path = _resolve_path(case_config.get("case_str_file_path"))
     case_task_request_path = _resolve_path(case_config["case_task_request_path"])
+    structure_request = case_config.get("structure_request")
     canonical_config_path = _resolve_path(case_config["canonical_atlas_workflow_config"])
     derived_config_path = _resolve_path(case_config["derived_atlas_workflow_config"])
     case_output_dir = _resolve_path(case_config["case_output_dir"])
@@ -59,6 +60,7 @@ def _run_case(case_config: dict[str, Any], verbose: bool = False) -> dict[str, A
         "case_video_path": str(case_video_path),
         "case_srt_file_path": str(case_srt_file_path) if case_srt_file_path is not None else None,
         "case_task_request_path": str(case_task_request_path),
+        "structure_request": structure_request,
         "should_generate_canonical_atlas": should_generate_canonical_atlas,
         "should_generate_derived_atlas": should_generate_derived_atlas,
         "canonical_output_dir": str(canonical_output_dir.resolve()),
@@ -75,22 +77,29 @@ def _run_case(case_config: dict[str, Any], verbose: bool = False) -> dict[str, A
             canonical_config = load_canonical_pipeline_config(canonical_config_path)
             canonical_workflow = CanonicalAtlasWorkflow(
                 planner=build_generator(canonical_config.planner),
-                segmentor=build_generator(canonical_config.segmentor),
+                text_segmentor=build_generator(canonical_config.text_segmentor or canonical_config.segmentor),
+                multimodal_segmentor=build_generator(
+                    canonical_config.multimodal_segmentor or canonical_config.segmentor
+                ),
+                structure_composer=build_generator(canonical_config.structure_composer or canonical_config.planner),
                 captioner=build_generator(canonical_config.captioner) if canonical_config.captioner is not None else None,
                 transcriber=build_transcriber(canonical_config.transcriber),
                 generate_subtitles_if_missing=canonical_config.runtime.generate_subtitles_if_missing,
-                chunk_size_sec=canonical_config.runtime.chunk_size_sec,
-                chunk_overlap_sec=canonical_config.runtime.chunk_overlap_sec,
+                text_chunk_size_sec=canonical_config.runtime.text_chunk_size_sec,
+                text_chunk_overlap_sec=canonical_config.runtime.text_chunk_overlap_sec,
+                multimodal_chunk_size_sec=canonical_config.runtime.multimodal_chunk_size_sec,
+                multimodal_chunk_overlap_sec=canonical_config.runtime.multimodal_chunk_overlap_sec,
                 caption_with_subtitles=canonical_config.runtime.caption_with_subtitles,
             )
             started_at = time.perf_counter()
-            canonical_workflow.create(
+            _, cost_time_info = canonical_workflow.create(
                 output_dir=canonical_output_dir,
                 source_video_path=case_video_path,
                 source_srt_file_path=case_srt_file_path,
+                structure_request=structure_request,
                 verbose=(canonical_config.runtime.verbose or verbose),
             )
-            result["canonical_duration_sec"] = round(time.perf_counter() - started_at, 3)
+            result["canonical_duration_sec"] = {"total_cost_time": round(time.perf_counter() - started_at, 3), **cost_time_info}
             result["canonical_success"] = True
 
         if should_generate_derived_atlas:

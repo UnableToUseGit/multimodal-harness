@@ -9,16 +9,15 @@ from ..transcription.base import BaseTranscriber
 from ..message_builder import build_text_messages, build_video_messages_from_path
 from ..parsing import parse_json_response
 
-from .canonical_atlas.atlas_assembly import AtlasAssemblyMixin
 from .canonical_atlas.execution_plan_builder import ExecutionPlanBuilderMixin
 from .canonical_atlas.plan import PlanMixin
 from .canonical_atlas.pipeline import PipelineMixin
+from .canonical_atlas.structure_composition import compose_canonical_structure
 from .canonical_atlas.video_parsing import VideoParsingMixin
 
 
 class CanonicalAtlasWorkflow(
     PipelineMixin,
-    AtlasAssemblyMixin,
     VideoParsingMixin,
     PlanMixin,
     ExecutionPlanBuilderMixin,
@@ -40,22 +39,40 @@ class CanonicalAtlasWorkflow(
     def __init__(
         self,
         planner: BaseGenerator,
-        segmentor: BaseGenerator,
-        captioner: BaseGenerator,
+        text_segmentor: Optional[BaseGenerator],
+        multimodal_segmentor: Optional[BaseGenerator],
+        structure_composer: Optional[BaseGenerator],
+        captioner: Optional[BaseGenerator],
         transcriber: Optional[BaseTranscriber] = None,
         generate_subtitles_if_missing: bool = True,
         chunk_size_sec: int = 600,
         chunk_overlap_sec: int = 20,
+        text_chunk_size_sec: Optional[int] = None,
+        text_chunk_overlap_sec: Optional[int] = None,
+        multimodal_chunk_size_sec: Optional[int] = None,
+        multimodal_chunk_overlap_sec: Optional[int] = None,
         caption_with_subtitles: bool = True,
+        verbose: bool = False,
     ):
         self.planner = planner
-        self.segmentor = segmentor
-        self.captioner = captioner or segmentor
+        self.text_segmentor = text_segmentor
+        self.multimodal_segmentor = multimodal_segmentor
+        self.structure_composer = structure_composer
+        self.captioner = captioner
         self.transcriber = transcriber
         self.generate_subtitles_if_missing = generate_subtitles_if_missing
         self.chunk_size_sec = chunk_size_sec
         self.chunk_overlap_sec = chunk_overlap_sec
+        self.text_chunk_size_sec = text_chunk_size_sec if text_chunk_size_sec is not None else chunk_size_sec
+        self.text_chunk_overlap_sec = text_chunk_overlap_sec if text_chunk_overlap_sec is not None else chunk_overlap_sec
+        self.multimodal_chunk_size_sec = (
+            multimodal_chunk_size_sec if multimodal_chunk_size_sec is not None else chunk_size_sec
+        )
+        self.multimodal_chunk_overlap_sec = (
+            multimodal_chunk_overlap_sec if multimodal_chunk_overlap_sec is not None else chunk_overlap_sec
+        )
         self.caption_with_subtitles = caption_with_subtitles
+        self.verbose = verbose
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def _log_info(self, message: str, *args) -> None:
@@ -91,3 +108,18 @@ class CanonicalAtlasWorkflow(
 
     def parse_response(self, generated_text: str) -> dict | list:
         return parse_json_response(generated_text)
+
+    def _compose_canonical_structure(
+        self,
+        units,
+        concise_description: str = "",
+        genres: list[str] | None = None,
+        structure_request: str = "",
+    ):
+        return compose_canonical_structure(
+            self.structure_composer,
+            units=units,
+            concise_description=concise_description,
+            genres=genres,
+            structure_request=structure_request,
+        )

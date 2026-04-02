@@ -53,6 +53,19 @@ def _workspace_payload(workspaces: list[ReviewWorkspace]) -> dict[str, object]:
             segment["clip_url"] = f"/media/{workspace.workspace_id}/{clip_relative_path}" if clip_relative_path else None
             segment["subtitles_url"] = f"/media/{workspace.workspace_id}/{subtitles_relative_path}" if subtitles_relative_path else None
             segment["readme_url"] = f"/media/{workspace.workspace_id}/{readme_relative_path}" if readme_relative_path else None
+            for unit in segment.get("units", []):
+                unit_clip_relative_path = unit.get("clip_relative_path")
+                unit_subtitles_relative_path = unit.get("subtitles_relative_path")
+                unit_readme_relative_path = unit.get("readme_relative_path")
+                unit["clip_url"] = (
+                    f"/media/{workspace.workspace_id}/{unit_clip_relative_path}" if unit_clip_relative_path else None
+                )
+                unit["subtitles_url"] = (
+                    f"/media/{workspace.workspace_id}/{unit_subtitles_relative_path}" if unit_subtitles_relative_path else None
+                )
+                unit["readme_url"] = (
+                    f"/media/{workspace.workspace_id}/{unit_readme_relative_path}" if unit_readme_relative_path else None
+                )
         payload.append(data)
     return {"workspaces": payload}
 
