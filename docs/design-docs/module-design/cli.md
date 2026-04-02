@@ -80,6 +80,7 @@ video-atlas config
 - 将 acquisition 结果直接写入输出目录后退出
 - 说明：
   - 该命令主要用于验证下载、字幕和 source metadata 获取能力
+  - 对 YouTube URL，当前会先做 metadata probe；若视频超过配置阈值，则只抓取字幕而不下载视频
 
 ## URL 输入设计
 
@@ -183,6 +184,7 @@ CLI 对 URL 输入的错误处理应区分为三类：
 - `create` 默认表示 canonical atlas create，不再保留 `canonical` 子命令层级。
 - 当前识别并支持 YouTube 与小宇宙；其他 URL 一律明确报错，不做隐式尝试。
 - `fetch` 必须保留主媒体文件、可用字幕和 source metadata，而不是只下载媒体文件。
+- YouTube 的“是否下载视频”由 acquisition config 控制，默认阈值为 `25` 分钟。
 - 不应因为未来可能支持 derived atlas，而在当前阶段提前引入多余 CLI 层级。
 
 ## 当前实现规划

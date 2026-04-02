@@ -64,7 +64,21 @@
       - `SourceAcquisitionResult`
 - 说明：
   - 该实现类只负责“获取和标准化输入”，不直接调用 canonical workflow。
+  - 该实现类先执行 metadata probe，再根据时长策略决定是否下载视频。
+  - 当前默认策略是：视频时长不超过 `25` 分钟时下载视频与字幕；超过 `25` 分钟时只抓取字幕，不下载视频文件。
   - 该实现类应优先复用 YouTube 已有字幕或自动字幕；仅当字幕不可用时，才把后续本地转写留给上层 workflow。
+
+### 具体实现类接口：`XiaoyuzhouAudioAcquirer`
+
+- 类型：`concrete class`
+- 作用：处理小宇宙单集页面 URL 的页面解析、音频下载和 metadata 抽取。
+- 关键行为：
+  - 解析页面中的 `__NEXT_DATA__` 与 `ld+json`
+  - 提取音频直链
+  - 提取标题、描述、发布时间、时长、节目作者和封面图等字段
+- 输出：
+  - `SourceAcquisitionResult`
+    - 其中 `audio_path` 为主媒体文件路径
 
 ### 数据对象接口：`SourceAcquisitionResult`
 
@@ -123,6 +137,19 @@
   - 可选的本地字幕文件
   - 归一化后的来源元数据
 
+### 小宇宙获取部分
+
+- 角色：抓取页面、解析音频直链和 metadata，并产出本地音频资产。
+- 边界：
+  - 负责页面解析和音频下载
+  - 不负责 atlas 生成或转写触发
+- 输入：
+  - 小宇宙单集 URL
+  - acquisition 工作目录
+- 输出：
+  - 本地音频文件
+  - 归一化后的来源元数据
+
 ### 结果标准化部分
 
 - 角色：将各类原始抓取结果整理为统一 schema。
@@ -141,7 +168,7 @@
 1. CLI 接收 `--url` 和 `--output-dir`。
 2. `source_acquisition` 先识别 URL 来源类型；当前支持标准 YouTube 视频页面和小宇宙单集页面。
 3. acquisition 执行来源特定抓取：
-   - YouTube：下载视频，并尽量抓取已有字幕或自动字幕。
+   - YouTube：先抓取 metadata，再根据时长阈值决定是下载视频+字幕还是只抓取字幕。
    - 小宇宙：抓取页面、提取音频直链并下载音频文件。
 4. acquisition 抓取并整理来源 metadata。
 5. acquisition 将结果标准化为 `SourceAcquisitionResult`。
@@ -203,6 +230,7 @@ video-atlas create \
 - 当 metadata 仅部分缺失时，不应阻断流程；应保留已获取字段继续执行。
 - 当 YouTube 字幕可用时，应优先复用，不额外触发本地转写。
 - 当 YouTube 字幕不可用时，应由上层 workflow 决定是否回退到既有 transcriber。
+- 当 YouTube 视频时长超过 acquisition 阈值时，允许只抓取字幕而不下载视频文件。
 - 当小宇宙 URL 只提供音频文件时，应由上层 workflow 决定是否执行转写。
 - 当下载成功但字幕抓取与本地转写均失败时，应整体失败，并清楚区分失败阶段。
 
@@ -228,6 +256,7 @@ video-atlas create \
 - 当前只支持单个标准 YouTube 视频页面 URL 与小宇宙单集 URL，不支持 `youtu.be`、playlist、频道页或批量任务。
 - acquisition 结果必须通过显式 schema 传递，不能长期依赖隐式字典。
 - source metadata 应使用稳定 schema，对外提供统一消费接口。
+- 当前 YouTube 的视频下载阈值通过 acquisition config 配置，默认值为 `1500` 秒。
 - derived atlas 链路不是当前设计范围的一部分。
 - 更轻量的 `mm_segmentor` 方案不纳入本阶段。
 

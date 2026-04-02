@@ -204,6 +204,9 @@ class CliSmokeTest(unittest.TestCase):
             tmpdir,
             prefer_youtube_subtitles=mock_load_config.return_value.acquisition.prefer_youtube_subtitles,
             youtube_output_template=mock_load_config.return_value.acquisition.youtube_output_template,
+            max_youtube_video_duration_sec=mock_load_config.return_value.acquisition.max_youtube_video_duration_sec,
+            youtube_cookies_file=mock_load_config.return_value.acquisition.youtube_cookies_file,
+            youtube_cookies_from_browser=mock_load_config.return_value.acquisition.youtube_cookies_from_browser,
         )
 
     @patch("video_atlas.cli.main.acquire_from_url", side_effect=UnsupportedSourceError("unsupported source"))

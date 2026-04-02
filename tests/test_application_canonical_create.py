@@ -66,6 +66,10 @@ class CanonicalCreateApplicationTest(unittest.TestCase):
             )
 
         self.assertEqual(result, ("atlas", {}))
+        acquire_call = mock_acquire_from_url.call_args
+        self.assertEqual(acquire_call.kwargs["max_youtube_video_duration_sec"], 1500)
+        self.assertIsNone(acquire_call.kwargs["youtube_cookies_file"])
+        self.assertIsNone(acquire_call.kwargs["youtube_cookies_from_browser"])
         request_arg = workflow.create.call_args.args[0]
         self.assertEqual(len(workflow.create.call_args.args), 1)
         self.assertEqual(request_arg.atlas_dir.parent, output_root)

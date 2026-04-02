@@ -13,6 +13,14 @@ class SourceInfoRecord:
     source_url: str | None = None
     subtitle_source: str | None = None
     acquisition_timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "source_type": self.source_type,
+            "source_url": self.source_url,
+            "subtitle_source": self.subtitle_source,
+            "acquisition_timestamp": self.acquisition_timestamp.isoformat(),
+        }
     
 @dataclass
 class SourceMetadata:

@@ -1,7 +1,9 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from video_atlas.config import load_canonical_pipeline_config, load_derived_pipeline_config
 
@@ -14,6 +16,9 @@ class ConfigLoadingTest(unittest.TestCase):
                 "enabled": True,
                 "prefer_youtube_subtitles": True,
                 "youtube_output_template": "%(id)s.%(ext)s",
+                "max_youtube_video_duration_sec": 1500,
+                "youtube_cookies_file": "/tmp/cookies.txt",
+                "youtube_cookies_from_browser": "chrome",
             },
         }
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -24,6 +29,30 @@ class ConfigLoadingTest(unittest.TestCase):
         self.assertTrue(config.acquisition.enabled)
         self.assertTrue(config.acquisition.prefer_youtube_subtitles)
         self.assertEqual(config.acquisition.youtube_output_template, "%(id)s.%(ext)s")
+        self.assertEqual(config.acquisition.max_youtube_video_duration_sec, 1500)
+        self.assertEqual(config.acquisition.youtube_cookies_file, "/tmp/cookies.txt")
+        self.assertEqual(config.acquisition.youtube_cookies_from_browser, "chrome")
+
+    @patch.dict(
+        os.environ,
+        {
+            "VIDEO_ATLAS_YOUTUBE_COOKIES_FILE": "/env/cookies.txt",
+            "VIDEO_ATLAS_YOUTUBE_COOKIES_FROM_BROWSER": "firefox",
+        },
+        clear=False,
+    )
+    def test_load_canonical_pipeline_config_reads_acquisition_cookies_from_env(self) -> None:
+        payload = {
+            "planner": {"provider": "openai_compatible", "model_name": "planner-model"},
+            "acquisition": {},
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "canonical-acquisition-env.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            config = load_canonical_pipeline_config(path)
+
+        self.assertEqual(config.acquisition.youtube_cookies_file, "/env/cookies.txt")
+        self.assertEqual(config.acquisition.youtube_cookies_from_browser, "firefox")
 
     def test_load_canonical_pipeline_config_supports_new_structure(self) -> None:
         payload = {

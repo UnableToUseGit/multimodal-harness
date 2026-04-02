@@ -40,14 +40,19 @@ def acquire_from_url(
     *,
     prefer_youtube_subtitles: bool = True,
     youtube_output_template: str = "%(id)s.%(ext)s",
+    max_youtube_video_duration_sec: int = 1500,
+    youtube_cookies_file: str | None = None,
+    youtube_cookies_from_browser: str | None = None,
 ) -> SourceAcquisitionResult:
     source_type = detect_source_from_url(url)
     if source_type == "youtube":
         return YouTubeVideoAcquirer(
             prefer_youtube_subtitles=prefer_youtube_subtitles,
             output_template=youtube_output_template,
+            max_video_duration_sec=max_youtube_video_duration_sec,
+            cookies_file=youtube_cookies_file,
+            cookies_from_browser=youtube_cookies_from_browser,
         ).acquire(url, Path(output_dir))
     if source_type == "xiaoyuzhou":
         return XiaoyuzhouAudioAcquirer().acquire(url, Path(output_dir))
     raise RuntimeError(f"Unhandled source type: {source_type}")
-

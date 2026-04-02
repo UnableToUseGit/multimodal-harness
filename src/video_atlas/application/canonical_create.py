@@ -109,6 +109,9 @@ def create_canonical_from_url(
         acquisition_dir,
         prefer_youtube_subtitles=config.acquisition.prefer_youtube_subtitles,
         youtube_output_template=config.acquisition.youtube_output_template,
+        max_youtube_video_duration_sec=config.acquisition.max_youtube_video_duration_sec,
+        youtube_cookies_file=config.acquisition.youtube_cookies_file,
+        youtube_cookies_from_browser=config.acquisition.youtube_cookies_from_browser,
     )
     
     request = CanonicalCreateRequest(
@@ -120,7 +123,6 @@ def create_canonical_from_url(
         source_info=acquisition.source_info,
         source_metadata=acquisition.source_metadata,
     )
-    
     workflow = _build_workflow(config)
     return workflow.create(request)
 
@@ -160,6 +162,5 @@ def create_canonical_from_local(
         source_info=materialized_inputs.source_info,
         source_metadata=materialized_inputs.source_metadata,
     )
-    
     workflow = _build_workflow(config)
     return workflow.create(request)

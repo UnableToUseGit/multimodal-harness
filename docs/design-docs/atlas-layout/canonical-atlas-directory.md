@@ -239,6 +239,7 @@ segments/<segment-folder>/
   - 当前实现中包括 `title`、`introduction`、`author`、`publish_date`、`duration_seconds`、`thumbnails`
 - 说明：
   - 该文件的字段集合可以随着来源能力扩展，但其“保存稳定可消费的来源 metadata”这一角色应保持稳定。
+  - 当前 YouTube 与小宇宙来源都会尽量写出上述字段；小宇宙的描述、发布时间、节目作者和封面图也会被归一化到该文件中。
 
 ### unit 目录 `README.md`
 

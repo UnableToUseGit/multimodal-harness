@@ -56,6 +56,12 @@
     "use_batched_inference": true,
     "batch_size": 32
   },
+  "acquisition": {
+    "enabled": true,
+    "prefer_youtube_subtitles": true,
+    "youtube_output_template": "%(id)s.%(ext)s",
+    "max_youtube_video_duration_sec": 3000
+  },
   "runtime": {
     "caption_with_subtitles": true,
     "generate_subtitles_if_missing": true,

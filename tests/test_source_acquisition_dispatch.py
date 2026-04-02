@@ -48,6 +48,7 @@ class SourceAcquisitionDispatchTest(unittest.TestCase):
             "/tmp/acquisition",
             prefer_youtube_subtitles=True,
             youtube_output_template="%(id)s.%(ext)s",
+            max_youtube_video_duration_sec=1500,
         )
 
         self.assertEqual(result, expected)
@@ -69,6 +70,7 @@ class SourceAcquisitionDispatchTest(unittest.TestCase):
             "/tmp/acquisition",
             prefer_youtube_subtitles=True,
             youtube_output_template="%(id)s.%(ext)s",
+            max_youtube_video_duration_sec=1500,
         )
 
         self.assertEqual(result, expected)

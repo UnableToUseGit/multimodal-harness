@@ -21,15 +21,11 @@ class XiaoyuzhouAcquisitionTest(unittest.TestCase):
     def test_extract_audio_url_and_title_from_page(self) -> None:
         page = """
         <html>
-          <head><title>demo</title></head>
-          <body>
-            <script>
-              window.__DATA__ = {"title":"Episode Title","audio":"https://media.xyzcdn.net/demo-file.m4a"};
-            </script>
-          </body>
+          <script id="__NEXT_DATA__" type="application/json">
+            {"props":{"pageProps":{"episode":{"title":"Episode Title","enclosure":{"url":"https://media.xyzcdn.net/demo-file.m4a"}}}}}
+          </script>
         </html>
         """
-
         self.assertEqual(extract_title_from_page(page), "Episode Title")
         self.assertEqual(extract_audio_url_from_page(page), "https://media.xyzcdn.net/demo-file.m4a")
 
@@ -37,7 +33,29 @@ class XiaoyuzhouAcquisitionTest(unittest.TestCase):
     def test_acquire_downloads_audio_and_builds_metadata(self, mock_urlopen: object) -> None:
         page = """
         <html>
-          <script>{"title":"Episode Title","audio":"https://media.xyzcdn.net/demo-file.m4a"}</script>
+          <script id="__NEXT_DATA__" type="application/json">
+            {
+              "props": {
+                "pageProps": {
+                  "episode": {
+                    "title": "Episode Title",
+                    "description": "Episode Description",
+                    "duration": 1234,
+                    "pubDate": "2024-08-26T01:00:00.000Z",
+                    "enclosure": {"url": "https://media.xyzcdn.net/demo-file.m4a"},
+                    "image": {
+                      "picUrl": "https://image.xyzcdn.net/episode.png",
+                      "thumbnailUrl": "https://image.xyzcdn.net/episode-thumb.png"
+                    },
+                    "podcast": {
+                      "author": "Podcast Author",
+                      "image": {"picUrl": "https://image.xyzcdn.net/podcast.png"}
+                    }
+                  }
+                }
+              }
+            }
+          </script>
         </html>
         """
         mock_urlopen.side_effect = [
@@ -52,9 +70,12 @@ class XiaoyuzhouAcquisitionTest(unittest.TestCase):
             )
 
         self.assertEqual(result.source_info.source_type, "xiaoyuzhou")
-        self.assertEqual(result.local_audio_path.name, "audio.m4a")
-        self.assertEqual(result.source_metadata["title"], "Episode Title")
-        self.assertEqual(result.source_metadata["audio_url"], "https://media.xyzcdn.net/demo-file.m4a")
+        self.assertEqual(result.audio_path.name, "audio.m4a")
+        self.assertEqual(result.source_metadata.title, "Episode Title")
+        self.assertEqual(result.source_metadata.introduction, "Episode Description")
+        self.assertEqual(result.source_metadata.author, "Podcast Author")
+        self.assertEqual(result.source_metadata.duration_seconds, 1234)
+        self.assertIn("https://image.xyzcdn.net/episode.png", result.source_metadata.thumbnails)
 
 
 if __name__ == "__main__":

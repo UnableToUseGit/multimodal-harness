@@ -118,6 +118,9 @@ def _run_fetch(args) -> int:
         args.output_dir,
         prefer_youtube_subtitles=config.acquisition.prefer_youtube_subtitles,
         youtube_output_template=config.acquisition.youtube_output_template,
+        max_youtube_video_duration_sec=config.acquisition.max_youtube_video_duration_sec,
+        youtube_cookies_file=config.acquisition.youtube_cookies_file,
+        youtube_cookies_from_browser=config.acquisition.youtube_cookies_from_browser,
     )
     
     return 0

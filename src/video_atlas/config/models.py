@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
 from typing import Any
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 @dataclass
@@ -65,6 +69,9 @@ class AcquisitionRuntimeConfig:
     enabled: bool = True
     prefer_youtube_subtitles: bool = True
     youtube_output_template: str = "%(id)s.%(ext)s"
+    max_youtube_video_duration_sec: int = 1500
+    youtube_cookies_file: str | None = None
+    youtube_cookies_from_browser: str | None = None
 
 
 @dataclass
@@ -123,7 +130,10 @@ def _build_canonical_runtime_config(raw: dict[str, Any]) -> CanonicalRuntimeConf
 
 
 def _build_acquisition_runtime_config(raw: dict[str, Any]) -> AcquisitionRuntimeConfig:
-    return AcquisitionRuntimeConfig(**raw)
+    merged = dict(raw)
+    merged.setdefault("youtube_cookies_file", os.environ.get("VIDEO_ATLAS_YOUTUBE_COOKIES_FILE"))
+    merged.setdefault("youtube_cookies_from_browser", os.environ.get("VIDEO_ATLAS_YOUTUBE_COOKIES_FROM_BROWSER"))
+    return AcquisitionRuntimeConfig(**merged)
 
 
 def load_canonical_pipeline_config(path: str | Path) -> CanonicalPipelineConfig:
