@@ -15,9 +15,15 @@
 # video-atlas create --url https://www.youtube.com/watch?v=kaPgGH5HC0w --output-dir local/outputs/test_video
 
 ## 测试组三：PATH；预期走 text route
+# video-atlas create \
+#     --video-file local/inputs/case_011_explanatory_commentary_tech/全面解析世界模型.mp4 \
+#     --subtitle-file local/inputs/case_011_explanatory_commentary_tech/subtitles.srt \
+#     --structure-request "结构化为粗粒度的章节" \
+#     --output-dir local/outputs/test_video
+
 video-atlas create \
-    --video-file local/inputs/case_011_explanatory_commentary_tech/全面解析世界模型.mp4 \
-    --subtitle-file local/inputs/case_011_explanatory_commentary_tech/subtitles.srt \
+    --video-file local/inputs/case_013_explanatory_commentary_history/墨西哥是如何成为一个毒品国家的.mp4 \
+    --subtitle-file local/inputs/case_013_explanatory_commentary_history/subtitles.srt \
     --structure-request "结构化为粗粒度的章节" \
     --output-dir local/outputs/test_video
 

@@ -1,9 +1,11 @@
 import os
+import io
 import subprocess
 import sys
 import unittest
+from contextlib import redirect_stdout
 from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 from video_atlas.cli.main import build_parser, main
 from video_atlas.source_acquisition import UnsupportedSourceError
@@ -130,28 +132,39 @@ class CliSmokeTest(unittest.TestCase):
             runtime=MagicMock(),
             acquisition=MagicMock(),
         )
+        atlas = MagicMock()
+        atlas.atlas_dir = "/tmp/out/run-url"
+        atlas.title = "URL Atlas"
+        atlas.execution_plan.output_language = "en"
+        atlas.segments = [MagicMock()]
+        mock_create_canonical_from_url.return_value = (atlas, {})
 
         with TemporaryDirectory() as tmpdir:
-            exit_code = main(
-                [
-                    "create",
-                    "--url",
-                    "https://www.youtube.com/watch?v=abc123xyz89",
-                    "--output-dir",
-                    tmpdir,
-                    "--config",
-                    "configs/canonical/default.json",
-                    "--structure-request",
-                    "keep it coarse",
-                ]
-            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "create",
+                        "--url",
+                        "https://www.youtube.com/watch?v=abc123xyz89",
+                        "--output-dir",
+                        tmpdir,
+                        "--config",
+                        "configs/canonical/default.json",
+                        "--structure-request",
+                        "keep it coarse",
+                    ]
+                )
 
         self.assertEqual(exit_code, 0)
+        self.assertIn("Creating canonical atlas...", stdout.getvalue())
+        self.assertIn("Done", stdout.getvalue())
         mock_create_canonical_from_url.assert_called_once_with(
             "https://www.youtube.com/watch?v=abc123xyz89",
             tmpdir,
             mock_load_config.return_value,
             structure_request="keep it coarse",
+            on_progress=ANY,
         )
 
     @patch("video_atlas.cli.main.create_canonical_from_local")
@@ -165,23 +178,35 @@ class CliSmokeTest(unittest.TestCase):
             runtime=MagicMock(),
             acquisition=MagicMock(),
         )
+        atlas = MagicMock()
+        atlas.atlas_dir = "/tmp/out/run-001"
+        atlas.title = "Local Atlas"
+        atlas.execution_plan.output_language = "zh"
+        atlas.segments = [MagicMock(), MagicMock()]
+        mock_create_canonical_from_local.return_value = (atlas, {})
 
         with TemporaryDirectory() as tmpdir:
-            exit_code = main(
-                [
-                    "create",
-                    "--video-file",
-                    "/tmp/video.mp4",
-                    "--subtitle-file",
-                    "/tmp/subtitles.srt",
-                    "--metadata-file",
-                    "/tmp/metadata.json",
-                    "--output-dir",
-                    tmpdir,
-                ]
-            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "create",
+                        "--video-file",
+                        "/tmp/video.mp4",
+                        "--subtitle-file",
+                        "/tmp/subtitles.srt",
+                        "--metadata-file",
+                        "/tmp/metadata.json",
+                        "--output-dir",
+                        tmpdir,
+                    ]
+                )
 
         self.assertEqual(exit_code, 0)
+        self.assertIn("Creating canonical atlas...", stdout.getvalue())
+        self.assertIn("atlas_dir /tmp/out/run-001", stdout.getvalue())
+        self.assertIn("output_language zh", stdout.getvalue())
+        self.assertIn("segments 2", stdout.getvalue())
         mock_create_canonical_from_local.assert_called_once_with(
             tmpdir,
             mock_load_config.return_value,
@@ -190,6 +215,7 @@ class CliSmokeTest(unittest.TestCase):
             subtitle_file="/tmp/subtitles.srt",
             metadata_file="/tmp/metadata.json",
             structure_request="",
+            on_progress=ANY,
         )
 
     @patch("video_atlas.cli.main.create_canonical_from_local")
@@ -203,17 +229,25 @@ class CliSmokeTest(unittest.TestCase):
             runtime=MagicMock(),
             acquisition=MagicMock(),
         )
+        atlas = MagicMock()
+        atlas.atlas_dir = "/tmp/out/run-002"
+        atlas.title = "Audio Atlas"
+        atlas.execution_plan.output_language = "en"
+        atlas.segments = [MagicMock()]
+        mock_create_canonical_from_local.return_value = (atlas, {})
 
         with TemporaryDirectory() as tmpdir:
-            exit_code = main(
-                [
-                    "create",
-                    "--audio-file",
-                    "/tmp/audio.m4a",
-                    "--output-dir",
-                    tmpdir,
-                ]
-            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "create",
+                        "--audio-file",
+                        "/tmp/audio.m4a",
+                        "--output-dir",
+                        tmpdir,
+                    ]
+                )
 
         self.assertEqual(exit_code, 0)
         mock_create_canonical_from_local.assert_called_once_with(
@@ -224,7 +258,9 @@ class CliSmokeTest(unittest.TestCase):
             subtitle_file=None,
             metadata_file=None,
             structure_request="",
+            on_progress=ANY,
         )
+        self.assertIn("output_language en", stdout.getvalue())
 
     @patch("video_atlas.cli.main.acquire_from_url")
     @patch("video_atlas.cli.main.load_canonical_pipeline_config")
@@ -238,17 +274,21 @@ class CliSmokeTest(unittest.TestCase):
         )
 
         with TemporaryDirectory() as tmpdir:
-            exit_code = main(
-                [
-                    "fetch",
-                    "--url",
-                    "https://www.youtube.com/watch?v=abc123xyz89",
-                    "--output-dir",
-                    tmpdir,
-                ]
-            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "fetch",
+                        "--url",
+                        "https://www.youtube.com/watch?v=abc123xyz89",
+                        "--output-dir",
+                        tmpdir,
+                    ]
+                )
 
         self.assertEqual(exit_code, 0)
+        self.assertIn("Fetching source assets...", stdout.getvalue())
+        self.assertIn(f"output_dir {tmpdir}", stdout.getvalue())
         mock_acquire_from_url.assert_called_once_with(
             "https://www.youtube.com/watch?v=abc123xyz89",
             tmpdir,

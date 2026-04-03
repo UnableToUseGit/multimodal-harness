@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from dataclasses import asdict
 from pathlib import Path
+from typing import Callable
 
 from ...persistence import CanonicalAtlasWriter, write_text_to
 from ...persistence import format_hms_time_range, slugify_segment_title
@@ -27,6 +28,10 @@ def _serialize_source_metadata(source_metadata):
 
 
 class TextFirstPipelineMixin:
+    def _notify_progress(self, on_progress: Callable[[str], None] | None, message: str) -> None:
+        if on_progress is not None:
+            on_progress(message)
+
     def _finalize_composed_segments(self, composition_result):
         normalized_segments = []
         for segment in composition_result.segments:
@@ -134,12 +139,13 @@ class TextFirstPipelineMixin:
                 if caption_with_subtitles and unit.subtitles_text:
                     write_text_to(atlas.atlas_dir, nested_unit_dir / "SUBTITLES.md", unit.subtitles_text)
 
-    def create(self, request: CanonicalCreateRequest):
+    def create(self, request: CanonicalCreateRequest, on_progress: Callable[[str], None] | None = None):
         atlas_dir = request.atlas_dir
         atlas_dir.mkdir(parents=True, exist_ok=True)
         request.input_dir.mkdir(parents=True, exist_ok=True)
         verbose = bool(getattr(self, "verbose", False))
 
+        self._notify_progress(on_progress, "Preparing subtitles...")
         subtitle_assets = resolve_subtitle_assets(
             input_dir=request.input_dir,
             subtitle_path=request.subtitle_path,
@@ -157,11 +163,13 @@ class TextFirstPipelineMixin:
             prepared_srt_path = normalized_srt_path
 
         subtitle_items, subtitles_text = parse_srt(prepared_srt_path)
+        self._notify_progress(on_progress, "Resolving atlas output language...")
         output_language = resolve_atlas_language(
             structure_request=request.structure_request or "",
             source_metadata=request.source_metadata,
             subtitles_text=subtitles_text,
         )
+        self._notify_progress(on_progress, "Planning canonical atlas...")
         execution_plan = build_text_first_execution_plan(
             request=request,
             planner=getattr(self, "planner", None),
@@ -174,6 +182,7 @@ class TextFirstPipelineMixin:
         if execution_plan.profile.route != "text_first":
             raise NotImplementedError(f"Unsupported text-first route: {execution_plan.profile.route}")
 
+        self._notify_progress(on_progress, "Parsing units...")
         started_at = time.time()
         units = build_text_units(
             text_segmentor=getattr(self, "text_segmentor", None),
@@ -185,6 +194,7 @@ class TextFirstPipelineMixin:
         )
         parsing_cost_time = time.time() - started_at
 
+        self._notify_progress(on_progress, "Composing final structure...")
         started_at = time.time()
         composition_result = compose_canonical_structure(
             getattr(self, "structure_composer", None),
@@ -217,6 +227,7 @@ class TextFirstPipelineMixin:
             source_metadata=_serialize_source_metadata(request.source_metadata),
         ) 
     
+        self._notify_progress(on_progress, "Writing atlas workspace...")
         started_at = time.time()
         if request.video_path is not None and request.video_path.exists():
             CanonicalAtlasWriter(caption_with_subtitles=getattr(self, "caption_with_subtitles", True)).write(atlas=atlas)

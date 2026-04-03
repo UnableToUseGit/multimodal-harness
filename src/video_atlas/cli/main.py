@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import platform
 import sys
+import time
 
 from video_atlas.application import create_canonical_from_local, create_canonical_from_url, acquire_from_url
 from video_atlas.config import load_canonical_pipeline_config
@@ -11,6 +12,25 @@ from video_atlas.source_acquisition import InvalidSourceUrlError, UnsupportedSou
 
 class CliUsageError(ValueError):
     pass
+
+
+def _print_progress(message: str) -> None:
+    print(message)
+
+
+def _print_create_summary(atlas, cost_time: float) -> None:
+    print("Done")
+    print(f"atlas_dir: {atlas.atlas_dir}")
+    print(f"title: {atlas.title}")
+    print(f"output_language: {atlas.execution_plan.output_language}")
+    print(f"segments: {len(atlas.segments)}")
+    print(f"cost_time: {cost_time:.2f}s")
+
+
+def _print_fetch_summary(output_dir: str, cost_time: float) -> None:
+    print("Done")
+    print(f"output_dir: {output_dir}")
+    print(f"cost_time: {cost_time:.2f}s")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -85,21 +105,25 @@ def _print_config() -> int:
 def _run_canonical_create(args) -> int:
     config = load_canonical_pipeline_config(args.config)
     local_inputs = [args.video_file, args.audio_file, args.subtitle_file, args.metadata_file]
+    print("Creating canonical atlas...")
+    started_at = time.time()
     if args.url:
         if any(item is not None for item in local_inputs):
             raise CliUsageError("create accepts either --url or local file inputs, not both")
-        create_canonical_from_url(
+        atlas, _ = create_canonical_from_url(
             args.url,
             args.output_dir,
             config,
             structure_request=args.structure_request,
+            on_progress=_print_progress,
         )
+        _print_create_summary(atlas, time.time() - started_at)
         return 0
 
     if args.video_file is None and args.audio_file is None and args.subtitle_file is None:
         raise CliUsageError("create requires --url or at least one of --video-file/--audio-file/--subtitle-file")
 
-    create_canonical_from_local(
+    atlas, _ = create_canonical_from_local(
         args.output_dir,
         config,
         video_file=args.video_file,
@@ -107,12 +131,16 @@ def _run_canonical_create(args) -> int:
         subtitle_file=args.subtitle_file,
         metadata_file=args.metadata_file,
         structure_request=args.structure_request,
+        on_progress=_print_progress,
     )
+    _print_create_summary(atlas, time.time() - started_at)
     return 0
 
 
 def _run_fetch(args) -> int:
     config = load_canonical_pipeline_config(args.config)
+    print("Fetching source assets...")
+    started_at = time.time()
     acquire_from_url(
         args.url,
         args.output_dir,
@@ -122,7 +150,7 @@ def _run_fetch(args) -> int:
         youtube_cookies_file=config.acquisition.youtube_cookies_file,
         youtube_cookies_from_browser=config.acquisition.youtube_cookies_from_browser,
     )
-    
+    _print_fetch_summary(args.output_dir, time.time() - started_at)
     return 0
 
 

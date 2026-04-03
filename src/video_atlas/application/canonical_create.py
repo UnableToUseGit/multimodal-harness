@@ -4,6 +4,7 @@ import json
 import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Callable
 from uuid import uuid4
 
 from video_atlas.config import build_generator, build_transcriber
@@ -94,6 +95,7 @@ def create_canonical_from_url(
     config: CanonicalPipelineConfig,
     *,
     structure_request: str = "",
+    on_progress: Callable[[str], None] | None = None,
 ):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -101,7 +103,10 @@ def create_canonical_from_url(
     atlas_dir.mkdir(parents=True, exist_ok=False)
     acquisition_dir = atlas_dir / "input"
     acquisition_dir.mkdir(parents=True, exist_ok=True)
-    
+
+    if on_progress is not None:
+        on_progress("Acquiring source assets from URL...")
+
     acquisition = acquire_from_url(
         url,
         acquisition_dir,
@@ -122,7 +127,7 @@ def create_canonical_from_url(
         source_metadata=acquisition.source_metadata,
     )
     workflow = _build_workflow(config)
-    return workflow.create(request)
+    return workflow.create(request, on_progress=on_progress)
 
 
 def create_canonical_from_local(
@@ -134,15 +139,18 @@ def create_canonical_from_local(
     subtitle_file: str | Path | None = None,
     metadata_file: str | Path | None = None,
     structure_request: str = "",
+    on_progress: Callable[[str], None] | None = None,
 ):
-    
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     atlas_dir = output_dir / uuid4().hex
     atlas_dir.mkdir(parents=True, exist_ok=False)
     acquisition_dir = atlas_dir / "input"
     acquisition_dir.mkdir(parents=True, exist_ok=True)
-    
+
+    if on_progress is not None:
+        on_progress("Preparing local input assets...")
+
     materialized_inputs = _materialize_local_inputs(
         acquisition_dir,
         video_file=video_file,
@@ -161,4 +169,4 @@ def create_canonical_from_local(
         source_metadata=materialized_inputs.source_metadata,
     )
     workflow = _build_workflow(config)
-    return workflow.create(request)
+    return workflow.create(request, on_progress=on_progress)

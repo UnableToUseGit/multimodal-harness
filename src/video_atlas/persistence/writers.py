@@ -116,7 +116,7 @@ def extract_clip(
         f"-i {shlex.quote(str(video_path.relative_to(root_path)))} "
         f"-c copy {shlex.quote(str(output_path.relative_to(root_path)))}"
     )
-    print(command)
+
     result = subprocess.run(
         command,
         shell=True,
