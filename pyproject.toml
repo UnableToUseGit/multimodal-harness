@@ -3,10 +3,10 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "video-atlas"
+name = "mm-harness"
 version = "0.1.0"
 description = "Video parsing pipeline that turns long videos into an LLM-friendly workspace."
-readme = "ARCHITECTURE.md"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "json-repair>=0.30.0",
@@ -20,7 +20,7 @@ dependencies = [
 dev = []
 
 [project.scripts]
-video-atlas = "video_atlas.cli.main:main"
+mm-harness = "video_atlas.cli.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

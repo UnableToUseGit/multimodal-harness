@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import argparse
 import platform
+import shutil
 import sys
 import time
 
-from video_atlas.application import create_canonical_from_local, create_canonical_from_url, acquire_from_url
+from video_atlas.application import create_canonical_from_local, create_canonical_from_url
 from video_atlas.config import load_canonical_pipeline_config
+from video_atlas.settings import ENV_API_BASE, ENV_API_KEY, get_settings
 from video_atlas.source_acquisition import InvalidSourceUrlError, UnsupportedSourceError
 
 
@@ -27,16 +29,10 @@ def _print_create_summary(atlas, cost_time: float) -> None:
     print(f"cost_time: {cost_time:.2f}s")
 
 
-def _print_fetch_summary(output_dir: str, cost_time: float) -> None:
-    print("Done")
-    print(f"output_dir: {output_dir}")
-    print(f"cost_time: {cost_time:.2f}s")
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="video-atlas",
-        description="Development CLI for the VideoAtlas package.",
+        prog="mm-harness",
+        description="CLI for the MM Harness package.",
     )
     subparsers = parser.add_subparsers(dest="command")
 
@@ -50,7 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers.add_parser(
         "config",
-        help="Print the current VideoAtlas configuration state.",
+        help="Print the current MM Harness configuration state.",
+    )
+    subparsers.add_parser(
+        "doctor",
+        help="Check whether the current environment is ready to run MM Harness.",
     )
 
     create_parser = subparsers.add_parser(
@@ -63,25 +63,17 @@ def build_parser() -> argparse.ArgumentParser:
     create_parser.add_argument("--subtitle-file")
     create_parser.add_argument("--metadata-file")
     create_parser.add_argument("--output-dir", required=True)
-    create_parser.add_argument("--config", default="configs/canonical/default.json")
     create_parser.add_argument("--structure-request", default="")
-
-    fetch_parser = subparsers.add_parser(
-        "fetch",
-        help="Fetch source assets without generating an atlas.",
-    )
-    fetch_parser.add_argument("--url", required=True)
-    fetch_parser.add_argument("--output-dir", required=True)
-    fetch_parser.add_argument("--config", default="configs/canonical/default.json")
     return parser
 
 
 def _print_info() -> int:
     import video_atlas
 
-    print(f"video_atlas {video_atlas.__version__}")
-    print(f"python {platform.python_version()}")
-    print(f"executable {sys.executable}")
+    print("MM Harness")
+    print(f"version      {video_atlas.__version__}")
+    print(f"python       {platform.python_version()}")
+    print(f"executable   {sys.executable}")
     return 0
 
 
@@ -93,8 +85,6 @@ def _check_import() -> int:
 
 
 def _print_config() -> int:
-    from video_atlas.settings import get_settings
-
     settings = get_settings()
     print(f"configured {'yes' if settings.is_configured else 'no'}")
     print(f"api_base {settings.api_base or '<missing>'}")
@@ -102,8 +92,96 @@ def _print_config() -> int:
     return 0
 
 
+def _doctor_check(label: str, ok: bool, detail: str) -> bool:
+    level = "OK" if ok else "FAIL"
+    print(f"{level:<5} {label:<22} {detail}")
+    return ok
+
+
+def _doctor_warn(label: str, detail: str) -> None:
+    print(f"{'WARN':<5} {label:<22} {detail}")
+
+
+def _run_doctor() -> int:
+    import os
+    import video_atlas
+
+    all_required_ok = True
+    settings = get_settings()
+
+    ffmpeg_path = shutil.which("ffmpeg")
+    ytdlp_path = shutil.which("yt-dlp")
+    deno_path = shutil.which("deno")
+
+    print("MM Harness Doctor")
+    print("")
+    print("Required")
+    all_required_ok &= _doctor_check("import", True, f"video_atlas {video_atlas.__version__}")
+    all_required_ok &= _doctor_check(
+        "ffmpeg",
+        ffmpeg_path is not None,
+        "found" if ffmpeg_path else "missing; install ffmpeg before running create",
+    )
+    all_required_ok &= _doctor_check(
+        "yt-dlp",
+        ytdlp_path is not None,
+        "found" if ytdlp_path else "missing; install yt-dlp for YouTube URL support",
+    )
+    all_required_ok &= _doctor_check(
+        "deno",
+        deno_path is not None,
+        "found" if deno_path else "missing; install deno for reliable YouTube extraction",
+    )
+    all_required_ok &= _doctor_check(
+        ENV_API_BASE,
+        bool(settings.api_base),
+        "configured" if settings.api_base else "missing; export LLM_API_BASE_URL",
+    )
+    all_required_ok &= _doctor_check(
+        ENV_API_KEY,
+        bool(settings.api_key),
+        "configured" if settings.api_key else "missing; export LLM_API_KEY",
+    )
+    groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+    all_required_ok &= _doctor_check(
+        "GROQ_API_KEY",
+        bool(groq_key),
+        "configured" if groq_key else "missing; export GROQ_API_KEY for transcription",
+    )
+
+    print("")
+    print("Optional")
+    youtube_cookie_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
+    youtube_cookies_from_browser = os.environ.get("YOUTUBE_COOKIES_FROM_BROWSER", "").strip()
+    if youtube_cookie_file or youtube_cookies_from_browser:
+        _doctor_warn("youtube-cookies", "configured")
+    else:
+        _doctor_warn(
+            "youtube-cookies",
+            "not configured; set YOUTUBE_COOKIES_FILE or YOUTUBE_COOKIES_FROM_BROWSER when YouTube requires authenticated access",
+        )
+
+    if not all_required_ok:
+        print("")
+        print("Hints")
+        if not ffmpeg_path:
+            print("- install ffmpeg and ensure it is on PATH")
+        if not ytdlp_path:
+            print("- install yt-dlp and ensure it is on PATH")
+        if not deno_path:
+            print("- install deno for more reliable YouTube extraction")
+        if not settings.api_base:
+            print("- export LLM_API_BASE_URL=...")
+        if not settings.api_key:
+            print("- export LLM_API_KEY=...")
+        if not groq_key:
+            print("- export GROQ_API_KEY=...")
+
+    return 0 if all_required_ok else 2
+
+
 def _run_canonical_create(args) -> int:
-    config = load_canonical_pipeline_config(args.config)
+    config = load_canonical_pipeline_config("configs/canonical/default.json")
     local_inputs = [args.video_file, args.audio_file, args.subtitle_file, args.metadata_file]
     print("Creating canonical atlas...")
     started_at = time.time()
@@ -137,29 +215,12 @@ def _run_canonical_create(args) -> int:
     return 0
 
 
-def _run_fetch(args) -> int:
-    config = load_canonical_pipeline_config(args.config)
-    print("Fetching source assets...")
-    started_at = time.time()
-    acquire_from_url(
-        args.url,
-        args.output_dir,
-        prefer_youtube_subtitles=config.acquisition.prefer_youtube_subtitles,
-        youtube_output_template=config.acquisition.youtube_output_template,
-        max_youtube_video_duration_sec=config.acquisition.max_youtube_video_duration_sec,
-        youtube_cookies_file=config.acquisition.youtube_cookies_file,
-        youtube_cookies_from_browser=config.acquisition.youtube_cookies_from_browser,
-    )
-    _print_fetch_summary(args.output_dir, time.time() - started_at)
-    return 0
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     parser.add_argument(
         "--version",
         action="version",
-        version="video-atlas 0.1.0",
+        version="mm-harness 0.1.0",
     )
     args = parser.parse_args(argv)
 
@@ -169,11 +230,11 @@ def main(argv: list[str] | None = None) -> int:
         return _check_import()
     if args.command == "config":
         return _print_config()
+    if args.command == "doctor":
+        return _run_doctor()
     try:
         if args.command == "create":
             return _run_canonical_create(args)
-        if args.command == "fetch":
-            return _run_fetch(args)
     except (CliUsageError, InvalidSourceUrlError, UnsupportedSourceError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

@@ -17,8 +17,10 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 class CliSmokeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.env_backup = {
-            "VIDEO_ATLAS_API_BASE": os.environ.get("VIDEO_ATLAS_API_BASE"),
-            "VIDEO_ATLAS_API_KEY": os.environ.get("VIDEO_ATLAS_API_KEY"),
+            "LLM_API_BASE_URL": os.environ.get("LLM_API_BASE_URL"),
+            "LLM_API_KEY": os.environ.get("LLM_API_KEY"),
+            "YOUTUBE_COOKIES_FILE": os.environ.get("YOUTUBE_COOKIES_FILE"),
+            "YOUTUBE_COOKIES_FROM_BROWSER": os.environ.get("YOUTUBE_COOKIES_FROM_BROWSER"),
         }
 
     def tearDown(self) -> None:
@@ -44,7 +46,8 @@ class CliSmokeTest(unittest.TestCase):
     def test_info_command(self) -> None:
         result = self._run_cli("info")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
-        self.assertIn("video_atlas 0.1.0", result.stdout)
+        self.assertIn("MM Harness", result.stdout)
+        self.assertIn("version      0.1.0", result.stdout)
 
     def test_check_import_command(self) -> None:
         result = self._run_cli("check-import")
@@ -52,14 +55,35 @@ class CliSmokeTest(unittest.TestCase):
         self.assertIn("import-ok 0.1.0", result.stdout)
 
     def test_config_command(self) -> None:
-        os.environ["VIDEO_ATLAS_API_BASE"] = "https://example.test/v1"
-        os.environ["VIDEO_ATLAS_API_KEY"] = "secret-token-1234"
+        os.environ["LLM_API_BASE_URL"] = "https://example.test/v1"
+        os.environ["LLM_API_KEY"] = "secret-token-1234"
 
         result = self._run_cli("config")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("configured yes", result.stdout)
         self.assertIn("api_base https://example.test/v1", result.stdout)
         self.assertIn("api_key secr...1234", result.stdout)
+
+    def test_doctor_warns_with_cookie_env_var_names(self) -> None:
+        stdout = io.StringIO()
+        with patch("video_atlas.cli.main.shutil.which", return_value="/usr/bin/fake"):
+            with patch.dict(
+                os.environ,
+                {
+                    "LLM_API_BASE_URL": "https://example.test/v1",
+                    "LLM_API_KEY": "secret",
+                    "GROQ_API_KEY": "groq-secret",
+                },
+                clear=False,
+            ):
+                with redirect_stdout(stdout):
+                    exit_code = main(["doctor"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn(
+            "set YOUTUBE_COOKIES_FILE or YOUTUBE_COOKIES_FROM_BROWSER",
+            stdout.getvalue(),
+        )
 
     def test_build_parser_supports_create_with_url(self) -> None:
         parser = build_parser()
@@ -70,8 +94,6 @@ class CliSmokeTest(unittest.TestCase):
                 "https://www.youtube.com/watch?v=abc123xyz89",
                 "--output-dir",
                 "/tmp/out",
-                "--config",
-                "configs/canonical/default.json",
                 "--structure-request",
                 "keep it coarse",
             ]
@@ -80,7 +102,6 @@ class CliSmokeTest(unittest.TestCase):
         self.assertEqual(args.command, "create")
         self.assertEqual(args.url, "https://www.youtube.com/watch?v=abc123xyz89")
         self.assertEqual(args.output_dir, "/tmp/out")
-        self.assertEqual(args.config, "configs/canonical/default.json")
         self.assertEqual(args.structure_request, "keep it coarse")
 
     def test_build_parser_supports_create_with_local_files(self) -> None:
@@ -149,8 +170,6 @@ class CliSmokeTest(unittest.TestCase):
                         "https://www.youtube.com/watch?v=abc123xyz89",
                         "--output-dir",
                         tmpdir,
-                        "--config",
-                        "configs/canonical/default.json",
                         "--structure-request",
                         "keep it coarse",
                     ]
@@ -159,6 +178,7 @@ class CliSmokeTest(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn("Creating canonical atlas...", stdout.getvalue())
         self.assertIn("Done", stdout.getvalue())
+        self.assertIn("atlas_dir: /tmp/out/run-url", stdout.getvalue())
         mock_create_canonical_from_url.assert_called_once_with(
             "https://www.youtube.com/watch?v=abc123xyz89",
             tmpdir,
@@ -204,9 +224,9 @@ class CliSmokeTest(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertIn("Creating canonical atlas...", stdout.getvalue())
-        self.assertIn("atlas_dir /tmp/out/run-001", stdout.getvalue())
-        self.assertIn("output_language zh", stdout.getvalue())
-        self.assertIn("segments 2", stdout.getvalue())
+        self.assertIn("atlas_dir: /tmp/out/run-001", stdout.getvalue())
+        self.assertIn("output_language: zh", stdout.getvalue())
+        self.assertIn("segments: 2", stdout.getvalue())
         mock_create_canonical_from_local.assert_called_once_with(
             tmpdir,
             mock_load_config.return_value,
@@ -260,59 +280,62 @@ class CliSmokeTest(unittest.TestCase):
             structure_request="",
             on_progress=ANY,
         )
-        self.assertIn("output_language en", stdout.getvalue())
+        self.assertIn("output_language: en", stdout.getvalue())
 
-    @patch("video_atlas.cli.main.acquire_from_url")
-    @patch("video_atlas.cli.main.load_canonical_pipeline_config")
-    def test_main_runs_fetch_from_url(
+    @patch.dict(
+        os.environ,
+        {
+            "LLM_API_BASE_URL": "https://example.test/v1",
+            "LLM_API_KEY": "secret-token-1234",
+            "GROQ_API_KEY": "gsk_test_123",
+            "YOUTUBE_COOKIES_FROM_BROWSER": "chrome",
+        },
+        clear=False,
+    )
+    def test_main_runs_doctor(
         self,
-        mock_load_config: MagicMock,
-        mock_acquire_from_url: MagicMock,
     ) -> None:
-        mock_load_config.return_value = MagicMock(
-            acquisition=MagicMock(),
-        )
-
-        with TemporaryDirectory() as tmpdir:
+        with patch("video_atlas.cli.main.shutil.which", side_effect=lambda name: f"/usr/bin/{name}"):
             stdout = io.StringIO()
             with redirect_stdout(stdout):
-                exit_code = main(
-                    [
-                        "fetch",
-                        "--url",
-                        "https://www.youtube.com/watch?v=abc123xyz89",
-                        "--output-dir",
-                        tmpdir,
-                    ]
-                )
+                exit_code = main(["doctor"])
 
         self.assertEqual(exit_code, 0)
-        self.assertIn("Fetching source assets...", stdout.getvalue())
-        self.assertIn(f"output_dir {tmpdir}", stdout.getvalue())
-        mock_acquire_from_url.assert_called_once_with(
-            "https://www.youtube.com/watch?v=abc123xyz89",
-            tmpdir,
-            prefer_youtube_subtitles=mock_load_config.return_value.acquisition.prefer_youtube_subtitles,
-            youtube_output_template=mock_load_config.return_value.acquisition.youtube_output_template,
-            max_youtube_video_duration_sec=mock_load_config.return_value.acquisition.max_youtube_video_duration_sec,
-            youtube_cookies_file=mock_load_config.return_value.acquisition.youtube_cookies_file,
-            youtube_cookies_from_browser=mock_load_config.return_value.acquisition.youtube_cookies_from_browser,
-        )
+        output = stdout.getvalue()
+        self.assertIn("MM Harness Doctor", output)
+        self.assertIn("Required", output)
+        self.assertIn("OK    ffmpeg", output)
+        self.assertIn("OK    yt-dlp", output)
+        self.assertIn("OK    deno", output)
+        self.assertIn("OK    LLM_API_BASE_URL", output)
+        self.assertIn("OK    LLM_API_KEY", output)
+        self.assertIn("OK    GROQ_API_KEY", output)
+        self.assertIn("Optional", output)
+        self.assertIn("WARN  youtube-cookies", output)
 
-    @patch("video_atlas.cli.main.acquire_from_url", side_effect=UnsupportedSourceError("unsupported source"))
-    def test_main_returns_error_for_unsupported_url(self, _mock_acquire_from_url: MagicMock) -> None:
-        with TemporaryDirectory() as tmpdir:
-            exit_code = main(
-                [
-                    "fetch",
-                    "--url",
-                    "https://example.com/video",
-                    "--output-dir",
-                    tmpdir,
-                ]
-            )
+    @patch.dict(
+        os.environ,
+        {
+            "LLM_API_BASE_URL": "",
+            "LLM_API_KEY": "",
+            "GROQ_API_KEY": "",
+            "YOUTUBE_COOKIES_FILE": "",
+            "YOUTUBE_COOKIES_FROM_BROWSER": "",
+        },
+        clear=False,
+    )
+    def test_main_returns_error_when_doctor_finds_missing_requirements(self) -> None:
+        with patch("video_atlas.cli.main.shutil.which", return_value=None):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(["doctor"])
 
         self.assertEqual(exit_code, 2)
+        output = stdout.getvalue()
+        self.assertIn("FAIL  ffmpeg", output)
+        self.assertIn("FAIL  GROQ_API_KEY", output)
+        self.assertIn("Hints", output)
+        self.assertIn("- export GROQ_API_KEY=...", output)
 
 
 if __name__ == "__main__":

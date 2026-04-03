@@ -31,11 +31,11 @@ class OpenAICompatibleGenerator(BaseGenerator):
 
     def __init__(self, config):
         super().__init__(config)
-        settings = get_settings(connection=self.config.get("connection") or "default")
+        settings = get_settings()
         if not settings.api_base:
-            raise ValueError("VIDEO_ATLAS_API_BASE is required for OpenAICompatibleGenerator")
+            raise ValueError("LLM_API_BASE_URL is required for OpenAICompatibleGenerator")
         if not settings.api_key:
-            raise ValueError("VIDEO_ATLAS_API_KEY is required for OpenAICompatibleGenerator")
+            raise ValueError("LLM_API_KEY is required for OpenAICompatibleGenerator")
         self.api_base = settings.api_base.rstrip("/")
         self.api_key = settings.api_key
 

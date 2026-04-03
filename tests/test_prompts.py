@@ -24,7 +24,6 @@ from video_atlas.prompts import (
 )
 from video_atlas.schemas import AtlasSegment, AtlasUnit
 from video_atlas.prompts.specs import PromptSpec as RawPromptSpec
-from video_atlas.workflows.canonical_atlas_workflow import CanonicalAtlasWorkflow
 
 
 class _QueueGenerator:
@@ -40,51 +39,6 @@ class _QueueGenerator:
             "json": payload,
             "response": {"usage": {"total_tokens": 1}},
         }
-
-
-class _CanonicalPromptWorkflow(CanonicalAtlasWorkflow):
-    def __init__(self, planner, text_segmentor, captioner):
-        super().__init__(
-            planner=planner,
-            text_segmentor=text_segmentor,
-            multimodal_segmentor=text_segmentor,
-            structure_composer=None,
-            captioner=captioner,
-        )
-        self.video_message_calls = []
-
-    def _build_video_messages_from_path(
-        self,
-        system_prompt: str,
-        user_prompt: str,
-        video_path: str,
-        start_time: float,
-        end_time: float,
-        video_sampling=None,
-    ):
-        self.video_message_calls.append(
-            {
-                "system_prompt": system_prompt,
-                "user_prompt": user_prompt,
-                "video_path": video_path,
-                "start_time": start_time,
-                "end_time": end_time,
-                "video_sampling": video_sampling,
-            }
-        )
-        return [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-
-    def _log_info(self, *args, **kwargs) -> None:
-        return None
-
-    def _log_warning(self, *args, **kwargs) -> None:
-        return None
-
-    def _log_error(self, *args, **kwargs) -> None:
-        return None
 
 
 class PromptSpecTest(unittest.TestCase):
@@ -373,112 +327,6 @@ class PromptExportsTest(unittest.TestCase):
 
 
 class WorkflowPromptUsageTest(unittest.TestCase):
-    def test_canonical_workflow_prompt_paths_do_not_require_mapping_access(self) -> None:
-        workflow = _CanonicalPromptWorkflow(
-            planner=_QueueGenerator([{"plan": "ok"}]),
-            text_segmentor=_QueueGenerator(
-                [
-                    [
-                        {
-                            "timestamp": 12.0,
-                            "boundary_rationale": "Topic changes here",
-                            "evidence": ["other"],
-                            "confidence": 0.8,
-                        }
-                    ]
-                ]
-            ),
-            captioner=_QueueGenerator(
-                [
-                    {"summary": "Local summary", "caption": "Local detail"},
-                ]
-            ),
-        )
-        workflow.structure_composer = _QueueGenerator(
-            [
-                {
-                    "title": "Atlas title",
-                    "abstract": "Atlas abstract",
-                    "segments": [
-                        {
-                            "segment_id": "seg_0001",
-                            "unit_ids": ["unit_0001"],
-                            "title": "Segment title",
-                            "summary": "Local summary",
-                            "composition_rationale": "Single unit segment",
-                        }
-                    ],
-                }
-            ]
-        )
-        execution_plan = SimpleNamespace(
-            genres=["lecture_talk"],
-            concise_description="A lecture-style explainer with one speaker and supporting examples.",
-            output_language="en",
-            segmentation_specification=SimpleNamespace(
-                profile_name="balanced",
-                profile=SimpleNamespace(
-                    signal_priority="balanced",
-                    segmentation_policy="Prefer topic shifts",
-                    target_segment_length_sec=(30, 120),
-                ),
-                frame_sampling_profile={"fps": 1},
-            ),
-            caption_specification=SimpleNamespace(
-                frame_sampling_profile={"fps": 1},
-                profile=SimpleNamespace(caption_policy="Summarize the clip faithfully"),
-            ),
-        )
-
-        with patch.object(RawPromptSpec, "__getitem__", side_effect=AssertionError("dict-style prompt access is forbidden")):
-            planner_output, planner_reasoning = workflow._run_plan_planner(
-                prepared_probe_inputs=[],
-                duration=90.0,
-                subtitle_items=[{"text": "hello world"}],
-            )
-            candidate_boundaries = workflow._detect_candidate_boundaries_for_chunk(
-                video_path="/tmp/video.mp4",
-                subtitle_items=[{"start": 0.0, "end": 20.0, "text": "subtitle text"}],
-                execution_plan=execution_plan,
-                core_start_time=0.0,
-                core_end_time=20.0,
-                window_start_time=0.0,
-                window_end_time=20.0,
-                last_detection_point=0.0,
-            )
-            caption = workflow._generate_local_caption(
-                video_path="/tmp/video.mp4",
-                segment=SimpleNamespace(start_time=0.0, end_time=20.0, segment_title="Local title"),
-                seg_id=1,
-                subtitle_items=[{"start": 0.0, "end": 20.0, "text": "subtitle text"}],
-                execution_plan=execution_plan,
-            )
-            composition_result = workflow._compose_canonical_structure(
-                units=[
-                    AtlasUnit(
-                        unit_id="unit_0001",
-                        title="Local title",
-                        start_time=0.0,
-                        end_time=20.0,
-                        summary=caption.summary,
-                        caption=caption.detail,
-                        subtitles_text=caption.subtitles_text,
-                        folder_name="unit-0001-local-title-00:00:00-00:00:20",
-                    )
-                ],
-                concise_description=execution_plan.concise_description,
-                genres=execution_plan.genres,
-                structure_request="Keep it coarse",
-            )
-            atlas = workflow._finalize_composed_segments(composition_result)
-
-        self.assertEqual(planner_output, {"plan": "ok"})
-        self.assertEqual(planner_reasoning, "")
-        self.assertEqual(len(candidate_boundaries), 1)
-        self.assertEqual(candidate_boundaries[0].timestamp, 12.0)
-        self.assertEqual(caption.summary, "Local summary")
-        self.assertEqual(atlas[0].title, "Segment title")
-
     def test_representative_input_fields_are_declared(self) -> None:
         self.assertEqual(PLANNER_PROMPT.input_fields, ())
         self.assertEqual(

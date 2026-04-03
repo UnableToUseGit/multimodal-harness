@@ -7,15 +7,15 @@ class ImportSmokeTest(unittest.TestCase):
 
         self.assertEqual(video_atlas.__version__, "0.1.0")
 
-    def test_canonical_workflow_direct_import(self) -> None:
-        from video_atlas.workflows.canonical_atlas_workflow import CanonicalAtlasWorkflow
+    def test_text_first_workflow_direct_import(self) -> None:
+        from video_atlas.workflows.text_first_canonical_atlas_workflow import TextFirstCanonicalAtlasWorkflow
 
-        self.assertEqual(CanonicalAtlasWorkflow.__name__, "CanonicalAtlasWorkflow")
+        self.assertEqual(TextFirstCanonicalAtlasWorkflow.__name__, "TextFirstCanonicalAtlasWorkflow")
 
     def test_workflows_public_export(self) -> None:
-        from video_atlas.workflows import CanonicalAtlasWorkflow
+        from video_atlas.workflows import TextFirstCanonicalAtlasWorkflow
 
-        self.assertEqual(CanonicalAtlasWorkflow.__name__, "CanonicalAtlasWorkflow")
+        self.assertEqual(TextFirstCanonicalAtlasWorkflow.__name__, "TextFirstCanonicalAtlasWorkflow")
 
     def test_create_video_atlas_result_is_not_exported(self) -> None:
         import video_atlas.schemas as schemas
