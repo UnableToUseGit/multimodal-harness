@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Agent exports for the VideoAtlas package."""
+"""Workflow exports for MM Harness."""
 
 from __future__ import annotations
 
 from importlib import import_module
 
 _EXPORT_MAP = {
-    "CanonicalAtlasWorkflow": "video_atlas.workflows.canonical_atlas_workflow"
+    "TextFirstCanonicalAtlasWorkflow": "video_atlas.workflows.text_first_canonical_atlas_workflow"
 }
 
 __all__ = list(_EXPORT_MAP.keys())

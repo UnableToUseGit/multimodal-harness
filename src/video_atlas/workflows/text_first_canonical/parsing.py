@@ -229,7 +229,7 @@ def build_text_units(
                 core_end=core_end,
                 last_detection_point=open_segment_start,
             )
-            output = text_segmentor.generate_single(messages=messages) if text_segmentor is not None else {"json": []}
+            output = text_segmentor.generate_single(messages=messages) if text_segmentor is not None else {"text": []}
             
             payload = parse_json_response(output.get("text", ""))
             if not isinstance(payload, list):

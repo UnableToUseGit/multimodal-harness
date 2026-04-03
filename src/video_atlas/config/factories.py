@@ -11,7 +11,6 @@ def build_generator(config: ModelRuntimeConfig):
     return OpenAICompatibleGenerator(
         {
             "model_name": config.model_name,
-            "connection": config.connection,
             "temperature": config.temperature,
             "top_p": config.top_p,
             "max_tokens": config.max_tokens,

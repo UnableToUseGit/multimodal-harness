@@ -2,7 +2,7 @@ import json
 import unittest
 
 from video_atlas.schemas import AtlasUnit
-from video_atlas.workflows.canonical_atlas.structure_composition import (
+from video_atlas.workflows.text_first_canonical.structure_composition import (
     CanonicalStructureComposer,
     CanonicalStructureCompositionError,
     build_canonical_structure_composition_messages,
@@ -79,7 +79,6 @@ class CanonicalStructureCompositionTest(unittest.TestCase):
         self.assertIn("unit_id: unit_0001", serialized)
         self.assertIn("title: Intro", serialized)
         self.assertIn("time_range: 00:00:00-00:00:10", serialized)
-        self.assertIn("subtitles_text:", serialized)
 
     def test_build_messages_include_priors_and_units(self) -> None:
         units = _make_units()

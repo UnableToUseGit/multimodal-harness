@@ -36,8 +36,8 @@ class ConfigLoadingTest(unittest.TestCase):
     @patch.dict(
         os.environ,
         {
-            "VIDEO_ATLAS_YOUTUBE_COOKIES_FILE": "/env/cookies.txt",
-            "VIDEO_ATLAS_YOUTUBE_COOKIES_FROM_BROWSER": "firefox",
+            "YOUTUBE_COOKIES_FILE": "/env/cookies.txt",
+            "YOUTUBE_COOKIES_FROM_BROWSER": "firefox",
         },
         clear=False,
     )
@@ -64,17 +64,14 @@ class ConfigLoadingTest(unittest.TestCase):
             "text_segmentor": {
                 "provider": "openai_compatible",
                 "model_name": "text-segmentor-model",
-                "connection": "remote",
             },
             "multimodal_segmentor": {
                 "provider": "openai_compatible",
                 "model_name": "multimodal-segmentor-model",
-                "connection": "local",
             },
             "structure_composer": {
                 "provider": "openai_compatible",
                 "model_name": "structure-composer-model",
-                "connection": "remote",
             },
             "captioner": {"provider": "openai_compatible", "model_name": "caption-model", "max_tokens": 3000},
             "runtime": {
@@ -93,11 +90,8 @@ class ConfigLoadingTest(unittest.TestCase):
 
         self.assertEqual(config.planner.model_name, "planner-model")
         self.assertEqual(config.text_segmentor.model_name, "text-segmentor-model")
-        self.assertEqual(config.text_segmentor.connection, "remote")
         self.assertEqual(config.multimodal_segmentor.model_name, "multimodal-segmentor-model")
-        self.assertEqual(config.multimodal_segmentor.connection, "local")
         self.assertEqual(config.structure_composer.model_name, "structure-composer-model")
-        self.assertEqual(config.structure_composer.connection, "remote")
         self.assertEqual(config.segmentor.model_name, "text-segmentor-model")
         self.assertEqual(config.captioner.model_name, "caption-model")
         self.assertEqual(config.captioner.max_tokens, 3000)

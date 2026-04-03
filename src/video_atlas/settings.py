@@ -5,12 +5,8 @@ from pathlib import Path
 import os
 
 
-ENV_API_BASE = "VIDEO_ATLAS_API_BASE"
-ENV_API_KEY = "VIDEO_ATLAS_API_KEY"
-ENV_LOCAL_API_BASE = "LOCAL_API_BASE"
-ENV_LOCAL_API_KEY = "LOCAL_API_KEY"
-ENV_REMOTE_API_BASE = "REMOTE_API_BASE"
-ENV_REMOTE_API_KEY = "REMOTE_API_KEY"
+ENV_API_BASE = "LLM_API_BASE_URL"
+ENV_API_KEY = "LLM_API_KEY"
 
 
 def _repo_root() -> Path:
@@ -68,23 +64,9 @@ class Settings:
         return f"{self.api_key[:4]}...{self.api_key[-4:]}"
 
 
-def get_settings(connection: str = "default", load_local_env: bool = True) -> Settings:
-    if load_local_env:
-        load_dotenv()
-
-    normalized_connection = connection.lower()
-    if normalized_connection == "default":
-        api_base = os.getenv(ENV_API_BASE)
-        api_key = os.getenv(ENV_API_KEY)
-    elif normalized_connection == "local":
-        api_base = os.getenv(ENV_LOCAL_API_BASE) or os.getenv(ENV_API_BASE)
-        api_key = os.getenv(ENV_LOCAL_API_KEY) or os.getenv(ENV_API_KEY)
-    elif normalized_connection == "remote":
-        api_base = os.getenv(ENV_REMOTE_API_BASE) or os.getenv(ENV_API_BASE)
-        api_key = os.getenv(ENV_REMOTE_API_KEY) or os.getenv(ENV_API_KEY)
-    else:
-        raise ValueError(f"Unsupported connection: {connection}")
-
+def get_settings() -> Settings:
+    api_base = os.getenv(ENV_API_BASE)
+    api_key = os.getenv(ENV_API_KEY)
     return Settings(
         api_base=api_base,
         api_key=api_key,

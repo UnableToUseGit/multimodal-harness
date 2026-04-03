@@ -5,16 +5,12 @@ import os
 from pathlib import Path
 from typing import Any
 import json
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 @dataclass
 class ModelRuntimeConfig:
     provider: str = "openai_compatible"
     model_name: str = ""
-    connection: str = "default"
     temperature: float = 0.0
     top_p: float = 1.0
     max_tokens: int = 1600
@@ -141,8 +137,8 @@ def _build_canonical_runtime_config(raw: dict[str, Any]) -> CanonicalRuntimeConf
 
 def _build_acquisition_runtime_config(raw: dict[str, Any]) -> AcquisitionRuntimeConfig:
     merged = dict(raw)
-    merged.setdefault("youtube_cookies_file", os.environ.get("VIDEO_ATLAS_YOUTUBE_COOKIES_FILE"))
-    merged.setdefault("youtube_cookies_from_browser", os.environ.get("VIDEO_ATLAS_YOUTUBE_COOKIES_FROM_BROWSER"))
+    merged.setdefault("youtube_cookies_file", os.environ.get("YOUTUBE_COOKIES_FILE"))
+    merged.setdefault("youtube_cookies_from_browser", os.environ.get("YOUTUBE_COOKIES_FROM_BROWSER"))
     return AcquisitionRuntimeConfig(**merged)
 
 
