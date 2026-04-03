@@ -161,7 +161,6 @@ class TextFirstPipelineMixin:
         if prepared_srt_path != normalized_srt_path:
             normalized_srt_path.write_text(prepared_srt_path.read_text(encoding="utf-8"), encoding="utf-8")
             prepared_srt_path = normalized_srt_path
-
         subtitle_items, subtitles_text = parse_srt(prepared_srt_path)
         self._notify_progress(on_progress, "Resolving atlas output language...")
         output_language = resolve_atlas_language(

@@ -10,25 +10,33 @@ from pathlib import Path
 
 def _ts_to_seconds(ts: str) -> float:
     hh, mm, rest = ts.split(":")
-    ss, ms = rest.split(",")
+    ss, ms = rest.replace(".", ",").split(",")
     return int(hh) * 3600 + int(mm) * 60 + int(ss) + int(ms) / 1000.0
 
 
 def parse_srt(srt_path: Path):
-    if not srt_path.exists:
+    if not Path(srt_path).exists():
         return [], ""
 
     with open(srt_path, "r", encoding="utf-8", errors="replace") as file:
         srt_text = file.read()
 
     srt_text = srt_text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if srt_text.startswith("\ufeff"):
+        srt_text = srt_text.lstrip("\ufeff")
+    if srt_text.startswith("WEBVTT"):
+        srt_text = srt_text[len("WEBVTT") :].lstrip()
     blocks = re.split(r"\n\s*\n", srt_text)
     subtitle_items: List[Dict] = []
-    time_re = re.compile(r"(?P<start>\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(?P<end>\d{2}:\d{2}:\d{2},\d{3})")
+    time_re = re.compile(
+        r"(?P<start>\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(?P<end>\d{2}:\d{2}:\d{2}[,.]\d{3})"
+    )
 
     for block in blocks:
         lines = [line.strip("\ufeff").strip() for line in block.split("\n") if line.strip()]
         if len(lines) < 2:
+            continue
+        if lines[0].startswith("NOTE"):
             continue
 
         match = None

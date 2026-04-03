@@ -2,7 +2,7 @@
 # # lecture 18min
 # video-atlas create --url https://www.youtube.com/watch?v=aircAruvnKk --output-dir local/outputs/test_video --structure-request "Structured into coarse-grained chapters"
 # # commentary. 38min
-# video-atlas create --url https://www.youtube.com/watch?v=KMlYdvwiQ0Y --output-dir local/outputs/test_video --structure-request "结构化为5~8个章节"
+video-atlas create --url https://www.youtube.com/watch?v=KMlYdvwiQ0Y --output-dir local/outputs/test_video --structure-request "结构化为5~8个章节"
 # # video podcast 1:20:00
 # video-atlas create --url https://www.youtube.com/watch?v=aR20FWCCjAs --output-dir local/outputs/test_video --structure-request "结构化为粗粒度的章节"
 
@@ -21,11 +21,11 @@
 #     --structure-request "结构化为粗粒度的章节" \
 #     --output-dir local/outputs/test_video
 
-video-atlas create \
-    --video-file local/inputs/case_013_explanatory_commentary_history/墨西哥是如何成为一个毒品国家的.mp4 \
-    --subtitle-file local/inputs/case_013_explanatory_commentary_history/subtitles.srt \
-    --structure-request "结构化为粗粒度的章节" \
-    --output-dir local/outputs/test_video
+# video-atlas create \
+#     --video-file local/inputs/case_013_explanatory_commentary_history/墨西哥是如何成为一个毒品国家的.mp4 \
+#     --subtitle-file local/inputs/case_013_explanatory_commentary_history/subtitles.srt \
+#     --structure-request "结构化为粗粒度的章节" \
+#     --output-dir local/outputs/test_video
 
 # video-atlas create \
 #     --video-file local/inputs/case_003_podcast/鲁豫对话许知远：人生是一场持续的写作陈鲁豫·慢谈EP13【视频播客】.mp4 \

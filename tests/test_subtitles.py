@@ -26,6 +26,26 @@ world
         self.assertEqual(len(segment_items), 1)
         self.assertIn("hello", segment_markdown)
 
+    def test_parse_srt_accepts_webvtt_content(self) -> None:
+        vtt_text = """WEBVTT
+
+00:00:01.000 --> 00:00:03.000
+你好
+
+00:00:04.000 --> 00:00:05.500 align:start position:0%
+世界
+"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            vtt_path = Path(tmpdir) / "sample.vtt"
+            vtt_path.write_text(vtt_text, encoding="utf-8")
+            subtitle_items, subtitle_markdown = parse_srt(vtt_path)
+
+        self.assertEqual(len(subtitle_items), 2)
+        self.assertEqual(subtitle_items[0]["text"], "你好")
+        self.assertEqual(subtitle_items[1]["text"], "世界")
+        self.assertIn("你好", subtitle_markdown)
+        self.assertIn("世界", subtitle_markdown)
+
 
 if __name__ == "__main__":
     unittest.main()
