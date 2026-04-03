@@ -79,7 +79,20 @@ def write_json_to(destination: str | Path, relative_path: str | Path, payload: d
     return write_text_to(destination, relative_path, json.dumps(payload, indent=2, ensure_ascii=False))
 
 def slugify_segment_title(title: str) -> str:
-    normalized = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    slug_chars: list[str] = []
+    previous_was_separator = False
+
+    for char in title.lower().strip():
+        if char.isalnum():
+            slug_chars.append(char)
+            previous_was_separator = False
+            continue
+
+        if not previous_was_separator:
+            slug_chars.append("-")
+            previous_was_separator = True
+
+    normalized = "".join(slug_chars).strip("-")
     return normalized or "untitled"
 
 
@@ -100,9 +113,10 @@ def extract_clip(
     command = (
         "ffmpeg -y -loglevel quiet "
         f"-ss {seg_start_time} -to {seg_end_time} "
-        f"-i {shlex.quote(str(video_path))} "
+        f"-i {shlex.quote(str(video_path.relative_to(root_path)))} "
         f"-c copy {shlex.quote(str(output_path.relative_to(root_path)))}"
     )
+    print(command)
     result = subprocess.run(
         command,
         shell=True,
@@ -180,12 +194,17 @@ class CanonicalAtlasWriter:
                 "# Canonical Atlas",
                 "",
                 f"**Title**: {atlas.title}",
+                ""
                 f"**Duration**: {seconds_to_hms(max_end_time)}",
+                ""
                 f"**Abstract**: {atlas.abstract}",
                 "",
                 "# Structure Context",
+                ""
                 f"There are {len(getattr(atlas, 'units', []) or [])} units extracted from the raw video.",
+                ""
                 f"There are {len(atlas.segments)} final composed segments generated from those units.",
+                ""
                 "- All original units are saved in `./units`.",
                 "- Final composed segments are saved in `./segments`.",
                 "- Each segment folder contains its own `README.md` and a copied view of the units it is composed from.",

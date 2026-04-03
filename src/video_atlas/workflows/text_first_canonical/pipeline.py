@@ -215,8 +215,8 @@ class TextFirstPipelineMixin:
             units=units,
             source_info=request.source_info,
             source_metadata=_serialize_source_metadata(request.source_metadata),
-        )
-
+        ) 
+    
         started_at = time.time()
         if request.video_path is not None and request.video_path.exists():
             CanonicalAtlasWriter(caption_with_subtitles=getattr(self, "caption_with_subtitles", True)).write(atlas=atlas)

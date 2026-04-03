@@ -1,12 +1,12 @@
 {
   "planner": {
     "provider": "openai_compatible",
-    "model_name": "Qwen/Qwen3.5-122B-A10B",
-    "connection": "local",
+    "model_name": "gpt-5.1",
+    "connection": "remote",
     "temperature": 0.6,
     "top_p": 0.95,
     "max_tokens": 8192,
-    "extra_body": {"chat_template_kwargs": {"enable_thinking": false}}
+    "extra_body": {"reasoning_effort": "none"}
   },
   "text_segmentor": {
     "provider": "openai_compatible",
@@ -32,17 +32,17 @@
     "connection": "remote",
     "temperature": 0.3,
     "top_p": 0.95,
-    "max_tokens": 4096,
+    "max_tokens": 8192,
     "extra_body": {"reasoning_effort": "none"}
   },
   "captioner": {
     "provider": "openai_compatible",
-    "model_name": "Qwen/Qwen3.5-122B-A10B",
-    "connection": "local",
+    "model_name": "gpt-5.1",
+    "connection": "remote",
     "temperature": 0.6,
     "top_p": 0.95,
     "max_tokens": 3200,
-    "extra_body": {"chat_template_kwargs": {"enable_thinking": false}}
+    "extra_body": {"reasoning_effort": "none"}
   },
   "transcriber": {
     "enabled": true,
@@ -60,12 +60,12 @@
     "enabled": true,
     "prefer_youtube_subtitles": true,
     "youtube_output_template": "%(id)s.%(ext)s",
-    "max_youtube_video_duration_sec": 3000
+    "max_youtube_video_duration_sec": 1800
   },
   "runtime": {
     "caption_with_subtitles": true,
     "generate_subtitles_if_missing": true,
-    "verbose": false,
+    "verbose": true,
     "text_chunk_size_sec": 1800,
     "text_chunk_overlap_sec": 120,
     "multimodal_chunk_size_sec": 600,

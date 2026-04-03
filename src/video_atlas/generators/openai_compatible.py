@@ -105,7 +105,6 @@ class OpenAICompatibleGenerator(BaseGenerator):
         text = _extract_text(choice.get("content"))
         return {
             "text": text,
-            "json": None,
             "response": response_json,
         }
 

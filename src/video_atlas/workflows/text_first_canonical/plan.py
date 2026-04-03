@@ -30,7 +30,7 @@ def _serialize_subtitle_items(subtitle_items: list[dict[str, Any]] | None) -> st
     return "\n".join(lines).strip()
 
 
-def _sample_subtitle_probe(subtitle_items: list[dict[str, Any]] | None, probe_window_size: int = 3) -> str:
+def _sample_subtitle_probe(subtitle_items: list[dict[str, Any]] | None, probe_window_size: int = 9) -> str:
     items = [item for item in (subtitle_items or []) if isinstance(item, dict) and str(item.get("text", "")).strip()]
     if not items:
         return "[NO_SUBTITLES]"
@@ -76,7 +76,7 @@ def _summarize_source_metadata(source_metadata: Any) -> str:
     return "\n".join(lines)
 
 
-def _collect_visual_probe(video_path, max_frames: int = 20) -> list[dict[str, str]]:
+def _collect_visual_probe(video_path, max_frames: int = 5) -> list[dict[str, str]]:
     frame_indices = get_frame_indices(str(video_path), 0, None, fps=0.1)
     if len(frame_indices) == 0:
         return []
@@ -143,9 +143,8 @@ def build_text_first_execution_plan(
         {"role": "user", "content": user_content},
     ]
     generated = planner.generate_single(messages=messages)
-    payload = generated.get("json")
-    if not isinstance(payload, dict):
-        payload = parse_json_response(generated.get("text", ""))
+
+    payload = parse_json_response(generated.get("text", ""))
     if not isinstance(payload, dict):
         payload = {}
     payload["output_language"] = output_language or "en"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Sequence
 
 from ...parsing import parse_json_response
@@ -15,6 +16,7 @@ class CanonicalStructureCompositionError(ValueError):
 
 
 def serialize_units_for_composition(units: Sequence[AtlasUnit]) -> str:
+    # TODO 对于2.5小时的访谈，如果同时纳入 caption 和 subtitle 以及 summary，差不多128k的输入，太长了
     lines: list[str] = []
     for index, unit in enumerate(units, start=1):
         lines.extend(
@@ -24,9 +26,6 @@ def serialize_units_for_composition(units: Sequence[AtlasUnit]) -> str:
                 f"title: {unit.title}",
                 f"time_range: {format_hms_time_range(unit.start_time, unit.end_time)}",
                 f"summary: {unit.summary}",
-                f"caption: {unit.caption}",
-                "subtitles_text:",
-                unit.subtitles_text.strip(),
                 "",
             ]
         )
@@ -183,8 +182,9 @@ def compose_canonical_structure(
         structure_request=structure_request,
         output_language=output_language,
     )
+    
     output = structure_composer.generate_single(messages=messages)
-    payload = output.get("json")
+    payload = output.get("text")
     if not isinstance(payload, dict):
         payload = parse_json_response(output.get("text"))
 

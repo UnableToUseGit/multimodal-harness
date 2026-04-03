@@ -141,9 +141,7 @@ def _generate_caption_payload(
             {"role": "user", "content": user_prompt},
         ]
     )
-    payload = output.get("json")
-    if not isinstance(payload, dict):
-        payload = parse_json_response(output.get("text", ""))
+    payload = parse_json_response(output.get("text", ""))
     if not isinstance(payload, dict):
         payload = {}
     summary = _normalize_text(payload.get("summary", "")) or _truncate_text(fallback, 240)
@@ -197,7 +195,6 @@ def build_text_units(
     subtitles_text: str,
     verbose: bool,
 ) -> list[AtlasUnit]:
-    del verbose
 
     normalized_items = [item for item in (subtitle_items or []) if isinstance(item, dict)]
     if normalized_items:
@@ -213,9 +210,14 @@ def build_text_units(
     chunk_size_sec = max(1, int(execution_plan.chunk_size_sec))
     chunk_overlap_sec = max(0, int(execution_plan.chunk_overlap_sec))
     chunk_start = 0.0
-
+    
+    import time
+    
     with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
         while chunk_start < max(duration, 0.1):
+            
+            started_at = time.time()
+            
             core_end = min(chunk_start + chunk_size_sec, duration)
             window_start = max(0.0, chunk_start - chunk_overlap_sec)
             window_end = min(duration, core_end + chunk_overlap_sec)
@@ -228,9 +230,8 @@ def build_text_units(
                 last_detection_point=open_segment_start,
             )
             output = text_segmentor.generate_single(messages=messages) if text_segmentor is not None else {"json": []}
-            payload = output.get("json")
-            if not isinstance(payload, list):
-                payload = parse_json_response(output.get("text", ""))
+            
+            payload = parse_json_response(output.get("text", ""))
             if not isinstance(payload, list):
                 payload = []
 
@@ -258,6 +259,10 @@ def build_text_units(
                 open_segment_start=open_segment_start,
                 candidate_boundaries=chunk_boundaries,
             )
+            
+            if verbose:
+                print(f"[Duration: {duration}; Chunk {chunk_start}-{core_end}] Candidate boundary detection completed in {time.time() - started_at:.2f}s | Boundaries kept: {len(chunk_boundaries)}")
+            
             for start_time, end_time, boundary_title in committed_ranges:
                 future = executor.submit(
                     _build_text_unit_from_range,

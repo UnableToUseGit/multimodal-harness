@@ -676,15 +676,6 @@ class VideoParsingMixin:
                         next_segment_id=next_segment_id,
                     )
 
-                if verbose:
-                    self._log_info(
-                        "[Chunk %.0f-%.0f] Candidate boundary detection completed in %.2fs | Boundaries kept: %d",
-                        core_start_time,
-                        core_end_time,
-                        time.time() - started_at,
-                        len(candidate_boundaries),
-                    )
-
                 if core_end_time >= duration:
                     break
 

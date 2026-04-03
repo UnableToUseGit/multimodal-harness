@@ -25,6 +25,15 @@ class _WriterHarness:
 
 
 class WorkspaceWritersTest(unittest.TestCase):
+    def test_slugify_segment_title_preserves_unicode_letters(self) -> None:
+        from video_atlas.persistence.writers import slugify_segment_title
+
+        self.assertEqual(slugify_segment_title("Hello World"), "hello-world")
+        self.assertEqual(slugify_segment_title("中文标题"), "中文标题")
+        self.assertEqual(slugify_segment_title("第一章：系统设计"), "第一章-系统设计")
+        self.assertEqual(slugify_segment_title("播客｜人工智能与Future"), "播客-人工智能与future")
+        self.assertEqual(slugify_segment_title("!!!"), "untitled")
+
     def test_copy_to_copies_file_into_destination_directory(self) -> None:
         from video_atlas.persistence.writers import copy_to
 
@@ -97,9 +106,7 @@ class WorkspaceWritersTest(unittest.TestCase):
             source_info=SourceInfoRecord(
                 source_type="youtube",
                 source_url="https://www.youtube.com/watch?v=abc123xyz89",
-                canonical_source_url="https://www.youtube.com/watch?v=abc123xyz89",
                 subtitle_source="youtube_caption",
-                subtitle_fallback_required=False,
             ),
             source_metadata={"title": "Match Overview", "channel": "Example Channel"},
         )

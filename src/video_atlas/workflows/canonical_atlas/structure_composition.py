@@ -193,9 +193,7 @@ def compose_canonical_structure(
         output_language=output_language,
     )
     output = structure_composer.generate_single(messages=messages)
-    payload = output.get("json")
-    if not isinstance(payload, dict):
-        payload = parse_json_response(output.get("text"))
+    payload = parse_json_response(output.get("text"))
 
     if not isinstance(payload, dict) or not payload:
         raise CanonicalStructureCompositionError("Structure composer did not return a valid JSON object")
