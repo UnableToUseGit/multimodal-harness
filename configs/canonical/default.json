@@ -46,15 +46,15 @@
   },
   "transcriber": {
     "enabled": true,
-    "backend": "faster_whisper",
-    "model_size_or_path": "small",
-    "device": "cpu",
-    "compute_type": "int8",
-    "language": null,
-    "vad_filter": true,
-    "min_silence_duration_ms": 500,
-    "use_batched_inference": true,
-    "batch_size": 32
+    "backend": "groq_whisper",
+    "groq_model": "whisper-large-v3",
+    "groq_language": null,
+    "groq_response_format": "verbose_json",
+    "groq_timestamp_granularities": ["segment"],
+    "groq_max_chunk_size_mb": 20,
+    "groq_audio_bitrate": "64k",
+    "groq_retry_on_rate_limit": true,
+    "groq_request_timeout_sec": 300.0
   },
   "acquisition": {
     "enabled": true,

@@ -108,6 +108,7 @@
   - [2026-0330-0609-canonical-high-efficiency.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0330-0609-canonical-high-efficiency.md)
   - [2026-0331.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0331.md)
   - [2026-0401.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0401.md)
+  - [2026-0403-groq-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0403-groq-transcription-route.md)
 
 ## 参考资料
 

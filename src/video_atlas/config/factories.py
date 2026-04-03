@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..generators import OpenAICompatibleGenerator
-from ..transcription import AliyunAsrTranscriber, FasterWhisperTranscriber
+from ..transcription import AliyunAsrTranscriber, FasterWhisperTranscriber, GroqWhisperTranscriber
 from .models import ModelRuntimeConfig, TranscriberRuntimeConfig
 
 
@@ -55,6 +55,23 @@ def build_transcriber(config: TranscriberRuntimeConfig):
                 "poll_interval_sec": config.aliyun_poll_interval_sec,
                 "poll_timeout_sec": config.aliyun_poll_timeout_sec,
                 "retain_remote_artifacts": config.retain_remote_artifacts,
+            }
+        )
+    if config.backend == "groq_whisper":
+        return GroqWhisperTranscriber(
+            {
+                "sample_rate": config.sample_rate,
+                "channels": config.channels,
+                "api_base": config.groq_api_base,
+                "model": config.groq_model,
+                "api_key_env": config.groq_api_key_env,
+                "language": config.groq_language,
+                "response_format": config.groq_response_format,
+                "timestamp_granularities": list(config.groq_timestamp_granularities),
+                "max_chunk_size_mb": config.groq_max_chunk_size_mb,
+                "audio_bitrate": config.groq_audio_bitrate,
+                "retry_on_rate_limit": config.groq_retry_on_rate_limit,
+                "request_timeout_sec": config.groq_request_timeout_sec,
             }
         )
     raise ValueError(f"Unsupported transcriber backend: {config.backend}")

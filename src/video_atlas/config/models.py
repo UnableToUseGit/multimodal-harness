@@ -24,7 +24,7 @@ class ModelRuntimeConfig:
 @dataclass
 class TranscriberRuntimeConfig:
     enabled: bool = True
-    backend: str = "faster_whisper"
+    backend: str = "groq_whisper"
     sample_rate: int = 16000
     channels: int = 1
     model_size_or_path: str = "small"
@@ -48,6 +48,16 @@ class TranscriberRuntimeConfig:
     aliyun_signed_url_expires_sec: int = 3600
     aliyun_poll_interval_sec: float = 2.0
     aliyun_poll_timeout_sec: float = 900.0
+    groq_api_base: str = "https://api.groq.com/openai/v1"
+    groq_model: str = "whisper-large-v3"
+    groq_api_key_env: str = "GROQ_API_KEY"
+    groq_language: str | None = None
+    groq_response_format: str = "verbose_json"
+    groq_timestamp_granularities: list[str] = field(default_factory=lambda: ["segment"])
+    groq_max_chunk_size_mb: int = 20
+    groq_audio_bitrate: str = "64k"
+    groq_retry_on_rate_limit: bool = True
+    groq_request_timeout_sec: float = 300.0
     retain_remote_artifacts: bool = False
 
 

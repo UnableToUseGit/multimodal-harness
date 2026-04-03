@@ -101,6 +101,27 @@
   - 它对上层暴露与 `FasterWhisperTranscriber` 相同的调用协议，但内部依赖云端服务与 OSS 临时对象。
   - 详细设计见 [2026-0329-aliyun-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0329-aliyun-transcription-route.md)。
 
+### 具体实现类接口：`GroqWhisperTranscriber`
+
+- 类型：`concrete class`
+- 作用：提供基于 Groq Speech-to-Text API 的轻量云端转写实现。
+- 初始化输入：
+  - Groq 相关配置对象
+    - 或等价 `dict`
+  - 包括模型、API 凭证、分片阈值、音频转码参数等
+- 对外暴露的方法：
+  - `transcribe_audio(...)`：转码、切片、调用 Groq API 并返回统一转写片段集合。
+- 关键方法的输入与输出：
+  - `transcribe_audio(...)`
+    - 输入：
+      - 音频路径
+    - 输出：
+      - 统一的转写片段集合
+- 说明：
+  - 该实现类是 `BaseTranscriber` 的并列 provider。
+  - 它在模块内部完成文件大小约束处理，不向上层泄漏 chunking 逻辑。
+  - 正式实现应使用结构化响应格式，而不是纯文本响应，以保留时间戳信息。
+
 ### `extract_audio_ffmpeg`
 
 - 类型：`function`
@@ -136,6 +157,7 @@
 - 音频抽取工具
 - 具体转写引擎
 - 云端 ASR provider 与对象存储服务
+- Groq Speech-to-Text API
 - 字幕格式写出逻辑
 
 ## 内部组成
@@ -202,6 +224,12 @@
   - 云端原始转写结果
   - 归一化后的转写片段集合
 
+说明：
+
+- 不同 provider 的细节可以不同。
+- `AliyunAsrTranscriber` 依赖 OSS 和异步任务。
+- `GroqWhisperTranscriber` 依赖同步上传接口和模块内 chunking。
+
 ### 字幕写出部分
 
 - 角色：将转写结果转换为 SRT。
@@ -240,7 +268,9 @@
 - [aliyun_oss.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/aliyun_oss.py)：封装阿里云 OSS 上传与签名下载 URL 能力。
 - [aliyun_asr.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/aliyun_asr.py)：封装 DashScope ASR 调用与结果归一化逻辑。
 - [aliyun_transcriber.py](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/src/video_atlas/transcription/aliyun_transcriber.py)：提供当前的阿里云 ASR 转写实现。
+- `GroqWhisperTranscriber` 计划作为新的轻量云端转写实现接入 `transcription` 模块。
 
 ## 相关设计记录
 
 - [2026-0329-aliyun-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0329-aliyun-transcription-route.md)：记录阿里云 ASR + OSS 正式接入 `transcription` 模块的设计方案。
+- [2026-0403-groq-transcription-route.md](/share/project/minghao/Proj/VideoAFS/VideoEdit/development/docs/decision-making/2026-0403-groq-transcription-route.md)：记录 Groq Whisper 轻量云端转写路线的设计方案。
