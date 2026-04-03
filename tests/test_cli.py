@@ -142,6 +142,43 @@ class CliSmokeTest(unittest.TestCase):
         self.assertEqual(args.audio_file, "/tmp/audio.m4a")
         self.assertIsNone(args.url)
 
+    def test_build_parser_supports_skill_command(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["skill", "--install"])
+        self.assertEqual(args.command, "skill")
+        self.assertTrue(args.install)
+
+    @patch("video_atlas.cli.main.install_skill")
+    def test_main_runs_install(self, mock_install_skill: MagicMock) -> None:
+        mock_install_skill.return_value = MagicMock(target_dir="/tmp/skills/mm-harness")
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(["install"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Installing MM Harness assets...", stdout.getvalue())
+        self.assertIn("skill_dir: /tmp/skills/mm-harness", stdout.getvalue())
+
+    @patch("video_atlas.cli.main.install_skill")
+    def test_main_runs_skill_install(self, mock_install_skill: MagicMock) -> None:
+        mock_install_skill.return_value = MagicMock(target_dir="/tmp/skills/mm-harness")
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(["skill", "--install"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("skill_dir: /tmp/skills/mm-harness", stdout.getvalue())
+
+    @patch("video_atlas.cli.main.uninstall_skill")
+    def test_main_runs_skill_uninstall(self, mock_uninstall_skill: MagicMock) -> None:
+        mock_uninstall_skill.return_value = MagicMock(removed_paths=["a", "b"])
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(["skill", "--uninstall"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("removed: 2", stdout.getvalue())
+
     @patch("video_atlas.cli.main.create_canonical_from_url")
     @patch("video_atlas.cli.main.load_canonical_pipeline_config")
     def test_main_runs_create_from_url(

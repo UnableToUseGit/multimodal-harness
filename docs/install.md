@@ -42,6 +42,7 @@ Install with `pipx`:
 
 ```bash
 pipx install https://github.com/UnableToUseGit/multimodal-harness/archive/refs/heads/main.zip
+mm-harness install
 ```
 
 ### Step 2: Check runtime dependencies

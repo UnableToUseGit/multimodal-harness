@@ -24,6 +24,10 @@ mm-harness = "video_atlas.cli.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+video_atlas = ["skill/SKILL.md"]

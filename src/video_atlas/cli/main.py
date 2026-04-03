@@ -9,6 +9,7 @@ import time
 from video_atlas.application import create_canonical_from_local, create_canonical_from_url
 from video_atlas.config import load_canonical_pipeline_config
 from video_atlas.settings import ENV_API_BASE, ENV_API_KEY, get_settings
+from video_atlas.skill_install import install_skill, uninstall_skill
 from video_atlas.source_acquisition import InvalidSourceUrlError, UnsupportedSourceError
 
 
@@ -52,6 +53,17 @@ def build_parser() -> argparse.ArgumentParser:
         "doctor",
         help="Check whether the current environment is ready to run MM Harness.",
     )
+    subparsers.add_parser(
+        "install",
+        help="Install MM Harness assets for agent use.",
+    )
+    skill_parser = subparsers.add_parser(
+        "skill",
+        help="Manage MM Harness skill registration.",
+    )
+    skill_group = skill_parser.add_mutually_exclusive_group(required=True)
+    skill_group.add_argument("--install", action="store_true", help="Install SKILL.md into the detected skill directory.")
+    skill_group.add_argument("--uninstall", action="store_true", help="Remove SKILL.md from detected skill directories.")
 
     create_parser = subparsers.add_parser(
         "create",
@@ -180,6 +192,26 @@ def _run_doctor() -> int:
     return 0 if all_required_ok else 2
 
 
+def _run_install() -> int:
+    print("Installing MM Harness assets...")
+    result = install_skill()
+    print("Done")
+    print(f"skill_dir: {result.target_dir}")
+    return 0
+
+
+def _run_skill(args) -> int:
+    if args.install:
+        result = install_skill()
+        print("Done")
+        print(f"skill_dir: {result.target_dir}")
+        return 0
+    result = uninstall_skill()
+    print("Done")
+    print(f"removed: {len(result.removed_paths)}")
+    return 0
+
+
 def _run_canonical_create(args) -> int:
     config = load_canonical_pipeline_config("configs/canonical/default.json")
     local_inputs = [args.video_file, args.audio_file, args.subtitle_file, args.metadata_file]
@@ -232,6 +264,10 @@ def main(argv: list[str] | None = None) -> int:
         return _print_config()
     if args.command == "doctor":
         return _run_doctor()
+    if args.command == "install":
+        return _run_install()
+    if args.command == "skill":
+        return _run_skill(args)
     try:
         if args.command == "create":
             return _run_canonical_create(args)
