@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import html
+import mimetypes
 import re
 import sys
 from pathlib import Path
@@ -23,8 +25,10 @@ DEFAULT_HEIGHT = 1440
 
 
 def parse_markdown_file(file_path: str) -> dict[str, object]:
-    content = Path(file_path).read_text(encoding="utf-8")
+    markdown_path = Path(file_path).resolve()
+    content = markdown_path.read_text(encoding="utf-8")
     metadata, body = parse_frontmatter(content)
+    metadata = resolve_media_paths(metadata, markdown_path.parent)
     intro, article = split_intro_and_article(body)
     return {
         "metadata": metadata,
@@ -58,6 +62,19 @@ def parse_yaml_mapping(metadata_block: str) -> dict[str, object]:
         key, value = line.split(":", 1)
         metadata[key.strip()] = value.strip().strip("\"'")
     return metadata
+
+
+def resolve_media_paths(metadata: dict[str, object], base_dir: Path) -> dict[str, object]:
+    resolved = dict(metadata)
+    for key in ("intro_image", "cover_image", "image"):
+        raw_value = resolved.get(key)
+        if not raw_value:
+            continue
+        candidate = Path(str(raw_value)).expanduser()
+        if not candidate.is_absolute():
+            candidate = (base_dir / candidate).resolve()
+        resolved[key] = str(candidate)
+    return resolved
 
 
 def split_intro_and_article(content: str) -> tuple[str, str]:
@@ -178,6 +195,43 @@ def generate_intro_html(
     intro_html = convert_markdown_to_html(intro_markdown)
     title = str(metadata.get("title") or "")
     source = str(metadata.get("source") or "")
+    intro_image_path = first_existing_intro_image(metadata)
+    if intro_image_path is not None:
+        return generate_visual_intro_html(
+            intro_html,
+            metadata,
+            intro_image_path,
+            width=width,
+            height=height,
+        )
+    return generate_text_intro_html(
+        intro_html,
+        metadata,
+        width=width,
+        height=height,
+    )
+
+
+def first_existing_intro_image(metadata: dict[str, object]) -> Path | None:
+    for key in ("intro_image", "cover_image", "image"):
+        raw_value = metadata.get(key)
+        if not raw_value:
+            continue
+        candidate = Path(str(raw_value))
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def generate_text_intro_html(
+    intro_html: str,
+    metadata: dict[str, object],
+    *,
+    width: int,
+    height: int,
+) -> str:
+    title = str(metadata.get("title") or "")
+    source = str(metadata.get("source") or "")
     kicker = f'<div class="kicker">{title}</div>' if title else ""
     source_line = f'<div class="source">From: {source}</div>' if source else ""
     return f"""<!DOCTYPE html>
@@ -258,6 +312,133 @@ def generate_intro_html(
   </div>
 </body>
 </html>"""
+
+
+def generate_visual_intro_html(
+    intro_html: str,
+    metadata: dict[str, object],
+    intro_image_path: Path,
+    *,
+    width: int,
+    height: int,
+) -> str:
+    title = str(metadata.get("title") or "")
+    source = str(metadata.get("source") or "")
+    subtitle = str(metadata.get("subtitle") or "")
+    kicker = f'<div class="kicker">{title}</div>' if title else ""
+    subtitle_line = f'<div class="subtitle">{subtitle}</div>' if subtitle else ""
+    source_line = f'<div class="source">From: {source}</div>' if source else ""
+    image_uri = image_path_to_data_uri(intro_image_path)
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width={width}, height={height}">
+  <style>
+    * {{
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }}
+    body {{
+      width: {width}px;
+      height: {height}px;
+      overflow: hidden;
+      background: #f3efe8;
+      color: #111827;
+      font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    }}
+    .canvas {{
+      width: 100%;
+      height: 100%;
+      padding: 44px;
+    }}
+    .paper {{
+      width: 100%;
+      height: 100%;
+      background: #fffdf9;
+      border-radius: 26px;
+      box-shadow: 0 16px 48px rgba(31, 41, 55, 0.10);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }}
+    .hero {{
+      height: 56%;
+      background: #ddd;
+    }}
+    .hero img {{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }}
+    .intro-copy {{
+      flex: 1;
+      padding: 34px 52px 42px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }}
+    .kicker {{
+      font-size: 24px;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: #9a6b36;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }}
+    .subtitle {{
+      margin: 12px 0 20px;
+      font-size: 24px;
+      color: #6b7280;
+      line-height: 1.5;
+    }}
+    .intro {{
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+      font-size: 27px;
+      line-height: 1.7;
+      color: #1f2937;
+      flex: 1;
+      overflow: hidden;
+    }}
+    .intro h1, .intro h2, .intro h3 {{
+      font-size: 54px;
+      line-height: 1.2;
+      margin: 0 0 18px;
+      color: #111827;
+    }}
+    .intro p {{
+      margin: 0 0 18px;
+    }}
+    .source {{
+      margin-top: 12px;
+      font-size: 22px;
+      color: #6b7280;
+    }}
+  </style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="paper">
+      <div class="hero"><img src="{image_uri}" alt=""></div>
+      <div class="intro-copy">
+        {kicker}
+        <div class="intro">{intro_html}</div>
+        {subtitle_line}
+        {source_line}
+      </div>
+    </div>
+  </div>
+</body>
+</html>"""
+
+
+def image_path_to_data_uri(path: Path) -> str:
+    mime_type, _encoding = mimetypes.guess_type(path.name)
+    mime_type = mime_type or "image/jpeg"
+    payload = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{payload}"
 
 
 def generate_body_page_html(

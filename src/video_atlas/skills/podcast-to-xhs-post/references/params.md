@@ -1,51 +1,9 @@
 # 参数参考文档
 
-## 封面渲染脚本（render_cover_xhs.py）
+## 渲染脚本（render_xhs.py）
 
 ```bash
-python scripts/render_cover_xhs.py <markdown_file> [options]
-```
-
-### 参数列表
-
-| 参数 | 简写 | 说明 | 默认值 |
-|---|---|---|---|
-| `--output-dir` | `-o` | 输出目录 | 当前工作目录 |
-| `--theme` | `-t` | 封面主题 | `default` |
-| `--width` | `-w` | 图片宽度（px） | `1080` |
-| `--height` | | 图片高度 | `1440` |
-| `--dpr` | | 设备像素比（清晰度） | `2` |
-
-### 封面主题（`--theme`）
-
-| 值 | 名称 | 说明 |
-|---|---|---|
-| `sketch` | 手绘素描 | 手绘风格，默认 |
-| `default` | 默认简约 | 浅灰渐变背景（`#f3f3f3 → #f9f9f9`） |
-| `playful-geometric` | 活泼几何 | Memphis 设计风格 |
-| `neo-brutalism` | 新粗野主义 | 粗框线条、强对比 |
-| `botanical` | 植物园自然 | 自然绿植风格 |
-| `professional` | 专业商务 | 简洁商务蓝 |
-| `retro` | 复古怀旧 | 暖色复古感 |
-| `terminal` | 终端命令行 | 深色代码终端风格 |
-
-
-### 常用命令示例
-
-```bash
-# 默认主题
-python scripts/render_cover_xhs.py cover.md
-
-# 切换主题
-python scripts/render_cover_xhs.py cover.md -t playful-geometric
-```
-
----
-
-## 正文图片渲染脚本（render_body_xhs.py）
-
-```bash
-python scripts/render_body_xhs.py <markdown_file> [options]
+python scripts/render_xhs.py <markdown_file> [options]
 ```
 
 ### 参数列表
@@ -62,7 +20,23 @@ python scripts/render_body_xhs.py <markdown_file> [options]
 - Markdown 文件开头可包含 YAML frontmatter
 - frontmatter 之后先写引导页
 - 引导页之后使用一个 `---` 分隔正文主体
+- 如果 frontmatter 中包含 `intro_image`，脚本会默认将该图片作为封面图
 - 正文主体内部不再手动分页，而是由渲染脚本自动分页
+
+### 封面图来源约定
+
+`intro_image` 应按以下优先级选择：
+
+1. 视频播客中的高质量画面
+2. 播客的 thumbnail
+3. 与主题相关的外部图片
+
+推荐要求：
+
+- 图片清晰
+- 构图稳定
+- 与播客主题相关
+- 适合做首图
 
 ### 输出结果
 
@@ -77,13 +51,13 @@ python scripts/render_body_xhs.py <markdown_file> [options]
 
 ```bash
 # 基础用法
-python scripts/render_body_xhs.py article.md
+python scripts/render_xhs.py article.md
 
 # 指定输出目录
-python scripts/render_body_xhs.py article.md -o ./rendered
+python scripts/render_xhs.py article.md -o ./rendered
 
 # 自定义尺寸
-python scripts/render_body_xhs.py article.md --width 1080 --height 1440 --dpr 2
+python scripts/render_xhs.py article.md --width 1080 --height 1440 --dpr 2
 ```
 
 ---
@@ -154,9 +128,10 @@ XHS_API_URL=http://localhost:5005
 
 ```yaml
 ---
-emoji: "🚀"           # 封面装饰 Emoji
-title: "大标题"        # 封面大标题（不超过 15 字）
-subtitle: "副标题文案"  # 封面副标题（不超过 15 字）
+title: "笔记标题"
+subtitle: "副标题文案"
+source: "播客来源"
+intro_image: "./selected-frame.jpg"  # 必填。用于封面图
 ---
 ```
 
@@ -166,9 +141,9 @@ subtitle: "副标题文案"  # 封面副标题（不超过 15 字）
 
 ```markdown
 ---
-emoji: "💡"
 title: "工具推荐"
-subtitle: "提升效率的 5 个神器"
+source: "播客来源"
+intro_image: "./selected-frame.jpg"
 ---
 
 # 为什么这期播客值得看
