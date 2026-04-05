@@ -47,8 +47,11 @@ def _candidate_skill_dirs() -> list[tuple[Path, str]]:
 
 def _copy_packaged_skill(target_dir: Path) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
-    skill_pkg = resources.files("video_atlas.skill")
-    skill_md = skill_pkg.joinpath("SKILL.md").read_text(encoding="utf-8")
+    skill_md = (
+        resources.files("video_atlas")
+        .joinpath("skills", "mm-harness", "SKILL.md")
+        .read_text(encoding="utf-8")
+    )
     (target_dir / "SKILL.md").write_text(skill_md, encoding="utf-8")
 
 
