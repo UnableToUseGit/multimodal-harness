@@ -8,6 +8,7 @@ on:
 
 jobs:
   smoke-install:
+    name: smoke / ${{ matrix.os }} / ${{ matrix.install_mode }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -15,6 +16,12 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
+        install_mode:
+          - source
+          - zip
+
+    env:
+      REPO_ZIP_URL: https://github.com/UnableToUseGit/multimodal-harness/archive/refs/heads/main.zip
 
     steps:
       - name: Checkout repository
@@ -29,7 +36,12 @@ jobs:
         run: python -m pip install --upgrade pip pipx
 
       - name: Install MM Harness from source checkout
+        if: matrix.install_mode == 'source'
         run: python -m pipx install .
+
+      - name: Install MM Harness from GitHub zip
+        if: matrix.install_mode == 'zip'
+        run: python -m pipx install "$REPO_ZIP_URL"
 
       - name: Resolve pipx bin directory
         run: |
