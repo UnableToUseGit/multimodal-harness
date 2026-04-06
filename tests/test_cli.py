@@ -119,6 +119,8 @@ class CliSmokeTest(unittest.TestCase):
                 "https://www.youtube.com/watch?v=abc123xyz89",
                 "--output-dir",
                 "/tmp/out",
+                "--name",
+                "demo-run",
                 "--structure-request",
                 "keep it coarse",
             ]
@@ -127,6 +129,7 @@ class CliSmokeTest(unittest.TestCase):
         self.assertEqual(args.command, "create")
         self.assertEqual(args.url, "https://www.youtube.com/watch?v=abc123xyz89")
         self.assertEqual(args.output_dir, "/tmp/out")
+        self.assertEqual(args.name, "demo-run")
         self.assertEqual(args.structure_request, "keep it coarse")
 
     def test_build_parser_supports_create_with_local_files(self) -> None:
@@ -252,6 +255,8 @@ class CliSmokeTest(unittest.TestCase):
                         "https://www.youtube.com/watch?v=abc123xyz89",
                         "--output-dir",
                         tmpdir,
+                        "--name",
+                        "demo-run",
                         "--structure-request",
                         "keep it coarse",
                     ]
@@ -265,6 +270,7 @@ class CliSmokeTest(unittest.TestCase):
             "https://www.youtube.com/watch?v=abc123xyz89",
             tmpdir,
             mock_load_config.return_value,
+            name="demo-run",
             structure_request="keep it coarse",
             on_progress=ANY,
         )
@@ -301,6 +307,8 @@ class CliSmokeTest(unittest.TestCase):
                         "/tmp/metadata.json",
                         "--output-dir",
                         tmpdir,
+                        "--name",
+                        "local-run",
                     ]
                 )
 
@@ -312,6 +320,7 @@ class CliSmokeTest(unittest.TestCase):
         mock_create_canonical_from_local.assert_called_once_with(
             tmpdir,
             mock_load_config.return_value,
+            name="local-run",
             video_file="/tmp/video.mp4",
             audio_file=None,
             subtitle_file="/tmp/subtitles.srt",
@@ -348,6 +357,8 @@ class CliSmokeTest(unittest.TestCase):
                         "/tmp/audio.m4a",
                         "--output-dir",
                         tmpdir,
+                        "--name",
+                        "audio-run",
                     ]
                 )
 
@@ -355,6 +366,7 @@ class CliSmokeTest(unittest.TestCase):
         mock_create_canonical_from_local.assert_called_once_with(
             tmpdir,
             mock_load_config.return_value,
+            name="audio-run",
             video_file=None,
             audio_file="/tmp/audio.m4a",
             subtitle_file=None,

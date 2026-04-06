@@ -218,6 +218,41 @@ class TextFirstWorkflowTest(unittest.TestCase):
         self.assertGreaterEqual(text_segmentor.generate_single.call_count, 2)
         self.assertGreaterEqual(len(units), 1)
 
+    def test_build_text_units_preserves_multiline_subtitles_text(self) -> None:
+        from video_atlas.schemas import CanonicalExecutionPlan
+        from video_atlas.workflows.text_first_canonical.parsing import build_text_units
+
+        text_segmentor = MagicMock()
+        text_segmentor.generate_single.return_value = {"text": "[]", "json": None}
+        captioner = MagicMock()
+        captioner.generate_single.return_value = {
+            "text": '{"summary":"summary","caption":"caption"}',
+            "json": None,
+        }
+        execution_plan = CanonicalExecutionPlan(
+            profile_name="podcast",
+            chunk_size_sec=60,
+            chunk_overlap_sec=10,
+        )
+        subtitle_items = [
+            {"start": 0.0, "end": 2.0, "text": "first line"},
+            {"start": 2.0, "end": 4.0, "text": "second line"},
+        ]
+
+        units = build_text_units(
+            text_segmentor=text_segmentor,
+            captioner=captioner,
+            execution_plan=execution_plan,
+            subtitle_items=subtitle_items,
+            subtitles_text="Start Time: 0.0 --> End Time: 2.0 Subtitle: first line\n\nStart Time: 2.0 --> End Time: 4.0 Subtitle: second line",
+            verbose=False,
+        )
+
+        self.assertEqual(len(units), 1)
+        self.assertIn("\n\n", units[0].subtitles_text)
+        self.assertIn("first line", units[0].subtitles_text)
+        self.assertIn("second line", units[0].subtitles_text)
+
     def test_audio_only_input_runs_text_first_pipeline(self) -> None:
         planner = MagicMock()
         planner.generate_single.return_value = {

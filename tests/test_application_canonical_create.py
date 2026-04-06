@@ -15,6 +15,18 @@ from video_atlas.workflows.text_first_canonical_atlas_workflow import TextFirstC
 
 
 class CanonicalCreateApplicationTest(unittest.TestCase):
+    def test_suggest_atlas_dir_name_uses_readable_slug_and_short_id(self) -> None:
+        from video_atlas.application.canonical_create import _suggest_atlas_dir_name
+
+        name = _suggest_atlas_dir_name(source_title="Naval Podcast: AI Learning")
+
+        self.assertRegex(name, r"^naval-podcast-ai-learning-[0-9a-f]{8}$")
+
+    def test_suggest_atlas_dir_name_uses_requested_name_verbatim(self) -> None:
+        from video_atlas.application.canonical_create import _suggest_atlas_dir_name
+
+        self.assertEqual(_suggest_atlas_dir_name(requested_name="my-run"), "my-run")
+
     def test_build_workflow_moves_verbose_into_workflow_instance(self) -> None:
         from video_atlas.application.canonical_create import _build_workflow
 
@@ -62,6 +74,7 @@ class CanonicalCreateApplicationTest(unittest.TestCase):
                 "https://www.youtube.com/watch?v=abc123xyz89",
                 tmpdir,
                 CanonicalPipelineConfig(planner=None),
+                name="friendly-name",
                 structure_request="keep it coarse",
             )
 
@@ -73,6 +86,7 @@ class CanonicalCreateApplicationTest(unittest.TestCase):
         request_arg = workflow.create.call_args.args[0]
         self.assertEqual(len(workflow.create.call_args.args), 1)
         self.assertEqual(request_arg.atlas_dir.parent, output_root)
+        self.assertEqual(request_arg.atlas_dir.name, "friendly-name")
         self.assertEqual(request_arg.video_path, video_path)
         self.assertEqual(request_arg.subtitle_path, subtitle_path)
         self.assertEqual(request_arg.structure_request, "keep it coarse")
@@ -96,6 +110,7 @@ class CanonicalCreateApplicationTest(unittest.TestCase):
             result = create_canonical_from_local(
                 output_dir=root / "outputs",
                 config=CanonicalPipelineConfig(planner=None),
+                name="friendly-local-name",
                 video_file=source_video,
                 subtitle_file=source_subtitles,
                 metadata_file=source_metadata,
@@ -105,6 +120,7 @@ class CanonicalCreateApplicationTest(unittest.TestCase):
             self.assertEqual(result, ("atlas", {}))
             request_arg = workflow.create.call_args.args[0]
             self.assertEqual(request_arg.atlas_dir.parent.name, "outputs")
+            self.assertEqual(request_arg.atlas_dir.name, "friendly-local-name")
             self.assertTrue(request_arg.video_path.exists())
             self.assertTrue(request_arg.subtitle_path.exists())
             self.assertEqual(request_arg.structure_request, "local request")

@@ -131,6 +131,80 @@ def extract_clip(
         raise RuntimeError(f"ffmpeg failed with exit code {result.returncode}: {result.stdout}")
 
 
+def build_canonical_root_readme_text(
+    atlas,
+    *,
+    duration_seconds: float,
+    has_video: bool = True,
+    has_audio: bool = False,
+    has_subtitles: bool = True,
+    has_thumbnail_dir: bool = False,
+) -> str:
+    source_type = getattr(getattr(atlas, "source_info", None), "source_type", None) or "unknown"
+    source_metadata = getattr(atlas, "source_metadata", {}) or {}
+    source_title = source_metadata.get("title", "") if isinstance(source_metadata, dict) else ""
+    source_author = source_metadata.get("author", "") if isinstance(source_metadata, dict) else ""
+
+    input_lines = [
+        "- `input/` stores the source assets and acquisition metadata for this run.",
+        "- It may include the original video or audio file, prepared subtitles, downloaded thumbnails, `SOURCE_INFO.json`, and `SOURCE_METADATA.json`.",
+    ]
+    if has_video:
+        input_lines.append("- If the source video was downloaded, you will find it under `input/`.")
+    if has_audio:
+        input_lines.append("- If the source is audio-first, the copied audio file is stored under `input/`.")
+    if has_subtitles:
+        input_lines.append("- Prepared subtitles are stored under `input/subtitles.srt` and summarized again in `SUBTITLES.md` when enabled.")
+    if has_thumbnail_dir:
+        input_lines.append("- Downloaded thumbnails are stored under `input/thumbnails/` for cover selection and downstream creative tasks.")
+
+    return "\n".join(
+        [
+            "# MM Harness Output",
+            "",
+            "This directory is the result of one `mm-harness create` run.",
+            "It converts a long video or audio source into a structured workspace that is easier to read, search, and reuse.",
+            "",
+            "## At A Glance",
+            f"- Title: {atlas.title}",
+            f"- Source type: {source_type}",
+            f"- Duration: {seconds_to_hms(duration_seconds)}",
+            f"- Units: {len(getattr(atlas, 'units', []) or [])}",
+            f"- Segments: {len(getattr(atlas, 'segments', []) or [])}",
+            *(([f"- Original source title: {source_title}"] if source_title else [])),
+            *(([f"- Source author: {source_author}"] if source_author else [])),
+            "",
+            "## Recommended Reading Order",
+            "- Start with `segments/` if you want the quickest understanding of the content.",
+            "- Go to `units/` if you need a finer-grained breakdown of the source.",
+            "- Use `input/` when you need the raw source assets, subtitles, metadata, or thumbnails.",
+            "",
+            "## Directory Guide",
+            "### input/",
+            *input_lines,
+            "",
+            "### units/",
+            "- `units/` stores the smallest content units extracted from the source.",
+            "- Each unit usually represents one continuous span of content with its own title, summary, detail description, and time range.",
+            "- Open a unit folder when you need a precise local view of the material.",
+            "",
+            "### segments/",
+            "- `segments/` stores higher-level grouped results built from one or more units.",
+            "- A segment is usually the best place to start if you want a readable chapter-like view of the source.",
+            "- Each segment folder contains its own `README.md` and a copied view of the units it is composed from.",
+            "",
+            "## Workspace Files",
+            "- `README.md` is this overview page.",
+            "- `SUBTITLES.md` contains the prepared full subtitles when subtitle export is enabled.",
+            "- `units/` contains the detailed low-level breakdown.",
+            "- `segments/` contains the higher-level grouped structure.",
+            "",
+            "## Abstract",
+            atlas.abstract,
+        ]
+    )
+
+
 class CanonicalAtlasWriter:
     def __init__(self, caption_with_subtitles: bool = True) -> None:
         self.caption_with_subtitles = caption_with_subtitles
@@ -189,32 +263,16 @@ class CanonicalAtlasWriter:
         )
 
     def _global_readme_text(self, atlas, max_end_time) -> str:
-        return "\n".join(
-            [
-                "# Canonical Atlas",
-                "",
-                f"**Title**: {atlas.title}",
-                ""
-                f"**Duration**: {seconds_to_hms(max_end_time)}",
-                ""
-                f"**Abstract**: {atlas.abstract}",
-                "",
-                "# Structure Context",
-                ""
-                f"There are {len(getattr(atlas, 'units', []) or [])} units extracted from the raw video.",
-                ""
-                f"There are {len(atlas.segments)} final composed segments generated from those units.",
-                ""
-                "- All original units are saved in `./units`.",
-                "- Final composed segments are saved in `./segments`.",
-                "- Each segment folder contains its own `README.md` and a copied view of the units it is composed from.",
-                "",
-                "# Additional Files",
-                "- Raw video: `./video.mp4`",
-                "- Unit detail information: `./units/`",
-                "- Segment detail information: `./segments/`",
-                "- Full subtitles for this video: `./SUBTITLES.md`",
-            ]
+        has_audio = getattr(atlas, "relative_audio_path", None) is not None
+        source_metadata = getattr(atlas, "source_metadata", {}) or {}
+        has_thumbnail_dir = bool(source_metadata.get("thumbnails"))
+        return build_canonical_root_readme_text(
+            atlas,
+            duration_seconds=max_end_time,
+            has_video=True,
+            has_audio=has_audio,
+            has_subtitles=self.caption_with_subtitles,
+            has_thumbnail_dir=has_thumbnail_dir,
         )
 
     def _write_unit_directory(

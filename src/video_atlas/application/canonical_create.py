@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from video_atlas.config import build_generator, build_transcriber
 from video_atlas.config.models import CanonicalPipelineConfig
+from video_atlas.persistence.writers import slugify_segment_title
 from video_atlas.schemas import CanonicalCreateRequest, SourceMetadata, SourceInfoRecord
 from video_atlas.persistence import write_json_to
 from video_atlas.source_acquisition import acquire_from_url
@@ -22,6 +23,55 @@ class _MaterializedLocalInputs:
     subtitle_path: Path | None
     source_info: SourceInfoRecord
     source_metadata: SourceMetadata | None
+
+
+def _validate_requested_name(name: str) -> str:
+    cleaned = name.strip()
+    if not cleaned:
+        raise ValueError("name must not be empty")
+    if any(separator in cleaned for separator in ("/", "\\")):
+        raise ValueError("name must not contain path separators")
+    if cleaned in {".", ".."}:
+        raise ValueError("name must not be '.' or '..'")
+    return cleaned
+
+
+def _suggest_atlas_dir_name(
+    *,
+    requested_name: str | None = None,
+    source_title: str | None = None,
+    source_path: str | Path | None = None,
+) -> str:
+    if requested_name is not None:
+        return _validate_requested_name(requested_name)
+
+    base_name = (source_title or "").strip()
+    if not base_name and source_path is not None:
+        base_name = Path(source_path).stem.strip()
+    slug = slugify_segment_title(base_name) if base_name else "atlas"
+    slug = (slug or "atlas")[:60].strip("-") or "atlas"
+    return f"{slug}-{uuid4().hex[:8]}"
+
+
+def _relocate_path(original_root: Path, final_root: Path, path: Path | None) -> Path | None:
+    if path is None:
+        return None
+    try:
+        relative = path.relative_to(original_root)
+    except ValueError:
+        return path
+    return final_root / relative
+
+
+def _relocate_acquisition_result(original_root: Path, final_root: Path, acquisition):
+    acquisition.video_path = _relocate_path(original_root, final_root, acquisition.video_path)
+    acquisition.audio_path = _relocate_path(original_root, final_root, acquisition.audio_path)
+    acquisition.subtitles_path = _relocate_path(original_root, final_root, acquisition.subtitles_path)
+    acquisition.artifacts = {
+        key: _relocate_path(original_root, final_root, value)
+        for key, value in acquisition.artifacts.items()
+    }
+    return acquisition
 
 
 def _build_workflow(config: CanonicalPipelineConfig) -> TextFirstCanonicalAtlasWorkflow:
@@ -94,14 +144,15 @@ def create_canonical_from_url(
     output_dir: str | Path,
     config: CanonicalPipelineConfig,
     *,
+    name: str | None = None,
     structure_request: str = "",
     on_progress: Callable[[str], None] | None = None,
 ):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    atlas_dir = output_dir / uuid4().hex
-    atlas_dir.mkdir(parents=True, exist_ok=False)
-    acquisition_dir = atlas_dir / "input"
+    staging_dir = output_dir / f".staging-{uuid4().hex}"
+    staging_dir.mkdir(parents=True, exist_ok=False)
+    acquisition_dir = staging_dir / "input"
     acquisition_dir.mkdir(parents=True, exist_ok=True)
 
     if on_progress is not None:
@@ -116,7 +167,15 @@ def create_canonical_from_url(
         youtube_cookies_file=config.acquisition.youtube_cookies_file,
         youtube_cookies_from_browser=config.acquisition.youtube_cookies_from_browser,
     )
-    
+    atlas_dir = output_dir / _suggest_atlas_dir_name(
+        requested_name=name,
+        source_title=acquisition.source_metadata.title if acquisition.source_metadata is not None else None,
+    )
+    if atlas_dir.exists():
+        raise FileExistsError(f"atlas output directory already exists: {atlas_dir}")
+    shutil.move(str(staging_dir), str(atlas_dir))
+    acquisition = _relocate_acquisition_result(staging_dir, atlas_dir, acquisition)
+
     request = CanonicalCreateRequest(
         atlas_dir=atlas_dir,
         video_path=acquisition.video_path,
@@ -134,6 +193,7 @@ def create_canonical_from_local(
     output_dir: str | Path,
     config: CanonicalPipelineConfig,
     *,
+    name: str | None = None,
     video_file: str | Path | None = None,
     audio_file: str | Path | None = None,
     subtitle_file: str | Path | None = None,
@@ -143,7 +203,16 @@ def create_canonical_from_local(
 ):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    atlas_dir = output_dir / uuid4().hex
+    source_path = video_file or audio_file or subtitle_file
+    source_title: str | None = None
+    if metadata_file is not None:
+        payload = json.loads(Path(metadata_file).read_text(encoding="utf-8"))
+        source_title = str(payload.get("title", "")).strip() or None
+    atlas_dir = output_dir / _suggest_atlas_dir_name(
+        requested_name=name,
+        source_title=source_title,
+        source_path=source_path,
+    )
     atlas_dir.mkdir(parents=True, exist_ok=False)
     acquisition_dir = atlas_dir / "input"
     acquisition_dir.mkdir(parents=True, exist_ok=True)

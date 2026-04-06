@@ -5,7 +5,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Callable
 
-from ...persistence import CanonicalAtlasWriter, write_text_to
+from ...persistence import CanonicalAtlasWriter, build_canonical_root_readme_text, write_text_to
 from ...persistence import format_hms_time_range, slugify_segment_title
 from ...schemas import CanonicalAtlas, CanonicalCreateRequest
 from ...utils import parse_srt
@@ -94,28 +94,15 @@ class TextFirstPipelineMixin:
         caption_with_subtitles = getattr(self, "caption_with_subtitles", True)
         writer = CanonicalAtlasWriter(caption_with_subtitles=caption_with_subtitles)
         units_by_id = {unit.unit_id: unit for unit in atlas.units}
-
-        readme_text = "\n".join(
-            [
-                "# Text-First Canonical Atlas",
-                "",
-                f"**Title**: {atlas.title}",
-                f"**Duration**: {seconds_to_hms(atlas.duration)}",
-                f"**Abstract**: {atlas.abstract}",
-                f"**Profile**: {atlas.execution_plan.profile_name}",
-                f"**Route**: {atlas.execution_plan.profile.route}",
-                "",
-                "# Structure Context",
-                f"There are {len(atlas.units)} units extracted from the prepared subtitles.",
-                f"There are {len(atlas.segments)} final composed segments generated from those units.",
-                "- All original units are saved in `./units`.",
-                "- Final composed segments are saved in `./segments`.",
-                "- Each segment folder contains its own `README.md` and a copied view of the units it is composed from.",
-                "",
-                "# Additional Files",
-                "- Prepared subtitles: `./SUBTITLES.md`",
-                "- Subtitle source file: `./input/subtitles.srt`",
-            ]
+        source_metadata = getattr(atlas, "source_metadata", {}) or {}
+        has_thumbnail_dir = bool(source_metadata.get("thumbnails"))
+        readme_text = build_canonical_root_readme_text(
+            atlas,
+            duration_seconds=atlas.duration,
+            has_video=False,
+            has_audio=atlas.relative_audio_path is not None,
+            has_subtitles=caption_with_subtitles,
+            has_thumbnail_dir=has_thumbnail_dir,
         )
         write_text_to(atlas.atlas_dir, "README.md", readme_text)
         if subtitles_text and caption_with_subtitles:

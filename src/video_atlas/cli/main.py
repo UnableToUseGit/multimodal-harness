@@ -97,6 +97,7 @@ def build_parser() -> argparse.ArgumentParser:
     create_parser.add_argument("--subtitle-file")
     create_parser.add_argument("--metadata-file")
     create_parser.add_argument("--output-dir", required=True)
+    create_parser.add_argument("--name")
     create_parser.add_argument("--structure-request", default="")
     return parser
 
@@ -253,6 +254,7 @@ def _run_canonical_create(args) -> int:
             args.url,
             args.output_dir,
             config,
+            name=args.name,
             structure_request=args.structure_request,
             on_progress=_print_progress,
         )
@@ -265,6 +267,7 @@ def _run_canonical_create(args) -> int:
     atlas, _ = create_canonical_from_local(
         args.output_dir,
         config,
+        name=args.name,
         video_file=args.video_file,
         audio_file=args.audio_file,
         subtitle_file=args.subtitle_file,

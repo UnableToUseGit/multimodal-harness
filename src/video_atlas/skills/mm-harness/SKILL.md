@@ -92,6 +92,15 @@ mm-harness create \
   --output-dir ./outputs
 ```
 
+Create from a URL with a readable run name:
+
+```bash
+mm-harness create \
+  --url "https://www.youtube.com/watch?v=..." \
+  --output-dir ./outputs \
+  --name naval-ai-podcast
+```
+
 Create from a local video file:
 
 ```bash
@@ -116,15 +125,73 @@ mm-harness create \
   --output-dir ./outputs
 ```
 
-If the user gives you a specific output requirement, add it with `--structure-request`.
+Useful create parameters:
+
+- `--output-dir`
+  - the parent directory where MM Harness will write the result
+  - MM Harness will create one subdirectory inside it for this run
+- `--name`
+  - optional
+  - use this when you want a stable, human-readable result directory name
+  - if omitted, MM Harness will generate a readable name automatically
+- `--structure-request`
+  - optional
+  - use this when the user has a specific goal for how the output should be organized
+  - examples:
+    - "keep the structure coarse"
+    - "organize it as lecture notes"
+    - "make the structure suitable for writing a Xiaohongshu post"
+  - this does not replace the source content; it only guides how MM Harness structures the output
 
 ## What You Get After Running It
 
-MM Harness writes a structured output directory to the user-provided `--output-dir`.
+MM Harness writes one structured result directory under the user-provided `--output-dir`.
 
-Use that output directory as the basis for the next step of work.
+The result is not just a plain transcript. It is a structured workspace intended to make the original media easier to inspect and process.
 
-The result is not just a plain transcript. It is a structured workspace intended to make the original media easier for you to inspect and process.
+Typical contents include:
+
+- `input/`
+  - source assets and acquisition metadata
+  - may include the original video or audio file, prepared subtitles, thumbnails, `SOURCE_INFO.json`, and `SOURCE_METADATA.json`
+- `units/`
+  - the smallest content units extracted from the source
+  - useful when you need a fine-grained breakdown
+- `segments/`
+  - higher-level grouped results built from one or more units
+  - usually the best place to start reading
+- `README.md`
+  - the overview page for the whole workspace
+- `SUBTITLES.md`
+  - the prepared full subtitles when subtitle export is enabled
+
+## How To Read The Output
+
+Recommended reading order:
+
+1. Start with `README.md`
+   - it explains what this run contains
+2. Then go to `segments/`
+   - this is the quickest way to understand the content at a chapter-like level
+3. Then go to `units/` if you need more detail
+   - this is where you inspect finer-grained evidence and local content spans
+4. Use `input/` when you need raw assets
+   - source files
+   - metadata
+   - subtitles
+   - thumbnails for cover selection or creative tasks
+
+## What To Do Next
+
+After MM Harness finishes:
+
+- for summaries, notes, and quick understanding:
+  - start from `segments/`
+- for content creation tasks:
+  - use `segments/` for overall structure
+  - use `units/` for detail, quotes, and supporting evidence
+- for source validation:
+  - check `input/SOURCE_INFO.json` and `input/SOURCE_METADATA.json`
 
 ## Required Environment
 

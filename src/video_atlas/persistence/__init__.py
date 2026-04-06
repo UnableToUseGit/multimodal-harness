@@ -3,6 +3,7 @@
 from .writers import (
     CanonicalAtlasWriter,
     DerivedAtlasWriter,
+    build_canonical_root_readme_text,
     clip_exists,
     copy_to,
     extract_clip,
@@ -16,6 +17,7 @@ from .writers import (
 __all__ = [
     "CanonicalAtlasWriter",
     "DerivedAtlasWriter",
+    "build_canonical_root_readme_text",
     "clip_exists",
     "copy_to",
     "extract_clip",

@@ -154,7 +154,11 @@ class WorkspaceWritersTest(unittest.TestCase):
             harness.written,
         )
         self.assertIn("Match Overview", harness.written["README.md"])
-        self.assertIn("There are 1 units extracted from the raw video.", harness.written["README.md"])
+        self.assertIn("This directory is the result of one `mm-harness create` run.", harness.written["README.md"])
+        self.assertIn("### input/", harness.written["README.md"])
+        self.assertIn("### units/", harness.written["README.md"])
+        self.assertIn("### segments/", harness.written["README.md"])
+        self.assertIn("Start with `segments/` if you want the quickest understanding of the content.", harness.written["README.md"])
         self.assertIn("**Start Time**: 00:00:00", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
         self.assertIn("**End Time**: 00:00:20", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])
         self.assertIn("**Duration**: 00:00:20", harness.written["segments/seg0001-opening-00:00:00-00:00:20/README.md"])

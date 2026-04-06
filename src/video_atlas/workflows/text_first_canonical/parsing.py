@@ -17,6 +17,12 @@ def _normalize_text(value: Any) -> str:
     return " ".join(value.split()).strip()
 
 
+def _normalize_subtitles_text(value: Any) -> str:
+    if not isinstance(value, str):
+        value = str(value)
+    return value.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+
 def _truncate_text(text: str, max_chars: int) -> str:
     if max_chars <= 0 or len(text) <= max_chars:
         return text
@@ -64,7 +70,7 @@ def _build_unit(
         end_time=end_time,
         summary=_truncate_text(_normalize_text(summary) or safe_title, 240),
         caption=_normalize_text(caption) or safe_title,
-        subtitles_text=_normalize_text(subtitles_text),
+        subtitles_text=_normalize_subtitles_text(subtitles_text),
         folder_name=folder_name,
     )
 
@@ -161,9 +167,9 @@ def _build_text_unit_from_range(
     unit_id: str,
 ) -> AtlasUnit:
     segment_subtitle_items, segment_subtitles = get_subtitle_in_segment(list(subtitle_items), start_time, end_time)
-    normalized_subtitles = _normalize_text(segment_subtitles)
+    normalized_subtitles = _normalize_subtitles_text(segment_subtitles)
     if not normalized_subtitles:
-        normalized_subtitles = _normalize_text(subtitles_text)
+        normalized_subtitles = _normalize_subtitles_text(subtitles_text)
     if not normalized_subtitles:
         raise ValueError("text-first parsing requires subtitle text")
 
