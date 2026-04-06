@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime
+import mimetypes
+import os
 from pathlib import Path
+import tempfile
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 
 from dateutil import parser
+import cv2
+import requests
 
 from ..persistence import write_json_to
 from ..schemas import SourceAcquisitionResult, SourceInfoRecord, SourceMetadata
@@ -77,6 +82,7 @@ class YouTubeVideoAcquirer:
         metadata_info = self._extract_metadata(youtube_url)
         source_metadata = self._build_source_metadata(metadata_info)
         should_download_video = self._should_download_video(metadata_info)
+        thumbnail_paths = self._download_thumbnails(metadata_info, output_dir)
 
         download_info = self._download_assets(
             youtube_url=youtube_url,
@@ -99,6 +105,7 @@ class YouTubeVideoAcquirer:
             source_metadata=source_metadata,
             video_path=video_path,
             subtitles_path=subtitle_path,
+            artifacts={"thumbnail_dir": output_dir / "thumbnails"} if thumbnail_paths else {},
         )
 
     def _extract_metadata(self, youtube_url: str) -> dict[str, object]:
@@ -156,6 +163,60 @@ class YouTubeVideoAcquirer:
             duration_seconds=float(info.get("duration") or 0),
             thumbnails=thumbnails,
         )
+
+    def _download_thumbnails(self, info: dict[str, object], output_dir: Path) -> list[Path]:
+        thumbnail_urls = [
+            str(item.get("url"))
+            for item in info.get("thumbnails", [])
+            if isinstance(item, dict) and item.get("url")
+        ]
+        thumbnail_dir = output_dir / "thumbnails"
+        downloaded_paths: list[Path] = []
+        for index, thumbnail_url in enumerate(thumbnail_urls, start=1):
+            try:
+                response = requests.get(thumbnail_url, timeout=30)
+                response.raise_for_status()
+            except requests.RequestException:
+                continue
+
+            extension = self._resolve_thumbnail_extension(thumbnail_url, response.headers.get("Content-Type", ""))
+            thumbnail_dir.mkdir(parents=True, exist_ok=True)
+            dimensions = self._read_image_dimensions(response.content, extension)
+            if dimensions is not None:
+                width, height = dimensions
+                thumbnail_path = thumbnail_dir / f"thumb_{index:03d}_{width}x{height}{extension}"
+            else:
+                thumbnail_path = thumbnail_dir / f"thumb_{index:03d}{extension}"
+            thumbnail_path.write_bytes(response.content)
+            downloaded_paths.append(thumbnail_path)
+        return downloaded_paths
+
+    def _resolve_thumbnail_extension(self, url: str, content_type: str) -> str:
+        url_suffix = Path(urlparse(url).path).suffix.lower()
+        if url_suffix in {".jpg", ".jpeg", ".png", ".webp"}:
+            return url_suffix
+
+        guessed_extension = mimetypes.guess_extension(content_type.split(";", 1)[0].strip()) if content_type else None
+        if guessed_extension in {".jpg", ".jpeg", ".png", ".webp"}:
+            return guessed_extension
+        return ".jpg"
+
+    def _read_image_dimensions(self, image_bytes: bytes, extension: str) -> tuple[int, int] | None:
+        with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as tmp_file:
+            tmp_file.write(image_bytes)
+            tmp_path = Path(tmp_file.name)
+
+        try:
+            image = cv2.imread(str(tmp_path))
+            if image is None:
+                return None
+            height, width = image.shape[:2]
+            return int(width), int(height)
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
     def _resolve_video_path(self, info: dict[str, object], output_dir: Path) -> Path:
         filepath = info.get("filepath") or info.get("_filename")

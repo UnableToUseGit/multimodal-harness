@@ -3,6 +3,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
+import cv2
+import numpy as np
+
 from video_atlas.source_acquisition.youtube import (
     YouTubeVideoAcquirer,
     choose_subtitle_candidate,
@@ -11,6 +14,12 @@ from video_atlas.source_acquisition.youtube import (
 
 
 class YouTubeAcquisitionTest(unittest.TestCase):
+    def _encode_image(self, width: int, height: int, extension: str) -> bytes:
+        image = np.zeros((height, width, 3), dtype=np.uint8)
+        success, encoded = cv2.imencode(extension, image)
+        self.assertTrue(success)
+        return encoded.tobytes()
+
     def test_is_supported_youtube_watch_url_rejects_short_playlist_and_invalid_urls(self) -> None:
         self.assertTrue(is_supported_youtube_watch_url("https://www.youtube.com/watch?v=abc123xyz89"))
         self.assertFalse(is_supported_youtube_watch_url("https://youtu.be/abc123xyz89"))
@@ -33,7 +42,13 @@ class YouTubeAcquisitionTest(unittest.TestCase):
         self.assertIsNone(choose_subtitle_candidate([]))
 
     @patch("video_atlas.source_acquisition.youtube.yt_dlp.YoutubeDL")
-    def test_acquire_downloads_video_and_subtitles_for_short_video(self, mock_youtube_dl: MagicMock) -> None:
+    @patch("video_atlas.source_acquisition.youtube.requests.get")
+    def test_acquire_downloads_video_and_subtitles_for_short_video(self, mock_get: MagicMock, mock_youtube_dl: MagicMock) -> None:
+        mock_response = MagicMock()
+        mock_response.content = self._encode_image(320, 180, ".jpg")
+        mock_response.headers = {"Content-Type": "image/jpeg"}
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
         metadata_context = MagicMock()
         metadata_context.extract_info.return_value = {
             "id": "abc123xyz89",
@@ -66,6 +81,11 @@ class YouTubeAcquisitionTest(unittest.TestCase):
             result = YouTubeVideoAcquirer(max_video_duration_sec=1500).acquire(
                 "https://www.youtube.com/watch?v=abc123xyz89",
                 Path(tmpdir),
+            )
+            self.assertEqual(result.artifacts["thumbnail_dir"], Path(tmpdir) / "thumbnails")
+            self.assertEqual(
+                sorted(path.name for path in result.artifacts["thumbnail_dir"].iterdir()),
+                ["thumb_001_320x180.jpg"],
             )
 
         self.assertEqual(mock_youtube_dl.call_args_list[0].args[0], {"skip_download": True})
@@ -125,13 +145,30 @@ class YouTubeAcquisitionTest(unittest.TestCase):
         self.assertEqual(mock_youtube_dl.call_args_list[1].args[0]["cookiesfrombrowser"], "chrome")
 
     @patch("video_atlas.source_acquisition.youtube.yt_dlp.YoutubeDL")
-    def test_acquire_skips_video_download_for_long_video(self, mock_youtube_dl: MagicMock) -> None:
+    @patch("video_atlas.source_acquisition.youtube.requests.get")
+    def test_acquire_skips_video_download_for_long_video(self, mock_get: MagicMock, mock_youtube_dl: MagicMock) -> None:
+        def fake_get(url: str, timeout: int):
+            response = MagicMock()
+            response.raise_for_status.return_value = None
+            if url.endswith(".jpg"):
+                response.content = self._encode_image(320, 180, ".jpg")
+                response.headers = {"Content-Type": "image/jpeg"}
+            else:
+                response.content = self._encode_image(640, 360, ".webp")
+                response.headers = {"Content-Type": "image/webp"}
+            return response
+
+        mock_get.side_effect = fake_get
         metadata_context = MagicMock()
         metadata_context.extract_info.return_value = {
             "id": "abc123xyz89",
             "title": "Long video",
             "duration": 2000,
             "upload_date": "20240401",
+            "thumbnails": [
+                {"url": "https://image.example/thumb-small.jpg"},
+                {"url": "https://image.example/thumb-large.webp"},
+            ],
         }
         metadata_context.sanitize_info.return_value = metadata_context.extract_info.return_value
 
@@ -157,11 +194,17 @@ class YouTubeAcquisitionTest(unittest.TestCase):
                 "https://www.youtube.com/watch?v=abc123xyz89",
                 Path(tmpdir),
             )
+            self.assertEqual(result.artifacts["thumbnail_dir"], Path(tmpdir) / "thumbnails")
+            self.assertEqual(
+                sorted(path.name for path in result.artifacts["thumbnail_dir"].iterdir()),
+                ["thumb_001_320x180.jpg", "thumb_002_640x360.webp"],
+            )
 
         self.assertEqual(mock_youtube_dl.call_args_list[1].args[0]["skip_download"], True)
         self.assertIsNone(result.video_path)
         self.assertEqual(result.subtitles_path, Path("/tmp/downloads/abc123xyz89.en.vtt"))
         self.assertEqual(result.source_metadata.duration_seconds, 2000)
+        self.assertEqual(mock_get.call_count, 2)
 
 
 if __name__ == "__main__":
