@@ -25,11 +25,17 @@ jobs:
       - name: Install MM Harness from source checkout
         run: python -m pipx install .
 
+      - name: Resolve pipx bin directory
+        run: |
+          PIPX_BIN_DIR="$(python -m pipx environment --value PIPX_BIN_DIR)"
+          echo "$PIPX_BIN_DIR" >> "$GITHUB_PATH"
+          echo "PIPX_BIN_DIR=$PIPX_BIN_DIR" >> "$GITHUB_ENV"
+
       - name: Run info
-        run: ~/.local/bin/mm-harness info
+        run: "$PIPX_BIN_DIR/mm-harness" info
 
       - name: Run doctor
-        run: ~/.local/bin/mm-harness doctor || true
+        run: "$PIPX_BIN_DIR/mm-harness" doctor || true
 
       - name: Run create help
-        run: ~/.local/bin/mm-harness create --help
+        run: "$PIPX_BIN_DIR/mm-harness" create --help
