@@ -71,7 +71,7 @@ Expected required items:
 - `LLM_API_KEY`
 - `GROQ_API_KEY`
 
-What these items mean:
+Explain these items to the user in human terms before you mention environment variable names:
 
 - `ffmpeg`
   Required for audio/video preprocessing and transcription preparation.
@@ -79,12 +79,15 @@ What these items mean:
   Required for YouTube video and subtitle acquisition.
 - `deno`
   Required for more reliable YouTube extraction in some environments.
-- `LLM_API_BASE_URL`
-  The base URL of the remote OpenAI-compatible LLM service used by planning, parsing, captioning, and structure composition.
-- `LLM_API_KEY`
-  The API key for that remote LLM service.
-- `GROQ_API_KEY`
-  The API key for Groq speech-to-text transcription.
+- an LLM service
+  MM Harness needs access to a remote OpenAI-compatible LLM service for planning, parsing, captioning, and structure composition.
+  The user must provide:
+  - the service base URL → `LLM_API_BASE_URL`
+  - the service API key → `LLM_API_KEY`
+- a Groq transcription key
+  MM Harness uses Groq for speech-to-text transcription.
+  The user must provide:
+  - a Groq API key → `GROQ_API_KEY`
 
 Optional items:
 
@@ -92,6 +95,10 @@ Optional items:
 - `YOUTUBE_COOKIES_FROM_BROWSER`
 
 These optional YouTube cookie variables are only needed when YouTube requires authenticated access.
+Explain them to the user as:
+
+- a YouTube cookies file exported from a logged-in browser → `YOUTUBE_COOKIES_FILE`
+- or the name of a browser that is already logged into YouTube → `YOUTUBE_COOKIES_FROM_BROWSER`
 
 What you may do directly as the agent:
 
@@ -102,13 +109,13 @@ What you may do directly as the agent:
 
 What requires human user input:
 
-- `LLM_API_BASE_URL`
-- `LLM_API_KEY`
-- `GROQ_API_KEY`
-- `YOUTUBE_COOKIES_FILE`
-- `YOUTUBE_COOKIES_FROM_BROWSER`
+- the base URL of their OpenAI-compatible LLM service
+- the API key for that LLM service
+- a Groq API key for transcription
+- optionally, a YouTube cookies file or browser name for authenticated YouTube access
 
 You must ask the human user for these values. Do not invent them.
+When asking, mention both the plain-language meaning and the matching environment variable name.
 
 What requires human permission first:
 
@@ -126,27 +133,35 @@ Decision rule:
 
 How to ask the human user for these values:
 
-- For `LLM_API_BASE_URL` and `LLM_API_KEY`:
-  ask the user which OpenAI-compatible LLM service they want to use, and ask them to provide the service base URL and API key.
-- For `GROQ_API_KEY`:
-  ask the user to create a Groq API key at `https://console.groq.com`, then send you the key value.
-- For `YOUTUBE_COOKIES_FILE`:
-  ask the user to export a `cookies.txt` file from a browser already logged into YouTube, then give you the local file path.
-- For `YOUTUBE_COOKIES_FROM_BROWSER`:
-  ask the user which browser is already logged into YouTube, for example `chrome`, `chromium`, `edge`, or `firefox`.
+- For the LLM service:
+  ask the user which OpenAI-compatible LLM service they want to use, then ask for:
+  - the service base URL → `LLM_API_BASE_URL`
+  - the API key for that service → `LLM_API_KEY`
+- For Groq transcription:
+  ask the user to create a Groq API key at `https://console.groq.com`, then send you the key value → `GROQ_API_KEY`
+- For YouTube authenticated access:
+  if needed, ask the user for either:
+  - an exported `cookies.txt` file path → `YOUTUBE_COOKIES_FILE`
+  - or the name of a browser already logged into YouTube, such as `chrome`, `chromium`, `edge`, or `firefox` → `YOUTUBE_COOKIES_FROM_BROWSER`
 
 Suggested message to the user:
 
 ```text
-I need these values from you before MM Harness can run:
-1. LLM_API_BASE_URL: the base URL of your OpenAI-compatible LLM service
-2. LLM_API_KEY: the API key for that LLM service
-3. GROQ_API_KEY: a Groq API key for transcription
+MM Harness is installed, but it still needs two services from you before it can run:
+
+1. An LLM service
+   I need:
+   - the base URL of your OpenAI-compatible LLM service (LLM_API_BASE_URL)
+   - the API key for that service (LLM_API_KEY)
+
+2. A Groq API key for transcription
+   I need:
+   - your Groq API key (GROQ_API_KEY)
 
 Optional, only if YouTube requires authenticated access:
-4. YOUTUBE_COOKIES_FILE: path to an exported cookies.txt file
+- YOUTUBE_COOKIES_FILE: path to an exported cookies.txt file
 or
-5. YOUTUBE_COOKIES_FROM_BROWSER: the browser name to read cookies from
+- YOUTUBE_COOKIES_FROM_BROWSER: the browser name to read cookies from
 ```
 
 ### Step 3: Verify CLI availability

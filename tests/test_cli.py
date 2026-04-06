@@ -81,7 +81,7 @@ class CliSmokeTest(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertIn(
-            "set YOUTUBE_COOKIES_FILE or YOUTUBE_COOKIES_FROM_BROWSER",
+            "Ask the user for YOUTUBE_COOKIES_FILE or YOUTUBE_COOKIES_FROM_BROWSER",
             stdout.getvalue(),
         )
 
@@ -417,7 +417,7 @@ class CliSmokeTest(unittest.TestCase):
         self.assertIn("FAIL  ffmpeg", output)
         self.assertIn("FAIL  GROQ_API_KEY", output)
         self.assertIn("Hints", output)
-        self.assertIn("- export GROQ_API_KEY=...", output)
+        self.assertIn("- ask the user for a Groq API key for transcription, then set GROQ_API_KEY", output)
 
 
 if __name__ == "__main__":

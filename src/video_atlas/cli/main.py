@@ -170,18 +170,24 @@ def _run_doctor() -> int:
     all_required_ok &= _doctor_check(
         ENV_API_BASE,
         bool(settings.api_base),
-        "configured" if settings.api_base else "missing; export LLM_API_BASE_URL",
+        "configured"
+        if settings.api_base
+        else "missing; ask the user for their LLM service base URL, then set LLM_API_BASE_URL",
     )
     all_required_ok &= _doctor_check(
         ENV_API_KEY,
         bool(settings.api_key),
-        "configured" if settings.api_key else "missing; export LLM_API_KEY",
+        "configured"
+        if settings.api_key
+        else "missing; ask the user for their LLM service API key, then set LLM_API_KEY",
     )
     groq_key = os.environ.get("GROQ_API_KEY", "").strip()
     all_required_ok &= _doctor_check(
         "GROQ_API_KEY",
         bool(groq_key),
-        "configured" if groq_key else "missing; export GROQ_API_KEY for transcription",
+        "configured"
+        if groq_key
+        else "missing; ask the user for a Groq API key for transcription, then set GROQ_API_KEY",
     )
 
     print("")
@@ -193,7 +199,7 @@ def _run_doctor() -> int:
     else:
         _doctor_warn(
             "youtube-cookies",
-            "not configured; set YOUTUBE_COOKIES_FILE or YOUTUBE_COOKIES_FROM_BROWSER when YouTube requires authenticated access",
+            "not configured; only needed if YouTube asks for login. Ask the user for YOUTUBE_COOKIES_FILE or YOUTUBE_COOKIES_FROM_BROWSER if required",
         )
 
     if not all_required_ok:
@@ -206,11 +212,11 @@ def _run_doctor() -> int:
         if not deno_path:
             print("- install deno for more reliable YouTube extraction")
         if not settings.api_base:
-            print("- export LLM_API_BASE_URL=...")
+            print("- ask the user for their LLM service base URL, then set LLM_API_BASE_URL")
         if not settings.api_key:
-            print("- export LLM_API_KEY=...")
+            print("- ask the user for their LLM service API key, then set LLM_API_KEY")
         if not groq_key:
-            print("- export GROQ_API_KEY=...")
+            print("- ask the user for a Groq API key for transcription, then set GROQ_API_KEY")
 
     return 0 if all_required_ok else 2
 
