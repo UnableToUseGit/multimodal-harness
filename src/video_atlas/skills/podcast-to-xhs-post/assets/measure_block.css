@@ -1,0 +1,68 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: #ffffff;
+  color: #111827;
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+}
+.measure-shell {
+  width: __WIDTH__px;
+  padding: 0;
+}
+.measure-inner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.measure-inner h1,
+.measure-inner h2,
+.measure-inner h3 {
+  font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  color: #111827;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin: 28px 0 20px;
+  line-height: 1.3;
+}
+.measure-inner h1 { font-size: 54px; }
+.measure-inner h2 { font-size: 44px; }
+.measure-inner h3 { font-size: 36px; }
+.measure-inner p,
+.measure-inner li,
+.measure-inner blockquote {
+  font-size: 36px;
+  line-height: 1.82;
+  color: #1f2937;
+}
+.measure-inner p {
+  margin: 0 0 24px;
+}
+.measure-inner ul,
+.measure-inner ol {
+  margin: 0 0 24px 34px;
+}
+.measure-inner strong {
+  font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  color: #111827;
+  font-weight: 800;
+}
+.measure-inner em {
+  color: #7c2d12;
+  font-style: normal;
+}
+.measure-inner blockquote {
+  margin: 26px 0;
+  padding: 18px 22px;
+  border-left: 6px solid #d97706;
+  background: #fff8eb;
+  border-radius: 0 12px 12px 0;
+}
+.measure-inner img {
+  display: block;
+  max-width: 100%;
+  margin: 28px auto;
+  border-radius: 18px;
+}
