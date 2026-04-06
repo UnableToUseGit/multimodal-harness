@@ -129,9 +129,8 @@ XHS_API_URL=http://localhost:5005
 ```yaml
 ---
 title: "笔记标题"
-subtitle: "副标题文案"
 source: "播客来源"
-intro_image: "./selected-frame.jpg"  # 必填。用于封面图
+intro_image: "./cover.png"  # 必填。用于封面图
 ---
 ```
 
@@ -143,12 +142,10 @@ intro_image: "./selected-frame.jpg"  # 必填。用于封面图
 ---
 title: "工具推荐"
 source: "播客来源"
-intro_image: "./selected-frame.jpg"
+intro_image: "./scover.png"
 ---
 
-# 为什么这期播客值得看
-
-这期内容主要讨论了……
+"封面页的文本介绍内容"
 
 ---
 
