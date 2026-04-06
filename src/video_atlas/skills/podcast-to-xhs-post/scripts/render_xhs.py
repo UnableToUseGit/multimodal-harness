@@ -22,6 +22,29 @@ except ImportError:  # pragma: no cover - exercised at runtime, not in unit test
 
 DEFAULT_WIDTH = 1080
 DEFAULT_HEIGHT = 1440
+CANVAS_PADDING = 44
+BODY_PADDING_TOP = 74
+BODY_PADDING_RIGHT = 76
+BODY_PADDING_BOTTOM = 118
+BODY_PADDING_LEFT = 76
+SCRIPT_DIR = Path(__file__).resolve().parent
+ASSETS_DIR = SCRIPT_DIR.parent / "assets"
+
+
+def load_asset(name: str) -> str:
+    return (ASSETS_DIR / name).read_text(encoding="utf-8")
+
+
+def render_asset_template(name: str, **values: object) -> str:
+    template = load_asset(name)
+    rendered = template
+    for key, value in values.items():
+        rendered = rendered.replace(f"__{key.upper()}__", str(value))
+    return rendered
+
+
+def render_style_asset(name: str, **values: object) -> str:
+    return render_asset_template(name, **values)
 
 
 def parse_markdown_file(file_path: str) -> dict[str, object]:
@@ -121,37 +144,18 @@ def split_markdown_blocks(markdown_text: str) -> list[str]:
     return [block for block in blocks if block]
 
 
-def split_oversized_block(block: str, *, max_chars: int = 180) -> list[str]:
+def is_unsplittable_block(block: str) -> bool:
     stripped = block.lstrip()
-    if (
+    return (
         stripped.startswith("#")
         or stripped.startswith(">")
         or stripped.startswith("```")
         or stripped.startswith("~~~")
         or stripped.startswith("- ")
         or stripped.startswith("* ")
-        or re.match(r"^\d+\.\s", stripped)
-        or "!["
-        in stripped
-    ):
-        return [block]
-
-    sentences = re.split(r"(?<=[。！？!?；;])", block)
-    chunks: list[str] = []
-    current = ""
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if not sentence:
-            continue
-        candidate = f"{current}{sentence}" if current else sentence
-        if current and len(candidate) > max_chars:
-            chunks.append(current.strip())
-            current = sentence
-        else:
-            current = candidate
-    if current.strip():
-        chunks.append(current.strip())
-    return chunks or [block]
+        or re.match(r"^\d+\.\s", stripped) is not None
+        or "![" in stripped
+    )
 
 
 def convert_markdown_to_html(markdown_text: str) -> str:
@@ -192,9 +196,8 @@ def generate_intro_html(
     width: int,
     height: int,
 ) -> str:
-    intro_html = convert_markdown_to_html(intro_markdown)
-    title = str(metadata.get("title") or "")
-    source = str(metadata.get("source") or "")
+    normalized_intro = normalize_intro_markdown(intro_markdown)
+    intro_html = convert_markdown_to_html(normalized_intro)
     intro_image_path = first_existing_intro_image(metadata)
     if intro_image_path is not None:
         return generate_visual_intro_html(
@@ -210,6 +213,19 @@ def generate_intro_html(
         width=width,
         height=height,
     )
+
+
+def normalize_intro_markdown(intro_markdown: str) -> str:
+    lines = intro_markdown.splitlines()
+    normalized: list[str] = []
+    heading_removed = False
+    for line in lines:
+        stripped = line.strip()
+        if not heading_removed and re.match(r"^#{1,6}\s+", stripped):
+            heading_removed = True
+            continue
+        normalized.append(line)
+    return "\n".join(normalized).strip()
 
 
 def first_existing_intro_image(metadata: dict[str, object]) -> Path | None:
@@ -231,87 +247,15 @@ def generate_text_intro_html(
     height: int,
 ) -> str:
     title = str(metadata.get("title") or "")
-    source = str(metadata.get("source") or "")
-    kicker = f'<div class="kicker">{title}</div>' if title else ""
-    source_line = f'<div class="source">From: {source}</div>' if source else ""
-    return f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width={width}, height={height}">
-  <style>
-    * {{
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }}
-    body {{
-      width: {width}px;
-      height: {height}px;
-      overflow: hidden;
-      background: #f3efe8;
-      color: #111827;
-      font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-    }}
-    .canvas {{
-      width: 100%;
-      height: 100%;
-      padding: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }}
-    .paper {{
-      width: 100%;
-      height: 100%;
-      background: #fffdf9;
-      border-radius: 26px;
-      padding: 72px 72px 64px;
-      box-shadow: 0 16px 48px rgba(31, 41, 55, 0.10);
-      display: flex;
-      flex-direction: column;
-    }}
-    .kicker {{
-      font-size: 28px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #9a6b36;
-      margin-bottom: 28px;
-      font-weight: 700;
-    }}
-    .intro {{
-      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
-      font-size: 37px;
-      line-height: 1.82;
-      color: #1f2937;
-      flex: 1;
-    }}
-    .intro h1, .intro h2, .intro h3 {{
-      font-size: 60px;
-      line-height: 1.22;
-      margin: 0 0 28px;
-      color: #111827;
-    }}
-    .intro p {{
-      margin: 0 0 26px;
-    }}
-    .source {{
-      margin-top: 28px;
-      font-size: 26px;
-      color: #6b7280;
-    }}
-  </style>
-</head>
-<body>
-  <div class="canvas">
-    <div class="paper">
-      {kicker}
-      <div class="intro">{intro_html}</div>
-      {source_line}
-    </div>
-  </div>
-</body>
-</html>"""
+    title_html = f'<div class="cover-title">{html.escape(title)}</div>' if title else ""
+    return render_asset_template(
+        "intro_text.html",
+        width=width,
+        height=height,
+        css=render_style_asset("intro_text.css", width=width, height=height),
+        title_html=title_html,
+        intro_html=intro_html,
+    )
 
 
 def generate_visual_intro_html(
@@ -323,115 +267,17 @@ def generate_visual_intro_html(
     height: int,
 ) -> str:
     title = str(metadata.get("title") or "")
-    source = str(metadata.get("source") or "")
-    subtitle = str(metadata.get("subtitle") or "")
-    kicker = f'<div class="kicker">{title}</div>' if title else ""
-    subtitle_line = f'<div class="subtitle">{subtitle}</div>' if subtitle else ""
-    source_line = f'<div class="source">From: {source}</div>' if source else ""
+    title_html = f'<div class="cover-title">{html.escape(title)}</div>' if title else ""
     image_uri = image_path_to_data_uri(intro_image_path)
-    return f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width={width}, height={height}">
-  <style>
-    * {{
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }}
-    body {{
-      width: {width}px;
-      height: {height}px;
-      overflow: hidden;
-      background: #f3efe8;
-      color: #111827;
-      font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-    }}
-    .canvas {{
-      width: 100%;
-      height: 100%;
-      padding: 44px;
-    }}
-    .paper {{
-      width: 100%;
-      height: 100%;
-      background: #fffdf9;
-      border-radius: 26px;
-      box-shadow: 0 16px 48px rgba(31, 41, 55, 0.10);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }}
-    .hero {{
-      height: 56%;
-      background: #ddd;
-    }}
-    .hero img {{
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }}
-    .intro-copy {{
-      flex: 1;
-      padding: 34px 52px 42px;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }}
-    .kicker {{
-      font-size: 24px;
-      letter-spacing: 1.8px;
-      text-transform: uppercase;
-      color: #9a6b36;
-      margin-bottom: 16px;
-      font-weight: 700;
-    }}
-    .subtitle {{
-      margin: 12px 0 20px;
-      font-size: 24px;
-      color: #6b7280;
-      line-height: 1.5;
-    }}
-    .intro {{
-      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
-      font-size: 27px;
-      line-height: 1.7;
-      color: #1f2937;
-      flex: 1;
-      overflow: hidden;
-    }}
-    .intro h1, .intro h2, .intro h3 {{
-      font-size: 54px;
-      line-height: 1.2;
-      margin: 0 0 18px;
-      color: #111827;
-    }}
-    .intro p {{
-      margin: 0 0 18px;
-    }}
-    .source {{
-      margin-top: 12px;
-      font-size: 22px;
-      color: #6b7280;
-    }}
-  </style>
-</head>
-<body>
-  <div class="canvas">
-    <div class="paper">
-      <div class="hero"><img src="{image_uri}" alt=""></div>
-      <div class="intro-copy">
-        {kicker}
-        <div class="intro">{intro_html}</div>
-        {subtitle_line}
-        {source_line}
-      </div>
-    </div>
-  </div>
-</body>
-</html>"""
+    return render_asset_template(
+        "intro_visual.html",
+        width=width,
+        height=height,
+        css=render_style_asset("intro_visual.css", width=width, height=height),
+        image_uri=image_uri,
+        title_html=title_html,
+        intro_html=intro_html,
+    )
 
 
 def image_path_to_data_uri(path: Path) -> str:
@@ -449,119 +295,22 @@ def generate_body_page_html(
     height: int,
 ) -> str:
     article_html = "\n".join(convert_markdown_to_html(block) for block in blocks)
-    return f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width={width}, height={height}">
-  <style>
-    * {{
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }}
-    body {{
-      width: {width}px;
-      height: {height}px;
-      overflow: hidden;
-      background: #f3efe8;
-      color: #111827;
-      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
-    }}
-    .canvas {{
-      width: 100%;
-      height: 100%;
-      padding: 44px;
-    }}
-    .paper {{
-      width: 100%;
-      height: 100%;
-      background: #fffdf9;
-      border-radius: 26px;
-      box-shadow: 0 16px 48px rgba(31, 41, 55, 0.10);
-      overflow: hidden;
-      position: relative;
-    }}
-    .page-body {{
-      position: absolute;
-      inset: 0;
-      padding: 74px 76px 118px;
-      overflow: hidden;
-    }}
-    .page-body-inner {{
-      width: 100%;
-    }}
-    .page-body-inner h1,
-    .page-body-inner h2,
-    .page-body-inner h3 {{
-      font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-      color: #111827;
-      font-weight: 800;
-      letter-spacing: 0.3px;
-      margin: 28px 0 20px;
-      line-height: 1.3;
-    }}
-    .page-body-inner h1 {{ font-size: 54px; }}
-    .page-body-inner h2 {{ font-size: 44px; }}
-    .page-body-inner h3 {{ font-size: 36px; }}
-    .page-body-inner p,
-    .page-body-inner li,
-    .page-body-inner blockquote {{
-      font-size: 36px;
-      line-height: 1.82;
-      color: #1f2937;
-    }}
-    .page-body-inner p {{
-      margin: 0 0 24px;
-    }}
-    .page-body-inner ul,
-    .page-body-inner ol {{
-      margin: 0 0 24px 34px;
-    }}
-    .page-body-inner strong {{
-      font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-      color: #111827;
-      font-weight: 800;
-    }}
-    .page-body-inner em {{
-      color: #7c2d12;
-      font-style: normal;
-    }}
-    .page-body-inner blockquote {{
-      margin: 26px 0;
-      padding: 18px 22px;
-      border-left: 6px solid #d97706;
-      background: #fff8eb;
-      border-radius: 0 12px 12px 0;
-    }}
-    .page-body-inner img {{
-      display: block;
-      max-width: 100%;
-      margin: 28px auto;
-      border-radius: 18px;
-    }}
-    .page-number {{
-      position: absolute;
-      right: 74px;
-      bottom: 44px;
-      font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-      font-size: 28px;
-      color: #9ca3af;
-      letter-spacing: 1px;
-    }}
-  </style>
-</head>
-<body>
-  <div class="canvas">
-    <div class="paper">
-      <div class="page-body">
-        <div class="page-body-inner">{article_html}</div>
-      </div>
-      <div class="page-number">{page_number:02d}</div>
-    </div>
-  </div>
-</body>
-</html>"""
+    return render_asset_template(
+        "body_page.html",
+        width=width,
+        height=height,
+        css=render_style_asset(
+            "body_page.css",
+            width=width,
+            height=height,
+            body_padding_top=BODY_PADDING_TOP,
+            body_padding_right=BODY_PADDING_RIGHT,
+            body_padding_bottom=BODY_PADDING_BOTTOM,
+            body_padding_left=BODY_PADDING_LEFT,
+        ),
+        article_html=article_html,
+        page_number=f"{page_number:02d}",
+    )
 
 
 async def _new_page(width: int, height: int, dpr: int):
@@ -576,22 +325,45 @@ async def _new_page(width: int, height: int, dpr: int):
     return playwright, browser, page
 
 
-async def page_blocks_fit(
+def body_content_width(width: int) -> int:
+    return width - CANVAS_PADDING * 2 - BODY_PADDING_LEFT - BODY_PADDING_RIGHT
+
+
+def body_content_height(height: int) -> int:
+    return height - CANVAS_PADDING * 2 - BODY_PADDING_TOP - BODY_PADDING_BOTTOM
+
+
+def generate_measure_block_html(
+    block: str,
+    *,
+    width: int,
+) -> str:
+    block_html = convert_markdown_to_html(block)
+    content_width = body_content_width(width)
+    return render_asset_template(
+        "measure_block.html",
+        width=content_width,
+        css=render_style_asset("measure_block.css", width=content_width),
+        block_html=block_html,
+    )
+
+
+async def measure_block_height(
     page,
-    blocks: list[str],
+    block: str,
     *,
     width: int,
     height: int,
-) -> bool:
-    html = generate_body_page_html(blocks, page_number=1, width=width, height=height)
+) -> int:
+    html = generate_measure_block_html(block, width=width)
     await page.set_content(html, wait_until="load")
     await page.wait_for_timeout(50)
     return await page.evaluate(
         """() => {
-            const viewport = document.querySelector('.page-body');
-            const inner = document.querySelector('.page-body-inner');
-            if (!viewport || !inner) return false;
-            return inner.scrollHeight <= viewport.clientHeight + 2;
+            const inner = document.querySelector('.measure-inner');
+            if (!inner) return 0;
+            const rect = inner.getBoundingClientRect();
+            return Math.ceil(rect.height);
         }"""
     )
 
@@ -618,29 +390,108 @@ async def paginate_body(
 ) -> list[list[str]]:
     pages: list[list[str]] = []
     current: list[str] = []
+    current_height = 0
+    available_height = body_content_height(height)
+    block_height_cache: dict[str, int] = {}
+
+    async def get_block_height(block: str) -> int:
+        cached = block_height_cache.get(block)
+        if cached is not None:
+            return cached
+        measured = await measure_block_height(page, block, width=width, height=height)
+        block_height_cache[block] = measured
+        return measured
+
+    def refine_split_index(block: str, index: int) -> int:
+        lower_bound = max(1, index - 24)
+        for probe in range(index, lower_bound - 1, -1):
+            if block[probe - 1] in "，。！？；：,.!?;:、）)】]」』 ":
+                return probe
+        return index
+
+    async def split_block_for_available_height(
+        block: str,
+        remaining_height: int,
+    ) -> tuple[str, str] | None:
+        if remaining_height <= 0 or is_unsplittable_block(block) or len(block) < 2:
+            return None
+
+        full_height = await get_block_height(block)
+        if full_height <= remaining_height:
+            return None
+
+        low = 1
+        high = len(block) - 1
+        best = 0
+        while low <= high:
+            mid = (low + high) // 2
+            candidate = block[:mid]
+            candidate_height = await get_block_height(candidate)
+            if candidate_height <= remaining_height:
+                best = mid
+                low = mid + 1
+            else:
+                high = mid - 1
+
+        if best <= 0:
+            return None
+
+        split_index = refine_split_index(block, best)
+        if split_index <= 0 or split_index >= len(block):
+            split_index = best
+
+        prefix = block[:split_index]
+        suffix = block[split_index:]
+        if not prefix or not suffix:
+            return None
+        return prefix, suffix
 
     pending = list(blocks)
     while pending:
         block = pending.pop(0)
-        candidate = current + [block]
-        fits = await page_blocks_fit(page, candidate, width=width, height=height)
-        if fits:
-            current = candidate
+        block_height = await get_block_height(block)
+        if current_height + block_height <= available_height:
+            current.append(block)
+            current_height += block_height
             continue
 
         if current:
+            if not is_unsplittable_block(block):
+                split_result = await split_block_for_available_height(
+                    block,
+                    available_height - current_height,
+                )
+                if split_result is not None:
+                    prefix, suffix = split_result
+                    pages.append(current + [prefix])
+                    current = []
+                    current_height = 0
+                    pending = [suffix] + pending
+                    continue
             pages.append(current)
             current = []
+            current_height = 0
             pending.insert(0, block)
             continue
 
-        split_blocks = split_oversized_block(block)
-        if len(split_blocks) == 1:
+        if is_unsplittable_block(block):
             current = [block]
+            current_height = block_height
             pages.append(current)
             current = []
+            current_height = 0
         else:
-            pending = split_blocks + pending
+            split_result = await split_block_for_available_height(block, available_height)
+            if split_result is None:
+                current = [block]
+                current_height = block_height
+                pages.append(current)
+                current = []
+                current_height = 0
+            else:
+                prefix, suffix = split_result
+                pages.append([prefix])
+                pending = [suffix] + pending
 
     if current:
         pages.append(current)

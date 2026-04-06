@@ -1,0 +1,53 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  width: __WIDTH__px;
+  height: __HEIGHT__px;
+  overflow: hidden;
+  background: #f3efe8;
+  color: #111827;
+  font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+}
+.canvas {
+  width: 100%;
+  height: 100%;
+  padding: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.paper {
+  width: 100%;
+  height: 100%;
+  background: #fffdf9;
+  border-radius: 26px;
+  padding: 84px 78px 78px;
+  box-shadow: 0 16px 48px rgba(31, 41, 55, 0.10);
+  display: flex;
+  flex-direction: column;
+}
+.cover-title {
+  font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-size: 58px;
+  line-height: 1.18;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 40px;
+  letter-spacing: -1px;
+}
+.intro {
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  font-size: 40px;
+  line-height: 1.9;
+  color: #1f2937;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.intro p {
+  margin: 0 0 28px;
+}

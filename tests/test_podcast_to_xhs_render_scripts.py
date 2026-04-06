@@ -66,9 +66,9 @@ title: "测试标题"
         self.assertIn("03", html)
         self.assertIn("这里是正文", html)
 
-    def test_generate_text_intro_html_contains_source_and_title(self):
-        html = RENDER.generate_text_intro_html(
-            "<h1>为什么这期播客值得看</h1><p>导语</p>",
+    def test_generate_intro_html_strips_heading_and_omits_metadata_lines(self):
+        html = RENDER.generate_intro_html(
+            "# 为什么这期播客值得看\n\n导语第一段。\n\n导语第二段。",
             {
                 "title": "播客封面",
                 "subtitle": "副标题",
@@ -77,8 +77,84 @@ title: "测试标题"
             width=1080,
             height=1440,
         )
+        self.assertNotIn("为什么这期播客值得看", html)
         self.assertIn("播客封面", html)
-        self.assertIn("From: 测试来源", html)
+        self.assertNotIn("副标题", html)
+        self.assertNotIn("测试来源", html)
+        self.assertIn("导语第一段", html)
+
+    def test_generate_text_intro_html_renders_plain_intro_copy(self):
+        html = RENDER.generate_text_intro_html(
+            "<p>导语</p>",
+            {},
+            width=1080,
+            height=1440,
+        )
+        self.assertIn("导语", html)
+        self.assertNotIn("From:", html)
+
+    def test_is_unsplittable_block_marks_quotes_as_unsplittable(self):
+        self.assertTrue(
+            RENDER.is_unsplittable_block("> 一段很长的引用。即使很长也不应拆开。")
+        )
+
+
+class PodcastToXhsPaginationTest(unittest.IsolatedAsyncioTestCase):
+    async def test_paginate_body_splits_paragraph_when_page_tail_cannot_fit(self):
+        paragraph = "一个很长的段落。"
+
+        original_measure = RENDER.measure_block_height
+
+        async def fake_measure_block_height(_page, block, *, width, height):
+            if block.startswith("# "):
+                return 300
+            if block == paragraph:
+                return 1200
+            return len(block) * 150
+
+        try:
+            RENDER.measure_block_height = fake_measure_block_height
+
+            pages = await RENDER.paginate_body(
+                page=None,
+                blocks=["# 第一节", paragraph],
+                width=1080,
+                height=1440,
+            )
+        finally:
+            RENDER.measure_block_height = original_measure
+
+        self.assertEqual(len(pages), 2)
+        self.assertEqual(pages[0][0], "# 第一节")
+        self.assertEqual("".join(pages[0][1:]) + "".join(pages[1]), paragraph)
+        self.assertNotEqual(pages[0][1], paragraph)
+
+    async def test_paginate_body_keeps_title_and_carries_paragraph_across_pages(self):
+        paragraph = "甲" * 160
+
+        original_measure = RENDER.measure_block_height
+
+        async def fake_measure_block_height(_page, block, *, width, height):
+            if block.startswith("# "):
+                return 300
+            return len(block) * 10
+
+        try:
+            RENDER.measure_block_height = fake_measure_block_height
+
+            pages = await RENDER.paginate_body(
+                page=None,
+                blocks=["# 第一节", paragraph],
+                width=1080,
+                height=1440,
+            )
+        finally:
+            RENDER.measure_block_height = original_measure
+
+        self.assertEqual(len(pages), 2)
+        self.assertEqual(pages[0][0], "# 第一节")
+        self.assertEqual("".join(pages[0][1:]) + "".join(pages[1]), paragraph)
+        self.assertNotEqual(pages[0][1], paragraph)
 
 
 if __name__ == "__main__":
