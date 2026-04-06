@@ -42,7 +42,16 @@ Install with `pipx`:
 
 ```bash
 pipx install https://github.com/UnableToUseGit/multimodal-harness/archive/refs/heads/main.zip
+pipx ensurepath
 mm-harness install
+```
+
+If `mm-harness` is still not found after `pipx ensurepath`, ask the user to restart their shell.
+
+Common fallback location:
+
+```text
+~/.local/bin/mm-harness
 ```
 
 ### Step 2: Check runtime dependencies
@@ -146,5 +155,6 @@ Run:
 
 ```bash
 mm-harness info
+mm-harness doctor
 mm-harness create --help
 ```

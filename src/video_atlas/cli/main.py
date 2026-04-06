@@ -1,20 +1,42 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import platform
 import shutil
 import sys
 import time
 
-from video_atlas.application import create_canonical_from_local, create_canonical_from_url
-from video_atlas.config import load_canonical_pipeline_config
 from video_atlas.settings import ENV_API_BASE, ENV_API_KEY, get_settings
 from video_atlas.skill_install import install_skill, uninstall_skill
-from video_atlas.source_acquisition import InvalidSourceUrlError, UnsupportedSourceError
 
 
 class CliUsageError(ValueError):
     pass
+
+
+def load_canonical_pipeline_config(path: str):
+    from video_atlas.config import load_canonical_pipeline_config as _load
+
+    return _load(path)
+
+
+def create_canonical_from_url(*args, **kwargs):
+    from video_atlas.application import create_canonical_from_url as _create
+
+    return _create(*args, **kwargs)
+
+
+def create_canonical_from_local(*args, **kwargs):
+    from video_atlas.application import create_canonical_from_local as _create
+
+    return _create(*args, **kwargs)
+
+
+def _create_user_error_types():
+    from video_atlas.source_acquisition import InvalidSourceUrlError, UnsupportedSourceError
+
+    return (CliUsageError, InvalidSourceUrlError, UnsupportedSourceError)
 
 
 def _print_progress(message: str) -> None:
@@ -123,6 +145,7 @@ def _run_doctor() -> int:
 
     ffmpeg_path = shutil.which("ffmpeg")
     ytdlp_path = shutil.which("yt-dlp")
+    ytdlp_module = importlib.util.find_spec("yt_dlp") is not None
     deno_path = shutil.which("deno")
 
     print("MM Harness Doctor")
@@ -136,8 +159,8 @@ def _run_doctor() -> int:
     )
     all_required_ok &= _doctor_check(
         "yt-dlp",
-        ytdlp_path is not None,
-        "found" if ytdlp_path else "missing; install yt-dlp for YouTube URL support",
+        ytdlp_path is not None or ytdlp_module,
+        "found" if (ytdlp_path is not None or ytdlp_module) else "missing; install yt-dlp for YouTube URL support",
     )
     all_required_ok &= _doctor_check(
         "deno",
@@ -178,7 +201,7 @@ def _run_doctor() -> int:
         print("Hints")
         if not ffmpeg_path:
             print("- install ffmpeg and ensure it is on PATH")
-        if not ytdlp_path:
+        if ytdlp_path is None and not ytdlp_module:
             print("- install yt-dlp and ensure it is on PATH")
         if not deno_path:
             print("- install deno for more reliable YouTube extraction")
@@ -271,9 +294,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "create":
             return _run_canonical_create(args)
-    except (CliUsageError, InvalidSourceUrlError, UnsupportedSourceError) as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
+    except Exception as exc:
+        if isinstance(exc, _create_user_error_types()):
+            print(str(exc), file=sys.stderr)
+            return 2
+        raise
 
     parser.error(f"unknown command: {args.command}")
     return 2

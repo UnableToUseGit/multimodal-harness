@@ -4,11 +4,11 @@ import subprocess
 import sys
 import unittest
 from contextlib import redirect_stdout
+from importlib.machinery import ModuleSpec
 from tempfile import TemporaryDirectory
 from unittest.mock import ANY, MagicMock, patch
 
 from video_atlas.cli.main import build_parser, main
-from video_atlas.source_acquisition import UnsupportedSourceError
 
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -85,6 +85,31 @@ class CliSmokeTest(unittest.TestCase):
             stdout.getvalue(),
         )
 
+    def test_doctor_detects_ytdlp_from_python_environment(self) -> None:
+        stdout = io.StringIO()
+
+        def fake_which(name: str):
+            if name == "yt-dlp":
+                return None
+            return f"/usr/bin/{name}"
+
+        with patch("video_atlas.cli.main.shutil.which", side_effect=fake_which):
+            with patch("video_atlas.cli.main.importlib.util.find_spec", return_value=ModuleSpec("yt_dlp", loader=None)):
+                with patch.dict(
+                    os.environ,
+                    {
+                        "LLM_API_BASE_URL": "https://example.test/v1",
+                        "LLM_API_KEY": "secret",
+                        "GROQ_API_KEY": "groq-secret",
+                    },
+                    clear=False,
+                ):
+                    with redirect_stdout(stdout):
+                        exit_code = main(["doctor"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("OK    yt-dlp", stdout.getvalue())
+
     def test_build_parser_supports_create_with_url(self) -> None:
         parser = build_parser()
         args = parser.parse_args(
@@ -147,6 +172,26 @@ class CliSmokeTest(unittest.TestCase):
         args = parser.parse_args(["skill", "--install"])
         self.assertEqual(args.command, "skill")
         self.assertTrue(args.install)
+
+    def test_info_and_help_do_not_require_heavy_runtime_imports(self) -> None:
+        import builtins
+
+        real_import = builtins.__import__
+
+        def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name.startswith("video_atlas.application") or name.startswith("video_atlas.source_acquisition"):
+                raise AssertionError(f"unexpected heavy import: {name}")
+            return real_import(name, globals, locals, fromlist, level)
+
+        with patch("builtins.__import__", side_effect=guarded_import):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(["info"])
+            self.assertEqual(exit_code, 0)
+
+            parser = build_parser()
+            help_text = parser.format_help()
+            self.assertIn("create", help_text)
 
     @patch("video_atlas.cli.main.install_skill")
     def test_main_runs_install(self, mock_install_skill: MagicMock) -> None:

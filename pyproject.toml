@@ -10,9 +10,14 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "json-repair>=0.30.0",
+    "markdown>=3.6",
     "numpy>=1.24",
     "opencv-python>=4.8",
+    "playwright>=1.52.0",
     "pydantic>=2,<3",
+    "python-dateutil>=2.9.0",
+    "PyYAML>=6.0.2",
+    "requests>=2.32.0",
     "yt-dlp>=2025.3.31",
 ]
 
@@ -30,4 +35,10 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-video_atlas = ["skills/mm-harness/SKILL.md"]
+video_atlas = [
+    "skills/mm-harness/SKILL.md",
+    "skills/podcast-to-xhs-post/SKILL.md",
+    "skills/podcast-to-xhs-post/assets/*.css",
+    "skills/podcast-to-xhs-post/assets/*.html",
+    "skills/podcast-to-xhs-post/references/*.md",
+]

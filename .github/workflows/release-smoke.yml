@@ -1,0 +1,35 @@
+name: Release Smoke
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  smoke-install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pipx
+        run: python -m pip install --upgrade pip pipx
+
+      - name: Install MM Harness from source checkout
+        run: python -m pipx install .
+
+      - name: Run info
+        run: ~/.local/bin/mm-harness info
+
+      - name: Run doctor
+        run: ~/.local/bin/mm-harness doctor || true
+
+      - name: Run create help
+        run: ~/.local/bin/mm-harness create --help
