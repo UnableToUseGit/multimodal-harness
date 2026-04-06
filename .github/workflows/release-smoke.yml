@@ -32,10 +32,13 @@ jobs:
           echo "PIPX_BIN_DIR=$PIPX_BIN_DIR" >> "$GITHUB_ENV"
 
       - name: Run info
-        run: "$PIPX_BIN_DIR/mm-harness" info
+        run: |
+          "$PIPX_BIN_DIR/mm-harness" info
 
       - name: Run doctor
-        run: "$PIPX_BIN_DIR/mm-harness" doctor || true
+        run: |
+          "$PIPX_BIN_DIR/mm-harness" doctor || true
 
       - name: Run create help
-        run: "$PIPX_BIN_DIR/mm-harness" create --help
+        run: |
+          "$PIPX_BIN_DIR/mm-harness" create --help
