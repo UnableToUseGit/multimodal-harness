@@ -15,10 +15,10 @@ class CliUsageError(ValueError):
     pass
 
 
-def load_canonical_pipeline_config(path: str):
-    from video_atlas.config import load_canonical_pipeline_config as _load
+def load_default_canonical_pipeline_config():
+    from video_atlas.config import load_default_canonical_pipeline_config as _load
 
-    return _load(path)
+    return _load()
 
 
 def create_canonical_from_url(*args, **kwargs):
@@ -242,7 +242,7 @@ def _run_skill(args) -> int:
 
 
 def _run_canonical_create(args) -> int:
-    config = load_canonical_pipeline_config("configs/canonical/default.json")
+    config = load_default_canonical_pipeline_config()
     local_inputs = [args.video_file, args.audio_file, args.subtitle_file, args.metadata_file]
     print("Creating canonical atlas...")
     started_at = time.time()

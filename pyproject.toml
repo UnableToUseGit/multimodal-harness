@@ -36,6 +36,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 video_atlas = [
+    "config/defaults/*.json",
     "skills/mm-harness/SKILL.md",
     "skills/podcast-to-xhs-post/SKILL.md",
     "skills/podcast-to-xhs-post/assets/*.css",

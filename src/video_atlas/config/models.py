@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from importlib import resources
 import os
 from pathlib import Path
 from typing import Any
@@ -144,6 +145,20 @@ def _build_acquisition_runtime_config(raw: dict[str, Any]) -> AcquisitionRuntime
 
 def load_canonical_pipeline_config(path: str | Path) -> CanonicalPipelineConfig:
     raw = _read_json(path)
+    return _build_canonical_pipeline_config(raw)
+
+
+def load_default_canonical_pipeline_config() -> CanonicalPipelineConfig:
+    with (
+        resources.files("video_atlas")
+        .joinpath("config", "defaults", "canonical_default.json")
+        .open("r", encoding="utf-8")
+    ) as file:
+        raw = json.load(file)
+    return _build_canonical_pipeline_config(raw)
+
+
+def _build_canonical_pipeline_config(raw: dict[str, Any]) -> CanonicalPipelineConfig:
     legacy_segmentor = raw.get("segmentor")
     text_segmentor_raw = raw.get("text_segmentor") or legacy_segmentor
     multimodal_segmentor_raw = raw.get("multimodal_segmentor") or legacy_segmentor or text_segmentor_raw

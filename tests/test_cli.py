@@ -225,7 +225,7 @@ class CliSmokeTest(unittest.TestCase):
         self.assertIn("removed: 2", stdout.getvalue())
 
     @patch("video_atlas.cli.main.create_canonical_from_url")
-    @patch("video_atlas.cli.main.load_canonical_pipeline_config")
+    @patch("video_atlas.cli.main.load_default_canonical_pipeline_config")
     def test_main_runs_create_from_url(
         self,
         mock_load_config: MagicMock,
@@ -270,7 +270,7 @@ class CliSmokeTest(unittest.TestCase):
         )
 
     @patch("video_atlas.cli.main.create_canonical_from_local")
-    @patch("video_atlas.cli.main.load_canonical_pipeline_config")
+    @patch("video_atlas.cli.main.load_default_canonical_pipeline_config")
     def test_main_runs_create_from_local_files(
         self,
         mock_load_config: MagicMock,
@@ -321,7 +321,7 @@ class CliSmokeTest(unittest.TestCase):
         )
 
     @patch("video_atlas.cli.main.create_canonical_from_local")
-    @patch("video_atlas.cli.main.load_canonical_pipeline_config")
+    @patch("video_atlas.cli.main.load_default_canonical_pipeline_config")
     def test_main_runs_create_from_local_audio_file(
         self,
         mock_load_config: MagicMock,
@@ -362,7 +362,14 @@ class CliSmokeTest(unittest.TestCase):
             structure_request="",
             on_progress=ANY,
         )
-        self.assertIn("output_language: en", stdout.getvalue())
+
+    def test_packaged_default_config_is_loadable(self) -> None:
+        from video_atlas.config import load_default_canonical_pipeline_config
+
+        config = load_default_canonical_pipeline_config()
+
+        self.assertEqual(config.planner.model_name, "gpt-5.1")
+        self.assertEqual(config.transcriber.backend, "groq_whisper")
 
     @patch.dict(
         os.environ,

@@ -15,6 +15,7 @@ _EXPORT_MAP = {
     "build_generator": "video_atlas.config.factories",
     "build_transcriber": "video_atlas.config.factories",
     "load_canonical_pipeline_config": "video_atlas.config.models",
+    "load_default_canonical_pipeline_config": "video_atlas.config.models",
     "load_derived_pipeline_config": "video_atlas.config.models",
 }
 
